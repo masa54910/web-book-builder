@@ -1,0 +1,35 @@
+export const BETA_LIMITS = {
+  maxBooksPerUser: 5,
+  maxCharactersPerBook: 200_000,
+  maxImagesPerBook: 30,
+  maxImageBytes: 10 * 1024 * 1024,
+  maxZipBytes: 50 * 1024 * 1024,
+  maxZipExpandedBytes: 100 * 1024 * 1024,
+  maxZipFiles: 200,
+  maxTextBytes: 5 * 1024 * 1024,
+  allowedImageTypes: ["image/jpeg", "image/png", "image/webp"],
+  allowedImageExtensions: [".jpg", ".jpeg", ".png", ".webp"],
+  allowedImportExtensions: [".txt", ".md", ".markdown", ".docx", ".zip"],
+  reservedSlugs: [
+    "admin",
+    "api",
+    "authors",
+    "auth",
+    "books",
+    "contact",
+    "dashboard",
+    "forgot-password",
+    "login",
+    "privacy",
+    "reader",
+    "sample",
+    "settings",
+    "signup",
+    "terms",
+  ],
+} as const;
+
+export const STORAGE_BUCKETS = {
+  bookAssets: "book-assets",
+  profileAssets: "profile-assets",
+} as const;
