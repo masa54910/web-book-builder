@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import AppHeader from "@/components/AppHeader";
 import CharacterAssistant from "@/components/CharacterAssistant";
@@ -43,8 +44,13 @@ export default function LandingPage() {
         </div>
         <aside className="landing-preview-card" aria-label="Web書籍の機能概要">
           <div className="editor-room-illustration" aria-hidden="true">
-            <span className="mio-figure">ミオ</span>
-            <span className="booky-figure">🐱</span>
+            <Image
+              src="/characters/editor-room.png"
+              alt=""
+              width={316}
+              height={310}
+              priority
+            />
           </div>
           <span>WebBookMaker編集部</span>
           <h2>貼る → 本になる → URLで届く</h2>

@@ -35,6 +35,10 @@ const messages: Record<CharacterEventType, CharacterMessage[]> = {
 
 let lastMessageId = "";
 
+export function defaultCharacterMessage(type: CharacterEventType): CharacterMessage {
+  return messages[type][0] ?? messages.welcome[0];
+}
+
 export function pickCharacterMessage(type: CharacterEventType): CharacterMessage {
   const pool = messages[type];
   const candidates = pool.filter((message) => message.id !== lastMessageId);

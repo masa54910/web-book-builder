@@ -1,7 +1,23 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
-import { pickCharacterMessage, type CharacterEventType, type CharacterMessage } from "@/lib/characterEvents";
+import {
+  defaultCharacterMessage,
+  pickCharacterMessage,
+  type CharacterEventType,
+  type CharacterMessage,
+} from "@/lib/characterEvents";
+
+const characterImage = {
+  mio: "/characters/shiori-bust.png",
+  booky: "/characters/booky-bust.png",
+} satisfies Record<CharacterMessage["speaker"], string>;
+
+const characterName = {
+  mio: "編集アシスタント しおり",
+  booky: "編集部猫 ブッキー",
+} satisfies Record<CharacterMessage["speaker"], string>;
 
 export default function CharacterAssistant({
   event = "welcome",
@@ -10,7 +26,7 @@ export default function CharacterAssistant({
   event?: CharacterEventType;
   compact?: boolean;
 }) {
-  const [message, setMessage] = useState<CharacterMessage>(() => pickCharacterMessage(event));
+  const [message, setMessage] = useState<CharacterMessage>(() => defaultCharacterMessage(event));
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -22,10 +38,16 @@ export default function CharacterAssistant({
   return (
     <aside className={`character-assistant ${compact ? "compact" : ""} mood-${message.mood}`}>
       <div className={`character-avatar ${message.speaker}`}>
-        <span className="character-face">{message.speaker === "mio" ? "ミオ" : "🐾"}</span>
+        <Image
+          src={characterImage[message.speaker]}
+          alt={characterName[message.speaker]}
+          width={message.speaker === "mio" ? 130 : 120}
+          height={message.speaker === "mio" ? 142 : 130}
+          priority={event === "welcome"}
+        />
       </div>
       <div className="character-balloon">
-        <strong>{message.speaker === "mio" ? "編集アシスタント ミオ" : "編集部猫 ブッキー"}</strong>
+        <strong>{characterName[message.speaker]}</strong>
         <p>{message.message}</p>
       </div>
     </aside>
