@@ -1,4 +1,6 @@
 import type { BookConfig } from "@/config/bookConfig";
+import { normalizeLocale, type SupportedLocale } from "@/lib/localization";
+import type { BookThemeSettings } from "@/lib/themeSystem";
 import {
   DEFAULT_BRANDING,
   DEFAULT_MONETIZATION,
@@ -44,6 +46,8 @@ export type BookProjectInput = {
   coverImage?: string;
   bindingDirection: BookConfig["bindingDirection"];
   theme: BookConfig["theme"];
+  language?: SupportedLocale;
+  themeSettings?: Partial<BookThemeSettings>;
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
   images: UploadedBookImage[];
@@ -226,10 +230,11 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
         subtitle: input.subtitle.trim(),
         author,
         description: input.description.trim(),
-        language: "ja",
+        language: normalizeLocale(input.language),
         coverImage: input.coverImage,
         bindingDirection: input.bindingDirection,
         theme: input.theme,
+        themeSettings: input.themeSettings,
         tableOfContentsItemsPerPage: Math.max(1, input.tableOfContentsItemsPerPage),
         charactersPerPage: Math.max(180, input.charactersPerPage),
         publisherName: input.publisherName.trim() || "WebBookMaker",

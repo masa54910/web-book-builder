@@ -13,18 +13,34 @@ export default function ReadingTools({
   isBookmarked,
   stickyNotes,
   resumePosition,
+  autoFlipEnabled,
+  autoFlipSeconds,
+  autoFlipLoop,
+  autoFlipStartMode,
   onToggleBookmark,
   onJumpToStickyNote,
   onRemoveStickyNote,
   onContinue,
+  onToggleAutoFlip,
+  onAutoFlipSecondsChange,
+  onAutoFlipLoopChange,
+  onAutoFlipStartModeChange,
 }: {
   isBookmarked: boolean;
   stickyNotes: StickyNote[];
   resumePosition: LastRead | null;
+  autoFlipEnabled: boolean;
+  autoFlipSeconds: number;
+  autoFlipLoop: boolean;
+  autoFlipStartMode: "cover" | "current";
   onToggleBookmark: () => void;
   onJumpToStickyNote: (note: StickyNote) => void;
   onRemoveStickyNote: (note: StickyNote) => void;
   onContinue: () => void;
+  onToggleAutoFlip: () => void;
+  onAutoFlipSecondsChange: (seconds: number) => void;
+  onAutoFlipLoopChange: (enabled: boolean) => void;
+  onAutoFlipStartModeChange: (mode: "cover" | "current") => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -50,6 +66,49 @@ export default function ReadingTools({
             </small>
           </button>
         ) : null}
+      </div>
+
+      <div
+        className="auto-flip-tools"
+        aria-label="自動めくり"
+        onPointerDown={stopPageFlip}
+        onMouseDown={stopPageFlip}
+        onTouchStart={stopPageFlip}
+        onClick={stopPageFlip}
+      >
+        <button className="reader-button tool-button" type="button" onClick={onToggleAutoFlip}>
+          {autoFlipEnabled ? "自動めくり停止" : "自動めくり開始"}
+        </button>
+        <label>
+          <span>速度</span>
+          <select
+            value={autoFlipSeconds}
+            onChange={(event) => onAutoFlipSecondsChange(Number(event.target.value))}
+          >
+            <option value={3}>速い（3秒）</option>
+            <option value={5}>標準（5秒）</option>
+            <option value={8}>ゆっくり（8秒）</option>
+            <option value={12}>朗読向け（12秒）</option>
+          </select>
+        </label>
+        <label>
+          <span>開始位置</span>
+          <select
+            value={autoFlipStartMode}
+            onChange={(event) => onAutoFlipStartModeChange(event.target.value as "cover" | "current")}
+          >
+            <option value="current">現在ページ</option>
+            <option value="cover">表紙から</option>
+          </select>
+        </label>
+        <label className="auto-flip-check">
+          <input
+            type="checkbox"
+            checked={autoFlipLoop}
+            onChange={(event) => onAutoFlipLoopChange(event.target.checked)}
+          />
+          <span>ループ</span>
+        </label>
       </div>
 
       {isOpen ? (

@@ -77,8 +77,30 @@ export type BookVersion = {
 
 export type BrandingSettings = {
   showCreatedWithWebBookMaker: boolean;
-  plan: "free" | "paid";
+  plan: "free" | "plus";
 };
+
+export type PricingPlan = {
+  id: "free" | "plus";
+  name: string;
+  priceLabel: string;
+  features: string[];
+};
+
+export const PRICING_PLANS: PricingPlan[] = [
+  {
+    id: "free",
+    name: "Free",
+    priceLabel: "¥0",
+    features: ["20ページまで", "公開URL", "作者ページ", "基本テーマ", "SNS共有"],
+  },
+  {
+    id: "plus",
+    name: "Plus",
+    priceLabel: "準備中",
+    features: ["ページ無制限", "ブランド削除", "追加テーマ", "高度解析", "高画質動画", "追加動画テンプレート"],
+  },
+];
 
 export const DEFAULT_MONETIZATION: Monetization = {
   enabled: false,

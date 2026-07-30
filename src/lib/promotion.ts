@@ -1,0 +1,76 @@
+import type { BookConfig } from "@/config/bookConfig";
+import type { SupportedLocale } from "@/lib/localization";
+
+export type PromotionChannel = "x" | "note" | "instagram" | "threads" | "facebook" | "bluesky" | "tiktok" | "youtube" | "copy";
+
+export type PromotionAsset = {
+  bookId: string;
+  shareVersion: number;
+  shareUrl: string;
+  ogImageUrl: string;
+  ogpTitle: string;
+  ogpDescription: string;
+  hashtags: string[];
+  xPost: string;
+  noteTitle: string;
+  noteBody: string;
+};
+
+function hashtagsFor(config: BookConfig, locale: SupportedLocale) {
+  const base = locale === "ja" ? ["Web小説", "創作小説", "WebBookMaker"] : ["WebBook", "Writing", "WebBookMaker"];
+  if (config.theme === "research") return [...base, locale === "ja" ? "研究" : "Research"];
+  if (config.theme === "photo") return [...base, locale === "ja" ? "旅行記" : "PhotoBook"];
+  return base;
+}
+
+export function publicBookUrl(slug: string, origin?: string) {
+  const base = origin || process.env.NEXT_PUBLIC_SITE_URL || "";
+  return `${base.replace(/\/$/, "")}/books/${slug}`;
+}
+
+export function buildPromotionAsset({
+  config,
+  slug,
+  locale = "ja",
+  origin,
+  shareVersion = 1,
+}: {
+  config: BookConfig;
+  slug: string;
+  locale?: SupportedLocale;
+  origin?: string;
+  shareVersion?: number;
+}): PromotionAsset {
+  const shareUrl = publicBookUrl(slug, origin);
+  const ogImageUrl = `${(origin || process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "")}/api/og/book/${encodeURIComponent(slug)}?v=${shareVersion}`;
+  const hashtags = hashtagsFor(config, locale);
+  const description = config.description || `${config.author} のWebブックを公開しました。`;
+  const hashtagText = hashtags.map((tag) => `#${tag}`).join(" ");
+  const xPost =
+    locale === "ja"
+      ? `『${config.title}』を公開しました。\n\n${description}\n\nWebでページをめくりながら読めます。\n${shareUrl}\n\n${hashtagText}`
+      : `I published “${config.title}”.\n\n${description}\n\nRead it as a page-turning web book.\n${shareUrl}\n\n${hashtagText}`;
+
+  const noteTitle = locale === "ja" ? `『${config.title}』を公開しました` : `I published “${config.title}”`;
+  const noteBody =
+    locale === "ja"
+      ? `# ${noteTitle}\n\n${description}\n\nWebBookMakerで、表紙・目次・ページめくり付きのWebブックとして公開しました。\n\n## 作品を読む\n${shareUrl}\n\n## 見どころ\n- ${config.subtitle || "ページをめくるように読めるWeb作品です。"}\n- スマホでもPCでも読めます。\n\n${hashtagText}`
+      : `# ${noteTitle}\n\n${description}\n\nPublished with WebBookMaker as a web book with cover, table of contents, and page-turning reader.\n\n## Read\n${shareUrl}\n\n${hashtagText}`;
+
+  return {
+    bookId: config.bookId,
+    shareVersion,
+    shareUrl,
+    ogImageUrl,
+    ogpTitle: config.title,
+    ogpDescription: description,
+    hashtags,
+    xPost,
+    noteTitle,
+    noteBody,
+  };
+}
+
+export function xIntentUrl(text: string) {
+  return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+}

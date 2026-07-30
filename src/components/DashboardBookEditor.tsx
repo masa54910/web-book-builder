@@ -18,6 +18,9 @@ import { uploadBookProjectAssets } from "@/lib/bookAssetStorage";
 import { createSlugCandidate, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
 import { normalizeHandle, safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
+import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
+import { themePresets, type BookThemeSettings } from "@/lib/themeSystem";
+import CharacterAssistant from "@/components/CharacterAssistant";
 
 type EditorState = {
   title: string;
@@ -32,6 +35,12 @@ type EditorState = {
   coverFileName?: string;
   bindingDirection: "rtl" | "ltr";
   theme: ThemeId;
+  language: SupportedLocale;
+  fontFamily: BookThemeSettings["fontFamily"];
+  fontScale: BookThemeSettings["fontScale"];
+  marginScale: BookThemeSettings["marginScale"];
+  pageWidth: BookThemeSettings["pageWidth"];
+  background: BookThemeSettings["background"];
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
   visibility: "private" | "unlisted" | "public";
@@ -59,6 +68,12 @@ const INITIAL_EDITOR: EditorState = {
   rawText: "",
   bindingDirection: "rtl",
   theme: "classic",
+  language: "ja",
+  fontFamily: "mincho",
+  fontScale: "medium",
+  marginScale: "standard",
+  pageWidth: "standard",
+  background: "paper",
   charactersPerPage: 380,
   tableOfContentsItemsPerPage: 6,
   visibility: "private",
@@ -125,6 +140,12 @@ function fromRecord(record: CloudBookRecord): EditorState {
     coverFileName: record.coverPath ? "保存済み表紙" : undefined,
     bindingDirection: record.bindingDirection,
     theme: record.theme,
+    language: record.bookProject.config.language,
+    fontFamily: record.bookProject.config.themeSettings?.fontFamily || "mincho",
+    fontScale: record.bookProject.config.themeSettings?.fontScale || "medium",
+    marginScale: record.bookProject.config.themeSettings?.marginScale || "standard",
+    pageWidth: record.bookProject.config.themeSettings?.pageWidth || "standard",
+    background: record.bookProject.config.themeSettings?.background || "paper",
     charactersPerPage: record.charactersPerPage,
     tableOfContentsItemsPerPage: record.tocItemsPerPage,
     visibility: record.visibility,
@@ -238,6 +259,14 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     coverImage: state.coverImage,
     bindingDirection: state.bindingDirection,
     theme: state.theme,
+    language: state.language,
+    themeSettings: {
+      fontFamily: state.fontFamily,
+      fontScale: state.fontScale,
+      marginScale: state.marginScale,
+      pageWidth: state.pageWidth,
+      background: state.background,
+    },
     charactersPerPage: state.charactersPerPage,
     tableOfContentsItemsPerPage: state.tableOfContentsItemsPerPage,
     images,
@@ -417,19 +446,30 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   if (isLoading) return <div className="reader-loading">作品を読み込んでいます…</div>;
 
   return (
-    <main className="dashboard-page">
+    <main className="dashboard-page editor-page">
       <div className="dashboard-heading">
         <div>
           <p className="maker-kicker">Book editor</p>
           <h1>{mode === "new" ? "新しい作品" : "作品を編集"}</h1>
           <p>ベータ制限：最大5作品、本文20万文字、画像30枚、画像10MBまで。</p>
         </div>
-        <Link className="maker-secondary-link" href="/dashboard">
-          マイライブラリへ
-        </Link>
+        <div className="maker-actions">
+          <button className="maker-primary-button" type="button" disabled={isSaving} onClick={() => void save()}>
+            {isSaving ? "保存中…" : "保存"}
+          </button>
+          <button className="maker-secondary-button" type="button" onClick={() => void publish()}>
+            公開
+          </button>
+          <Link className="maker-secondary-link" href="/dashboard">
+            作品一覧へ
+          </Link>
+        </div>
       </div>
 
-      <section className="editor-layout">
+      <CharacterAssistant event={statusMessage.includes("失敗") ? "error" : dirty ? "welcome" : "save"} compact />
+
+      <section className="editor-workbench">
+        <div className="editor-main-column">
         <div className="maker-card">
           <h2>基本情報</h2>
           <div className="maker-grid">
@@ -512,6 +552,19 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             {errors.rawText ? <small className="form-error">{errors.rawText}</small> : null}
           </label>
         </div>
+        </div>
+
+        <aside className="editor-side-column" aria-label="リアルタイムプレビューと設定">
+          <section className="maker-card live-preview-card">
+            <p className="maker-kicker">Realtime preview</p>
+            <h2>{state.title || "無題のWebブック"}</h2>
+            <p>{state.description || "説明文を入力すると、公開時の紹介文として使われます。"}</p>
+            <div className={`mini-book-preview theme-${state.theme} book-bg-${state.background} book-font-${state.fontFamily}`}>
+              <strong>{state.title || "TITLE"}</strong>
+              <span>{state.author || "Author"}</span>
+              <p>{state.rawText.replace(/^# .+$/gm, "").trim().slice(0, 110) || "本文のプレビューがここに表示されます。"}</p>
+            </div>
+          </section>
 
         <div className="maker-card">
           <h2>画像</h2>
@@ -587,6 +640,14 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           <h2>デザイン・公開設定</h2>
           <div className="maker-grid">
             <label>
+              <span>UI言語</span>
+              <select value={state.language} onChange={(event) => update("language", event.target.value as SupportedLocale)}>
+                {SUPPORTED_LOCALES.map((locale) => (
+                  <option key={locale} value={locale}>{localeLabels[locale]}</option>
+                ))}
+              </select>
+            </label>
+            <label>
               <span>綴じ方向</span>
               <select value={state.bindingDirection} onChange={(event) => update("bindingDirection", event.target.value as "rtl" | "ltr")}>
                 <option value="rtl">右綴じ</option>
@@ -596,14 +657,54 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             <label>
               <span>テーマ</span>
               <select value={state.theme} onChange={(event) => update("theme", event.target.value as ThemeId)}>
-                <option value="classic">classic</option>
-                <option value="modern">modern</option>
-                <option value="minimal">minimal</option>
-                <option value="magazine">magazine（準備中）</option>
-                <option value="novel">novel（準備中）</option>
-                <option value="photo">photo（準備中）</option>
-                <option value="research">research（準備中）</option>
-                <option value="portfolio">portfolio（準備中）</option>
+                {themePresets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name}{preset.plan === "plus" ? "（Plus）" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>フォント</span>
+              <select value={state.fontFamily} onChange={(event) => update("fontFamily", event.target.value as BookThemeSettings["fontFamily"])}>
+                <option value="mincho">明朝</option>
+                <option value="gothic">ゴシック</option>
+                <option value="serif">Serif</option>
+                <option value="sans">Sans</option>
+              </select>
+            </label>
+            <label>
+              <span>文字サイズ</span>
+              <select value={state.fontScale} onChange={(event) => update("fontScale", event.target.value as BookThemeSettings["fontScale"])}>
+                <option value="small">小</option>
+                <option value="medium">中</option>
+                <option value="large">大</option>
+              </select>
+            </label>
+            <label>
+              <span>余白</span>
+              <select value={state.marginScale} onChange={(event) => update("marginScale", event.target.value as BookThemeSettings["marginScale"])}>
+                <option value="compact">狭め</option>
+                <option value="standard">標準</option>
+                <option value="wide">広め</option>
+              </select>
+            </label>
+            <label>
+              <span>ページ幅</span>
+              <select value={state.pageWidth} onChange={(event) => update("pageWidth", event.target.value as BookThemeSettings["pageWidth"])}>
+                <option value="narrow">狭め</option>
+                <option value="standard">標準</option>
+                <option value="wide">広め</option>
+              </select>
+            </label>
+            <label>
+              <span>背景</span>
+              <select value={state.background} onChange={(event) => update("background", event.target.value as BookThemeSettings["background"])}>
+                <option value="paper">紙</option>
+                <option value="ivory">アイボリー</option>
+                <option value="cafe">カフェ</option>
+                <option value="green">グリーン</option>
+                <option value="night">ナイト</option>
               </select>
             </label>
             <label>
@@ -643,6 +744,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           </div>
           <p className="maker-note">WebBookMakerは決済に関与しません。販売や応援は外部URLへの導線として扱います。</p>
         </div>
+        </aside>
       </section>
 
       {warnings.length ? <div className="maker-warning">{warnings.map((warning) => <p key={warning}>{warning}</p>)}</div> : null}

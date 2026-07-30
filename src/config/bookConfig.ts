@@ -8,6 +8,8 @@ import type {
   ReaderMode,
   ThemeId,
 } from "@/lib/productTypes";
+import type { SupportedLocale } from "@/lib/localization";
+import type { BookThemeSettings } from "@/lib/themeSystem";
 
 export type BindingDirection = "rtl" | "ltr";
 export type BookTheme = ThemeId;
@@ -18,10 +20,11 @@ export type BookConfig = {
   subtitle: string;
   author: string;
   description: string;
-  language: "ja" | "en";
+  language: SupportedLocale;
   coverImage?: string;
   bindingDirection: BindingDirection;
   theme: BookTheme;
+  themeSettings?: Partial<BookThemeSettings>;
   tableOfContentsItemsPerPage: number;
   charactersPerPage: number;
   publisherName: string;

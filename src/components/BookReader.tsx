@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BookConfig } from "@/config/bookConfig";
 import { buildReaderPages, toBoundPageOrder } from "@/lib/paginateText";
 import { recordReaderProgress } from "@/lib/readerAnalytics";
+import { themeClassNames } from "@/lib/themeSystem";
 import {
   readLastRead,
   readStickyNotes,
@@ -69,6 +70,10 @@ export default function BookReader({
   const [resumePosition, setResumePosition] = useState<LastRead | null>(() =>
     readLastRead(getSafeLocalStorage(), config.bookId),
   );
+  const [autoFlipEnabled, setAutoFlipEnabled] = useState(false);
+  const [autoFlipSeconds, setAutoFlipSeconds] = useState(5);
+  const [autoFlipLoop, setAutoFlipLoop] = useState(false);
+  const [autoFlipStartMode, setAutoFlipStartMode] = useState<"cover" | "current">("current");
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 760px)");
@@ -240,6 +245,30 @@ export default function BookReader({
     [stickyNotes],
   );
 
+  const toggleAutoFlip = useCallback(() => {
+    setAutoFlipEnabled((enabled) => {
+      const nextEnabled = !enabled;
+      if (!enabled && autoFlipStartMode === "cover") goToPage(0);
+      return nextEnabled;
+    });
+  }, [autoFlipStartMode, goToPage]);
+
+  useEffect(() => {
+    if (!autoFlipEnabled) return;
+    const timer = window.setInterval(() => {
+      if (currentPage >= pages.length - 1) {
+        if (autoFlipLoop) {
+          goToPage(0);
+        } else {
+          setAutoFlipEnabled(false);
+        }
+        return;
+      }
+      pageFlip()?.flipNext("top");
+    }, Math.max(2, autoFlipSeconds) * 1000);
+    return () => window.clearInterval(timer);
+  }, [autoFlipEnabled, autoFlipLoop, autoFlipSeconds, currentPage, goToPage, pageFlip, pages.length]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const nextKey = config.bindingDirection === "rtl" ? "ArrowLeft" : "ArrowRight";
@@ -322,7 +351,7 @@ export default function BookReader({
       : "右矢印キーで次へ、左矢印キーで前へ。ページの角をドラッグ、またはタップしても移動できます。";
 
   return (
-    <main className={`reader-shell theme-${config.theme}`}>
+    <main className={`reader-shell ${themeClassNames(config.theme, config.themeSettings)}`}>
       <header className="reader-masthead">
         <div>
           <p className="reader-kicker">Digital Book Builder · Static Preview</p>
@@ -394,10 +423,18 @@ export default function BookReader({
         isBookmarked={hasBookmarkInCurrentSpread}
         stickyNotes={stickyNotes}
         resumePosition={resumePosition}
+        autoFlipEnabled={autoFlipEnabled}
+        autoFlipSeconds={autoFlipSeconds}
+        autoFlipLoop={autoFlipLoop}
+        autoFlipStartMode={autoFlipStartMode}
         onToggleBookmark={toggleStickyNote}
         onJumpToStickyNote={jumpToStickyNote}
         onRemoveStickyNote={removeStickyNote}
         onContinue={continueReading}
+        onToggleAutoFlip={toggleAutoFlip}
+        onAutoFlipSecondsChange={setAutoFlipSeconds}
+        onAutoFlipLoopChange={setAutoFlipLoop}
+        onAutoFlipStartModeChange={setAutoFlipStartMode}
       />
       <ShareTools bookId={config.bookId} cloudBookId={cloudBookId} title={config.title} />
       <p className="reader-help">{helpText}</p>

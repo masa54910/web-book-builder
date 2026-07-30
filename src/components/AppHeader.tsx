@@ -24,6 +24,8 @@ export default function AppHeader() {
         </Link>
         <nav aria-label="主要ナビゲーション">
           <Link href="/#features">機能</Link>
+          <Link href="/blog">Blog</Link>
+          <Link href="/help">Help</Link>
           <Link href="/sample">サンプル</Link>
           {feedbackUrl ? (
             <a href={feedbackUrl} target="_blank" rel="noopener noreferrer nofollow">

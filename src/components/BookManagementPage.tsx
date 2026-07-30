@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import AppHeader from "@/components/AppHeader";
+import PromotionCenter from "@/components/PromotionCenter";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getBook, updatePublication, type CloudBookRecord } from "@/lib/bookRepository";
 import { summarizeCloudAnalytics } from "@/lib/readerAnalytics";
@@ -94,6 +95,14 @@ export default function BookManagementPage() {
               <p>まだクラウド解析データはありません。</p>
             )}
           </section>
+          {book.status === "published" ? (
+            <PromotionCenter
+              project={book.bookProject}
+              slug={book.slug}
+              cloudBookId={book.id}
+              locale={book.bookProject.config.language}
+            />
+          ) : null}
           {message ? <p className="maker-status" aria-live="polite">{message}</p> : null}
         </>
       )}

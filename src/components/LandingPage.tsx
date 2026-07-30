@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import AppHeader from "@/components/AppHeader";
+import CharacterAssistant from "@/components/CharacterAssistant";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { PRICING_PLANS } from "@/lib/productTypes";
 
 export default function LandingPage() {
   const { user, authMode, configurationError } = useAuth();
@@ -10,7 +12,7 @@ export default function LandingPage() {
   return (
     <main className="landing-page">
       <AppHeader />
-      <section className="landing-hero">
+      <section className="landing-hero warm-hero">
         <div>
           <p className="maker-kicker">WebBookMaker beta</p>
           <h1>あなたの文章を、読まれるWeb書籍に。</h1>
@@ -37,17 +39,30 @@ export default function LandingPage() {
           {authMode === "blocked" ? (
             <p className="form-error compact">{configurationError}</p>
           ) : null}
+          <CharacterAssistant event="welcome" compact />
         </div>
         <aside className="landing-preview-card" aria-label="Web書籍の機能概要">
-          <span>RIGHT / LEFT BOUND</span>
-          <h2>Publish your work</h2>
-          <ul>
-            <li>記事や原稿を一冊の作品へまとめる</li>
-            <li>PC見開き・スマホ単ページ</li>
-            <li>付箋・続きから読む</li>
-            <li>公開後も同じURLで更新</li>
-          </ul>
+          <div className="editor-room-illustration" aria-hidden="true">
+            <span className="mio-figure">ミオ</span>
+            <span className="booky-figure">🐱</span>
+          </div>
+          <span>WebBookMaker編集部</span>
+          <h2>貼る → 本になる → URLで届く</h2>
+          <p>ミオと編集部猫ブッキーが、あなたの原稿をWeb作品として届ける準備を手伝います。</p>
         </aside>
+      </section>
+
+      <section className="landing-section paste-flow">
+        <p className="maker-kicker">How it works</p>
+        <h2>文章を貼り付けるだけで、公開まで。</h2>
+        <div className="publish-steps">
+          {["文章貼り付け", "表紙とテーマ", "Webブック生成", "公開URL", "SNSへ共有"].map((step, index) => (
+            <article key={step}>
+              <strong>{String(index + 1).padStart(2, "0")}</strong>
+              <span>{step}</span>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="landing-section">
@@ -96,6 +111,43 @@ export default function LandingPage() {
       </section>
 
       <section className="landing-section">
+        <p className="maker-kicker">Promotion</p>
+        <h2>公開したあと、作品を広める。</h2>
+        <div className="feature-grid">
+          <article>
+            <h3>Promotion Center</h3>
+            <p>公開後に、動画作成・X投稿・note紹介記事・URLコピーを同じ画面から進められます。</p>
+          </article>
+          <article>
+            <h3>X共有テンプレート</h3>
+            <p>作品タイトル、紹介文、ハッシュタグ、共有URLを自動生成。投稿前にコピーして確認できます。</p>
+          </article>
+          <article>
+            <h3>note記事テンプレート</h3>
+            <p>新作公開のお知らせ文を生成し、noteへ持ち込めます。決済や販売処理には関与しません。</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="landing-section" id="pricing">
+        <p className="maker-kicker">Pricing</p>
+        <h2>まずは無料で、作品を届ける。</h2>
+        <div className="pricing-grid">
+          {PRICING_PLANS.map((plan) => (
+            <article className="pricing-card" key={plan.id}>
+              <h3>{plan.name}</h3>
+              <strong>{plan.priceLabel}</strong>
+              <ul>
+                {plan.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="landing-section">
         <p className="maker-kicker">Use cases</p>
         <h2>ポートフォリオにも、研究にも、物語にも。</h2>
         <div className="portfolio-tags" aria-label="利用用途">
@@ -126,6 +178,9 @@ export default function LandingPage() {
         <p>
           ベータ版では1ユーザー5作品、本文20万文字、画像30枚まで。課金・クラウド画像最適化・AI生成は今後の工程です。
         </p>
+        <Link className="maker-primary-link" href={user ? "/books/new" : "/signup"}>
+          Webブックを作成する
+        </Link>
       </section>
     </main>
   );
