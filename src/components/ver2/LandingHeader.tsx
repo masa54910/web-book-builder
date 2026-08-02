@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { useAuth } from "@/lib/auth/AuthContext";
-import BrandLogo from "@/components/ver2/BrandLogo";
+import BrandLogo from "@/components/ui/BrandLogo";
 
 export default function LandingHeader() {
   const { user } = useAuth();
@@ -13,7 +13,15 @@ export default function LandingHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-emerald-900/10 bg-[rgba(255,253,249,0.92)] backdrop-blur-xl">
       <div className="mx-auto flex min-h-[76px] w-full max-w-[1440px] items-center justify-between gap-6 px-4 md:px-6">
-        <BrandLogo />
+        <BrandLogo
+          href="/"
+          className="inline-flex items-center gap-3 text-slate-900"
+          iconClassName="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 via-white to-emerald-50 shadow-sm ring-1 ring-emerald-100"
+          svgClassName="h-8 w-8"
+          copyClassName="min-w-0"
+          wordClassName="block truncate text-xl font-black tracking-tight"
+          taglineClassName="block truncate text-[11px] font-bold text-emerald-800/75"
+        />
         <button
           type="button"
           aria-label="メニューを開閉"
