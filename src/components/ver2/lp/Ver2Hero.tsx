@@ -50,7 +50,35 @@ export default function Ver2Hero({ heroText, onHeroTextChange, onStart, status }
             <textarea id="heroText" className={styles.textarea} value={heroText} onChange={(event) => onHeroTextChange(event.target.value)} placeholder={"ここに文章を貼り付けてください。\n\nまたは、PDF・Word・Markdown・TXTファイルをドラッグ＆ドロップ。\n改行もそのまま反映されます。"} />
             <div className={styles.composerFooter}>
               <span className={styles.charCount}><span id="heroCount">{heroText.length}</span>文字</span>
-              <button type="button" className={styles.createBtn} onClick={onStart}>Webブックを作る</button>
+              <div className={styles.composerActions}>
+                <button
+                  type="button"
+                  className={styles.attachBtn}
+                  onClick={() => {
+                    // TODO:
+                    // PDF
+                    // Word
+                    // Markdown
+                    // TXT
+                    // を読み込み
+                    //
+                    // 手入力を含め
+                    // 無料版20ページ以内か判定
+                    //
+                    // OKならWebブック生成へ進む
+                  }}
+                >
+                  <span className={styles.attachIcon} aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M4.5 7.5h5.2l1.7 2h8.1v8.2a2.3 2.3 0 0 1-2.3 2.3H6.8a2.3 2.3 0 0 1-2.3-2.3Z" />
+                      <path d="M12 16V9" />
+                      <path d="m9.5 11.5 2.5-2.5 2.5 2.5" />
+                    </svg>
+                  </span>
+                  ファイルを添付
+                </button>
+                <button type="button" className={styles.createBtn} onClick={onStart}>Webブックを作る</button>
+              </div>
             </div>
             {status ? <p style={{ margin: "8px 0 0", color: "#0f6f5d", fontSize: "12px", fontWeight: 700 }}>{status}</p> : null}
           </div>
