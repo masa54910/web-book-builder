@@ -28,11 +28,13 @@ export default function ImagePage({
   return (
     <figure className="image-page">
       <p className="editorial-label">Visual Record · {String(imageIndex).padStart(3, "0")}</p>
-      <div className="image-frame">
-        {src ? <ReaderImage src={src} alt={alt} /> : <div className="image-fallback">IMAGE {String(imageIndex).padStart(3, "0")}</div>}
+      <div className="image-page-content">
+        <div className="image-frame">
+          {src ? <ReaderImage src={src} alt={alt} /> : <div className="image-fallback">IMAGE {String(imageIndex).padStart(3, "0")}</div>}
+        </div>
+        {missing ? <p className="image-missing">画像ID「{imageIndex}」が登録されていません。</p> : null}
+        {caption ? <figcaption className="image-caption">{caption}</figcaption> : null}
       </div>
-      {missing ? <p className="image-missing">画像ID「{imageIndex}」が登録されていません。</p> : null}
-      {caption ? <figcaption className="image-caption">{caption}</figcaption> : null}
     </figure>
   );
 }

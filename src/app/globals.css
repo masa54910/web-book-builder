@@ -1740,8 +1740,15 @@ a {
 }
 
 .image-page {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.image-page-content {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
 }
 
 .image-frame {
@@ -2572,7 +2579,7 @@ a {
 .book-image-layout-contained .image-frame {
   border-style: dashed;
   padding: 10px;
-  background: rgba(231, 225, 213, 0.56);
+  background: transparent;
 }
 
 .book-cover-style-solid.cover-page,
