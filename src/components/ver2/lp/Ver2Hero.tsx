@@ -49,8 +49,8 @@ export default function Ver2Hero({ heroText, onHeroTextChange, onStart, status }
             </div>
             <textarea id="heroText" className={styles.textarea} value={heroText} onChange={(event) => onHeroTextChange(event.target.value)} placeholder={"ここに文章を貼り付けてください。\n\nまたは、PDF・Word・Markdown・TXTファイルをドラッグ＆ドロップ。\n改行もそのまま反映されます。"} />
             <div className={styles.composerFooter}>
-              <span className={styles.charCount}><span id="heroCount">{heroText.length}</span>文字</span>
-              <div className={styles.composerActions}>
+              <div className={styles.composerMeta}>
+                <span className={styles.charCount}><span id="heroCount">{heroText.length}</span>文字</span>
                 <button
                   type="button"
                   className={styles.attachBtn}
@@ -77,8 +77,8 @@ export default function Ver2Hero({ heroText, onHeroTextChange, onStart, status }
                   </span>
                   ファイルを添付
                 </button>
-                <button type="button" className={styles.createBtn} onClick={onStart}>Webブックを作る</button>
               </div>
+              <button type="button" className={styles.createBtn} onClick={onStart}>Webブックを作る</button>
             </div>
             {status ? <p style={{ margin: "8px 0 0", color: "#0f6f5d", fontSize: "12px", fontWeight: 700 }}>{status}</p> : null}
           </div>

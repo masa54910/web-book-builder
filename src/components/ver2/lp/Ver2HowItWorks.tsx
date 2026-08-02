@@ -11,35 +11,7 @@ export default function Ver2HowItWorks() {
             <div className={styles.stepHead}><span className={styles.stepNum}>1</span><h3>文章を貼り付ける</h3></div>
             <div className={styles.textPanel}>
               むかしむかし、ある町に<br />一人の少女がいました。<br /><br />少女は星が大好きで、<br />夜になるといつも空を<br />見上げていました。
-              <div className={styles.textPanelActions}>
-                <button
-                  type="button"
-                  className={styles.attachBtn}
-                  onClick={() => {
-                    // TODO:
-                    // PDF
-                    // Word
-                    // Markdown
-                    // TXT
-                    // を読み込み
-                    //
-                    // 手入力を含め
-                    // 無料版20ページ以内か判定
-                    //
-                    // OKならWebブック生成へ進む
-                  }}
-                >
-                  <span className={styles.attachIcon} aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                      <path d="M4.5 7.5h5.2l1.7 2h8.1v8.2a2.3 2.3 0 0 1-2.3 2.3H6.8a2.3 2.3 0 0 1-2.3-2.3Z" />
-                      <path d="M12 16V9" />
-                      <path d="m9.5 11.5 2.5-2.5 2.5 2.5" />
-                    </svg>
-                  </span>
-                  ファイルを添付
-                </button>
-                <a className={styles.textPanelCta} href="#signup">Webブックを作る</a>
-              </div>
+              <a className={styles.textPanelCta} href="#signup">Webブックを作る</a>
             </div>
           </article>
           <article className={styles.step}>

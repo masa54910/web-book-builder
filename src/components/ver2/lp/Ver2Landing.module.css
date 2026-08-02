@@ -361,7 +361,7 @@
   margin-top: 12px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
   gap: 14px;
   flex-wrap: wrap;
 }
@@ -3342,11 +3342,15 @@
   padding-left: 24px;
 }
 
-.composerActions {
+.composerMeta {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.composerFooter .createBtn {
+  margin-left: auto;
 }
 
 .attachBtn {
@@ -3425,45 +3429,7 @@
 }
 
 .textPanel {
-  padding-bottom: 118px;
-}
-
-.textPanelActions {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.textPanelActions .attachBtn,
-.textPanelActions .textPanelCta {
-  position: static;
-}
-
-.textPanelActions .attachBtn {
-  min-height: 40px;
-  padding: 8px 16px;
-  color: var(--wbm-green-900);
-  border: 1px solid transparent;
-  background:
-    radial-gradient(circle at 16% 18%, rgba(255, 255, 255, .96), transparent 34%) padding-box,
-    linear-gradient(145deg, rgba(255, 255, 255, .88), rgba(248, 255, 252, .64)) padding-box,
-    linear-gradient(135deg, rgba(255, 255, 255, .96), rgba(16, 120, 90, .16), rgba(201, 154, 69, .12)) border-box;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, .92),
-    inset 0 -1px 0 rgba(255, 255, 255, .2),
-    var(--wbm-shadow-sm);
-}
-
-.textPanelActions .attachBtn::after {
-  background: linear-gradient(115deg, rgba(255, 255, 255, .44), transparent 38%);
-}
-
-.textPanelActions .textPanelCta {
-  min-height: 42px;
+  padding-bottom: 74px;
 }
 
 .fileBadges span,
@@ -3527,22 +3493,35 @@
 }
 
 @media (max-width: 640px) {
-  .composerActions {
-    width: 100%;
-    align-items: stretch;
+  .composerFooter {
+    flex-direction: row;
+    align-items: flex-end;
   }
 
-  .composerActions .attachBtn {
-    width: 100%;
+  .composerMeta {
+    width: auto;
+    align-items: flex-start;
+  }
+
+  .composerMeta .attachBtn {
+    width: auto;
     justify-content: center;
   }
 
-  .textPanelActions {
-    left: 14px;
+  .composerFooter .createBtn {
+    width: auto;
+  }
+}
+
+@media (max-width: 380px) {
+  .composerFooter {
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .textPanelActions .attachBtn,
-  .textPanelActions .textPanelCta {
+  .composerMeta,
+  .composerMeta .attachBtn,
+  .composerFooter .createBtn {
     width: 100%;
   }
 }
