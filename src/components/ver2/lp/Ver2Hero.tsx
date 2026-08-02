@@ -27,9 +27,9 @@ export default function Ver2Hero({ heroText, onHeroTextChange, onStart, status }
           </div>
 
           <div className={styles.heroBook}>
-            <div className={styles.heroShowcaseFrame}>
+            <Link className={styles.heroShowcaseFrame} href="/sample" aria-label="サンプルのWebブックを見る">
               <Ver2BookShowcase />
-            </div>
+            </Link>
           </div>
         </div>
 

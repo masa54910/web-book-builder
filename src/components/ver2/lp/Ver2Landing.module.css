@@ -3190,6 +3190,120 @@
   stroke-linejoin: round;
 }
 
+.heroShowcaseFrame,
+.finalBookLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.finalBookLink {
+  display: block;
+  border-radius: var(--wbm-radius-large);
+  transition: var(--wbm-control-transition);
+}
+
+.heroShowcaseFrame:hover,
+.finalBookLink:hover {
+  transform: translateY(-3px);
+}
+
+.fileBadges span {
+  position: relative;
+  overflow: hidden;
+}
+
+.fileBadges span:nth-child(1) {
+  color: var(--wbm-green-700);
+  background:
+    linear-gradient(145deg, rgba(232, 248, 242, .96), rgba(255, 255, 255, .74)) padding-box,
+    linear-gradient(135deg, rgba(15, 111, 93, .24), rgba(255, 255, 255, .9)) border-box;
+}
+
+.fileBadges span:nth-child(2) {
+  color: #7a5a18;
+  background:
+    linear-gradient(145deg, rgba(255, 246, 224, .96), rgba(255, 255, 255, .74)) padding-box,
+    linear-gradient(135deg, rgba(201, 154, 69, .28), rgba(255, 255, 255, .9)) border-box;
+}
+
+.fileBadges span:nth-child(3) {
+  color: #9a5a17;
+  background:
+    linear-gradient(145deg, rgba(255, 240, 220, .96), rgba(255, 255, 255, .74)) padding-box,
+    linear-gradient(135deg, rgba(233, 138, 43, .28), rgba(255, 255, 255, .9)) border-box;
+}
+
+.fileBadges span:nth-child(4) {
+  color: #405d7a;
+  background:
+    linear-gradient(145deg, rgba(234, 242, 250, .96), rgba(255, 255, 255, .74)) padding-box,
+    linear-gradient(135deg, rgba(64, 93, 122, .2), rgba(255, 255, 255, .9)) border-box;
+}
+
+.sampleLink {
+  color: var(--wbm-green-900);
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255, 255, 255, .95), transparent 34%) padding-box,
+    linear-gradient(145deg, rgba(255, 255, 255, .86), rgba(255, 248, 232, .66)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(15, 111, 93, .28), rgba(201, 154, 69, .24)) border-box;
+}
+
+.sampleLink::before {
+  background:
+    linear-gradient(90deg, rgba(15, 111, 93, .46) 0 2px, transparent 2px),
+    linear-gradient(145deg, rgba(220, 246, 238, .98), rgba(255, 244, 220, .96));
+  box-shadow:
+    inset 0 0 0 1px rgba(15, 111, 93, .22),
+    0 6px 14px rgba(15, 111, 93, .12);
+}
+
+.reassuranceItem {
+  overflow: hidden;
+}
+
+.reassuranceItem::after {
+  content: "";
+  position: absolute;
+  inset: auto 18px 0;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  opacity: .72;
+  pointer-events: none;
+}
+
+.reassuranceItem:nth-child(1) {
+  background:
+    radial-gradient(circle at 7% 18%, rgba(15, 111, 93, .12), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, .78), rgba(234, 249, 243, .56)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .95), rgba(15, 111, 93, .28), rgba(201, 154, 69, .12)) border-box;
+}
+
+.reassuranceItem:nth-child(1)::after {
+  background: linear-gradient(90deg, var(--wbm-green-700), rgba(15, 111, 93, .12));
+}
+
+.reassuranceItem:nth-child(2) {
+  background:
+    radial-gradient(circle at 7% 18%, rgba(233, 138, 43, .14), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, .78), rgba(255, 242, 220, .56)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .95), rgba(233, 138, 43, .26), rgba(201, 154, 69, .14)) border-box;
+}
+
+.reassuranceItem:nth-child(2)::after {
+  background: linear-gradient(90deg, var(--wbm-orange-600), rgba(233, 138, 43, .12));
+}
+
+.reassuranceItem:nth-child(3) {
+  background:
+    radial-gradient(circle at 7% 18%, rgba(201, 154, 69, .16), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, .78), rgba(255, 249, 231, .58)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .95), rgba(201, 154, 69, .28), rgba(15, 111, 93, .12)) border-box;
+}
+
+.reassuranceItem:nth-child(3)::after {
+  background: linear-gradient(90deg, var(--wbm-gold-500), rgba(201, 154, 69, .12));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page *,
   .page *::before,
