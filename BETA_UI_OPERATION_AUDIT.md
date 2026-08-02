@@ -12,19 +12,19 @@ Ver.2 LP のデザインを維持したまま、画面上に存在する主要�
 | --- | --- | --- | --- |
 | はじめる | Header | 未ログイン時 `/signup?next=%2Fbooks%2Fnew`、ログイン時 `/books/new` | 動作済み |
 | ログイン | Header | `/login` へ遷移 | 動作済み |
-| 作り方 | Header/Footer | `/how-to` へ遷移 | 動作済み |
+| 作り方 | Header/Footer | `/#samples` へアンカー遷移 | 動作済み |
 | サンプル | Header/Footer | `/sample` へ遷移 | 動作済み |
 | 料金プラン | Header/Footer | `/pricing` へ遷移 | 動作済み |
-| 作品を広める | Header/Footer | `/promote` へ遷移 | 動作済み |
-| よくある質問 | Header/Footer | `/faq` へ遷移 | 動作済み |
+| 作品を広める | Header/Footer | `/#promotion` へアンカー遷移 | 動作済み |
+| よくある質問 | Header/Footer | `/#faq` へアンカー遷移 | 動作済み |
 | サンプルのWebブックを見る | Hero/下部CTA | `/books/hoshifuru-machi-no-chiisana-kiroku` へ遷移 | 動作済み |
 | ファイルを添付 | Hero/下部CTA | ファイル選択、drag & drop、抽出、本文追記 | 動作済み |
 | Webブックを作る | Hero/下部CTA | 推定ページ数確認ダイアログを表示 | 動作済み |
-| 分析レポート | かんたん3ステップ | `/dashboard` へ遷移 | 動作済み |
-| 動画を作る | Promotion | `/signup?next=%2Fdashboard` へ遷移 | 動作済み |
-| Xで共有する | Promotion | `/signup?next=%2Fdashboard` へ遷移 | 動作済み |
-| note記事を作る | Promotion | `/signup?next=%2Fdashboard` へ遷移 | 動作済み |
-| 作者ページを見る | Promotion | `/signup?next=%2Fdashboard` へ遷移 | 動作済み |
+| 分析レポートを見る | かんたん3ステップ | `/demo/analytics` へ遷移 | 動作済み |
+| 動画を作る | Promotion | `/demo/video` へ遷移 | 動作済み |
+| Xで共有する | Promotion | `/demo/x` へ遷移 | 動作済み |
+| note記事を作る | Promotion | `/demo/note` へ遷移 | 動作済み |
+| 作者ページを見る | Promotion | `/demo/author` へ遷移 | 動作済み |
 | FAQ開閉 | FAQ | details/summaryで展開 | 動作済み |
 | 利用規約 | Footer | `/terms` | 動作済み |
 | プライバシー | Footer | `/privacy` | 動作済み |
@@ -45,14 +45,24 @@ Ver.2 LP のデザインを維持したまま、画面上に存在する主要�
 | ログイン後復元（login経由） | `/login` 経由で復元確認 | この環境では `/books/new` が認証必須で、実認証完了まで未確認 |
 | `/books/new` UX最終確認 | 自動保存表示、保存時刻、推定ページ数、章構成、公開設定 | 認証通過後に最終実機確認が必要 |
 
-## 独立ページ（Gate 1）
+## 独立ページ（Gate 4再編）
 
 | ページ | 主な内容 | ホームへ戻る |
 | --- | --- | --- |
-| `/how-to` | 制作フロー、作成CTA、サンプル導線 | 設置済み |
-| `/pricing` | 無料枠とベータ期間の課金状態説明 | 設置済み |
-| `/promote` | 共有チャネル説明、ダッシュボード導線 | 設置済み |
-| `/faq` | FAQ要点と問い合わせ導線 | 設置済み |
+| `/pricing` | LPと統一した料金ページ（Hero/3カード/比較表/FAQ/CTA） | 設置済み |
+| `/sample` | サンプル一覧からReaderへ遷移 | 設置済み |
+
+削除済み: `/how-to` `/promote` `/faq`（LP内アンカーへ統合）
+
+## デモページ（Gate 4）
+
+| ページ | 目的 | 共通導線 |
+| --- | --- | --- |
+| `/demo/video` | 紹介動画作成見本 | `← ホームへ戻る` / `無料ではじめる` |
+| `/demo/x` | X投稿見本 | `← ホームへ戻る` / `無料ではじめる` |
+| `/demo/note` | note記事見本 | `← ホームへ戻る` / `無料ではじめる` |
+| `/demo/author` | 作者ページ見本 | `← ホームへ戻る` / `無料ではじめる` |
+| `/demo/analytics` | 分析レポート見本（デモデータ） | `← ホームへ戻る` / `無料ではじめる` |
 
 ## 認証
 

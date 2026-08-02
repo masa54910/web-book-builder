@@ -1,0 +1,229 @@
+.page {
+  min-height: 100vh;
+  padding: 24px 14px 54px;
+  background:
+    radial-gradient(circle at 8% 6%, rgba(44, 132, 108, 0.14), transparent 30%),
+    radial-gradient(circle at 92% 10%, rgba(223, 140, 43, 0.14), transparent 28%),
+    linear-gradient(180deg, #f9f6f0, #f3eee5 50%, #fbfaf7);
+}
+
+.shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 18px;
+}
+
+.topBar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.hero,
+.card,
+.compare,
+.faq,
+.cta,
+.faqItem {
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  border-radius: 26px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(255, 252, 246, 0.55));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    0 18px 44px rgba(34, 55, 47, 0.1);
+  backdrop-filter: blur(14px);
+}
+
+.hero {
+  padding: 26px;
+  text-align: center;
+}
+
+.kicker {
+  margin: 0;
+  color: #28746e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 10px 0 12px;
+  color: #1d2d28;
+  font-size: clamp(36px, 5vw, 72px);
+  letter-spacing: -0.04em;
+  line-height: 1.06;
+}
+
+.hero p {
+  margin: 0;
+  color: #5a6962;
+  line-height: 1.8;
+}
+
+.cards {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.card {
+  padding: 20px;
+  display: grid;
+  gap: 10px;
+}
+
+.badge {
+  display: inline-flex;
+  width: max-content;
+  min-height: 26px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 111, 93, 0.16);
+  background: rgba(238, 248, 243, 0.9);
+  color: #0f6f5d;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.card h2 {
+  margin: 0;
+  color: #1c2e28;
+  font-size: 42px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.price {
+  margin: 0;
+  color: #1f302b;
+  font-size: 56px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.price small {
+  font-size: 30%;
+  color: #6b7872;
+  font-weight: 800;
+}
+
+.card ul {
+  margin: 4px 0 8px;
+  padding-left: 18px;
+  color: #445952;
+  line-height: 1.8;
+}
+
+.cardPublish {
+  background:
+    linear-gradient(145deg, rgba(238, 248, 243, 0.84), rgba(255, 252, 246, 0.58));
+}
+
+.cardWriter {
+  background:
+    linear-gradient(145deg, rgba(244, 250, 247, 0.84), rgba(255, 252, 246, 0.58));
+}
+
+.compare,
+.faq,
+.cta {
+  padding: 22px;
+}
+
+.compare h2,
+.faq h2,
+.cta h2 {
+  margin: 0 0 12px;
+  color: #21322d;
+  font-size: clamp(24px, 3vw, 34px);
+  letter-spacing: -0.02em;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border-radius: 16px;
+}
+
+.tableWrap table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.tableWrap th,
+.tableWrap td {
+  border-bottom: 1px solid rgba(20, 53, 46, 0.1);
+  padding: 11px 12px;
+  text-align: left;
+  color: #334842;
+  font-size: 14px;
+}
+
+.tableWrap thead th {
+  color: #20332d;
+  background: rgba(230, 245, 239, 0.76);
+  font-weight: 800;
+}
+
+.faqGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.faqItem {
+  padding: 14px;
+  border-radius: 18px;
+}
+
+.faqItem h3 {
+  margin: 0 0 8px;
+  color: #1f312b;
+  font-size: 17px;
+}
+
+.faqItem p,
+.cta p {
+  margin: 0;
+  color: #5b6963;
+  line-height: 1.75;
+}
+
+.ctaActions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1080px) {
+  .cards,
+  .faqGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .page {
+    padding: 16px 10px 40px;
+  }
+
+  .hero,
+  .card,
+  .compare,
+  .faq,
+  .cta,
+  .faqItem {
+    border-radius: 18px;
+  }
+
+  .price {
+    font-size: 46px;
+  }
+}

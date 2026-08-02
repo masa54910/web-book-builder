@@ -61,11 +61,11 @@ export default function Ver2Header() {
         </button>
 
         <nav className={`${styles.mainNav} ${open ? styles.mainNavOpen : ""}`}>
-          <Link href="/how-to">作り方</Link>
+          <Link href="/#samples">作り方</Link>
           <Link href="/sample">サンプル</Link>
           <Link href="/pricing">料金プラン</Link>
-          <Link href="/promote">作品を広める</Link>
-          <Link href="/faq">よくある質問</Link>
+          <Link href="/#promotion">作品を広める</Link>
+          <Link href="/#faq">よくある質問</Link>
           <Link className={styles.navBtn} href="/login">ログイン</Link>
           <Link
             className={`${styles.navBtn} ${styles.navBtnPrimary}`}
