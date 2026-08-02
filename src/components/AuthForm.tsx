@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useAuth } from "@/lib/auth/AuthContext";
 
@@ -18,6 +18,12 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
 
   const title =
     mode === "login" ? "ログイン" : mode === "signup" ? "無料で始める" : "パスワード再設定";
+
+  useEffect(() => {
+    if (authMode === "blocked" && configurationError) {
+      console.error("Runtime configuration error:", configurationError);
+    }
+  }, [authMode, configurationError]);
 
   const submit = async () => {
     setError("");
@@ -49,12 +55,48 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
       setMessage(forgotResult.message ?? "再設定手順を送信しました。");
       return;
     }
-    router.push("/dashboard");
+    const next = new URLSearchParams(window.location.search).get("next");
+    const target = next && next.startsWith("/") ? next : "/dashboard";
+    router.push(target);
   };
 
   return (
     <main className="auth-page">
       <section className="auth-card">
+        <Link className="auth-brand" href="/" aria-label="WebBookMaker ホーム">
+          <span className="auth-brand-icon" aria-hidden="true">
+            <svg viewBox="0 0 96 82">
+              <defs>
+                <linearGradient id="authTabletFrame" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stopColor="#183f36" />
+                  <stop offset="1" stopColor="#0f6f5d" />
+                </linearGradient>
+                <linearGradient id="authBookPaper" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stopColor="#fffdf7" />
+                  <stop offset="1" stopColor="#f5ead6" />
+                </linearGradient>
+              </defs>
+              <ellipse cx="45" cy="75" rx="37" ry="5" fill="#d9c7a8" opacity=".28" />
+              <path d="M66 15 87 72H67Z" fill="#17483c" opacity=".95" />
+              <g transform="rotate(-4 45 39)">
+                <rect x="9" y="8" width="66" height="61" rx="9" fill="url(#authTabletFrame)" />
+                <rect x="15" y="14" width="54" height="49" rx="5" fill="#f9f4e9" />
+                <circle cx="42" cy="11" r="1.3" fill="#8cb0a4" />
+              </g>
+              <g transform="translate(18 20)">
+                <path d="M2 5c10-2 18 0 25 6v35c-7-5-15-7-25-5Z" fill="url(#authBookPaper)" stroke="#ead9bd" strokeWidth="1.4" />
+                <path d="M52 5c-10-2-18 0-25 6v35c7-5 15-7 25-5Z" fill="url(#authBookPaper)" stroke="#ead9bd" strokeWidth="1.4" />
+                <path d="M27 11v35" stroke="#dfcba8" strokeWidth="1.4" />
+                <path d="M10 17h11M10 23h12M10 29h10M34 17h10M34 23h12M34 29h9" stroke="#d9c6a5" strokeWidth="1.7" strokeLinecap="round" />
+                <path d="M13 4h9v15l-4.5-3-4.5 3Z" fill="#ef8b3d" />
+              </g>
+            </svg>
+          </span>
+          <span className="auth-brand-copy">
+            <strong>WebBookMaker</strong>
+            <small>あなたの文章を、そのままWeb書籍に。</small>
+          </span>
+        </Link>
         <Link className="auth-home-link" href="/">
           ← ホームへ戻る
         </Link>
@@ -67,7 +109,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
         ) : null}
         {authMode === "blocked" ? (
           <p className="form-error" aria-live="polite">
-            {configurationError}
+            現在ログイン機能を利用できません。しばらくしてから再度お試しください。
           </p>
         ) : null}
         <label>

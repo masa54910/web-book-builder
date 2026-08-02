@@ -27,7 +27,7 @@ body {
     radial-gradient(circle at 16% 10%, rgba(239, 188, 105, 0.2), transparent 31rem),
     radial-gradient(circle at 82% 14%, rgba(116, 214, 206, 0.12), transparent 28rem),
     linear-gradient(150deg, #fff8ec 0%, #f5e6d0 52%, #ead7bd 100%);
-  font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Segoe UI", sans-serif;
+  font-family: "Noto Sans JP", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", sans-serif;
 }
 
 button {
@@ -146,11 +146,11 @@ a {
 .auth-card h1,
 .legal-page h1 {
   margin: 0;
-  font-family: Georgia, "Times New Roman", "Hiragino Kaku Gothic ProN", "Yu Gothic", serif;
+  font-family: "Noto Sans JP", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", sans-serif;
   font-size: clamp(34px, 6vw, 72px);
-  font-weight: 800;
-  line-height: 1.08;
-  letter-spacing: -0.02em;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
 }
 
 .landing-hero p {
@@ -317,13 +317,56 @@ a {
 
 .auth-card {
   display: grid;
-  width: min(460px, 100%);
-  padding: 30px;
-  border: 1px solid rgba(79, 67, 48, 0.14);
-  border-radius: 22px;
+  width: min(540px, 100%);
+  padding: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 28px;
   gap: 16px;
-  background: rgba(255, 253, 247, 0.88);
-  box-shadow: 0 20px 56px rgba(57, 43, 24, 0.12);
+  background:
+    radial-gradient(circle at 88% 12%, rgba(201, 154, 69, 0.15), transparent 30%),
+    radial-gradient(circle at 8% 96%, rgba(15, 111, 93, 0.12), transparent 28%),
+    rgba(255, 255, 255, 0.74);
+  box-shadow: 0 24px 64px rgba(31, 49, 43, 0.12);
+  backdrop-filter: blur(18px);
+}
+
+.auth-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: #173f36;
+}
+
+.auth-brand-icon {
+  width: 62px;
+  height: 52px;
+  display: inline-flex;
+}
+
+.auth-brand-icon svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.auth-brand-copy strong,
+.auth-brand-copy small {
+  display: block;
+}
+
+.auth-brand-copy strong {
+  font-size: 31px;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  font-weight: 900;
+}
+
+.auth-brand-copy small {
+  margin-top: 4px;
+  color: #4a5f57;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .auth-card label {
@@ -332,12 +375,19 @@ a {
 }
 
 .auth-card input {
-  min-height: 44px;
-  padding: 10px 12px;
-  border: 1px solid rgba(60, 52, 41, 0.22);
-  border-radius: 10px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid rgba(40, 62, 55, 0.2);
+  border-radius: 14px;
   color: #23211c;
-  background: #fffdf7;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+
+.auth-card input:focus {
+  outline: none;
+  border-color: rgba(15, 111, 93, 0.5);
+  box-shadow: 0 0 0 5px rgba(15, 111, 93, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .auth-notice {
@@ -357,24 +407,40 @@ a {
 
 .auth-home-link {
   width: fit-content;
-  color: #79502a;
+  color: #2f3f39;
   font-size: 13px;
   font-weight: 800;
+  padding: 8px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 10px 24px rgba(31, 49, 43, 0.1);
   text-decoration: none;
 }
 
 .auth-home-link:hover,
 .auth-home-link:focus-visible {
-  color: #422819;
-  text-decoration: underline;
-  text-underline-offset: 0.22em;
+  color: #15231f;
+  transform: translateY(-1px);
 }
 
 .auth-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
   font-size: 13px;
+}
+
+.auth-links a {
+  color: #215248;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.auth-links a:hover,
+.auth-links a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.22em;
 }
 
 .maker-page {
@@ -967,7 +1033,9 @@ a {
 .maker-primary-button,
 .maker-primary-link {
   color: #fffaf0;
-  background: #174a48;
+  background: linear-gradient(135deg, #1b8a73, #0f6f5d);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 12px 26px rgba(15, 111, 93, 0.2);
   font-weight: 800;
 }
 

@@ -13,7 +13,7 @@ import {
 import { importManuscriptFile } from "@/lib/fileImport";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getBook, saveBook, updatePublication, type CloudBookRecord } from "@/lib/bookRepository";
-import { savePreviewProject } from "@/lib/browserBookStorage";
+import { deleteDraft, loadDraft, savePreviewProject } from "@/lib/browserBookStorage";
 import { uploadBookProjectAssets } from "@/lib/bookAssetStorage";
 import { createSlugCandidate, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
@@ -89,6 +89,46 @@ const INITIAL_EDITOR: EditorState = {
   externalSalesUrl: "",
   externalSalesLabel: "",
 };
+
+function initialStateFromDraft(mode: "new" | "edit") {
+  if (mode !== "new" || typeof window === "undefined") {
+    return { state: INITIAL_EDITOR, restored: false };
+  }
+  const draft = loadDraft();
+  if (!draft) {
+    return { state: INITIAL_EDITOR, restored: false };
+  }
+
+  const fields = draft.fields;
+  const rawText = typeof fields.rawText === "string" ? fields.rawText : "";
+  if (!rawText.trim()) {
+    return { state: INITIAL_EDITOR, restored: false };
+  }
+
+  deleteDraft();
+  return {
+    state: {
+      ...INITIAL_EDITOR,
+      title: typeof fields.title === "string" && fields.title ? fields.title : INITIAL_EDITOR.title,
+      subtitle: typeof fields.subtitle === "string" ? fields.subtitle : INITIAL_EDITOR.subtitle,
+      author: typeof fields.author === "string" ? fields.author : INITIAL_EDITOR.author,
+      description:
+        typeof fields.description === "string" ? fields.description : INITIAL_EDITOR.description,
+      publisherName:
+        typeof fields.publisherName === "string" && fields.publisherName
+          ? fields.publisherName
+          : INITIAL_EDITOR.publisherName,
+      publishedAt:
+        typeof fields.publishedAt === "string" ? fields.publishedAt : INITIAL_EDITOR.publishedAt,
+      copyrightText:
+        typeof fields.copyrightText === "string"
+          ? fields.copyrightText
+          : INITIAL_EDITOR.copyrightText,
+      rawText,
+    },
+    restored: true,
+  };
+}
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -181,6 +221,7 @@ function imagesFromRecord(record: CloudBookRecord): UploadedBookImage[] {
 }
 
 export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) {
+  const [draftSeed] = useState(() => initialStateFromDraft(mode));
   const router = useRouter();
   const params = useParams<{ id?: string }>();
   const { user } = useAuth();
@@ -188,11 +229,13 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [bookId, setBookId] = useState<string | undefined>(params.id);
-  const [state, setState] = useState<EditorState>(INITIAL_EDITOR);
+  const [state, setState] = useState<EditorState>(draftSeed.state);
   const [images, setImages] = useState<UploadedBookImage[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [warnings, setWarnings] = useState<string[]>([]);
-  const [statusMessage, setStatusMessage] = useState("");
+  const [statusMessage, setStatusMessage] = useState(
+    draftSeed.restored ? "LPで入力した下書きを復元しました。続きから編集できます。" : "",
+  );
   const [isLoading, setIsLoading] = useState(mode === "edit");
   const [isSaving, setIsSaving] = useState(false);
   const [dirty, setDirty] = useState(false);

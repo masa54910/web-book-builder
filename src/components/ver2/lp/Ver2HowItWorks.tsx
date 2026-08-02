@@ -1,0 +1,36 @@
+import styles from "./Ver2Landing.module.css";
+
+export default function Ver2HowItWorks() {
+  return (
+    <section className={styles.section} id="samples">
+      <div className={styles.container}>
+        <h2 className={styles.sectionTitle}>🌿 かんたん3ステップで、あなたの本が完成 🌿</h2>
+        <p className={styles.sectionLead}>文章を貼り、表紙を選び、URLで届ける。迷わず進める制作フローです。</p>
+        <div className={styles.steps}>
+          <article className={styles.step}>
+            <div className={styles.stepHead}><span className={styles.stepNum}>1</span><h3>文章を貼り付ける</h3></div>
+            <div className={styles.textPanel}>むかしむかし、ある町に<br />一人の少女がいました。<br /><br />少女は星が大好きで、<br />夜になるといつも空を<br />見上げていました。<button>貼り付ける</button></div>
+          </article>
+          <article className={styles.step}>
+            <div className={styles.stepHead}><span className={styles.stepNum}>2</span><h3>表紙とテーマを選ぶ</h3></div>
+            <div className={styles.coverGrid}><div className={`${styles.cover} ${styles.c1}`}>星降る街の<br />小さな記録</div><div className={`${styles.cover} ${styles.c2}`}>風の庭</div><div className={`${styles.cover} ${styles.c3}`}>小さな記録</div><div className={`${styles.cover} ${styles.c4}`}>旅の記憶</div></div>
+            <div className={styles.swatches}><i /><i /><i /><i /><i /><b>＋</b></div>
+          </article>
+          <article className={styles.step}>
+            <div className={styles.stepHead}><span className={styles.stepNum}>3</span><h3>公開して、読者へ届ける</h3></div>
+            <div className={styles.sharebox}><div className={styles.url}>https://webbookmaker.app/books/123456</div><div className={styles.socials}><span className={`${styles.social} ${styles.x}`}>𝕏</span><span className={`${styles.social} ${styles.note}`}>note</span><span className={`${styles.social} ${styles.line}`}>LINE</span><span className={`${styles.social} ${styles.link}`}>🔗</span></div></div>
+          </article>
+          <article className={`${styles.step} ${styles.growCard}`}>
+            <div className={styles.stepHead}><span className={styles.stepNum}>4</span><h3>公開後も作品を育てる</h3></div>
+            <div className={styles.growthPanel}>
+              <div className={styles.growthMetric}><span className={styles.growthIcon}>◔</span><div><strong>読了率</strong><small>読者がどこまで読んだか確認</small></div></div>
+              <div className={styles.growthMetric}><span className={styles.growthIcon}>🔗</span><div><strong>人気の章</strong><small>反応の良い章を把握</small></div></div>
+              <div className={styles.growthMetric}><span className={styles.growthIcon}>✎</span><div><strong>公開後も編集</strong><small>同じURLのまま更新</small></div></div>
+              <button type="button" className={styles.growthButton}>作品レポート →</button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+  );
+}
