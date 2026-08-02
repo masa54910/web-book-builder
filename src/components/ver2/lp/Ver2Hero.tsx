@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 
 import styles from "./Ver2Landing.module.css";
 import Ver2BookShowcase from "./Ver2BookShowcase";
@@ -42,43 +41,19 @@ export default function Ver2Hero({ heroText, onHeroTextChange, onStart, status }
               </div>
               {status ? <p style={{ margin: "8px 0 0", color: "#0f6f5d", fontSize: "12px", fontWeight: 700 }}>{status}</p> : null}
             </div>
+
+            <div className={styles.featureCards}>
+              <div className={styles.featureCard}><div className={styles.featureIcon}>🔗</div><div><h3>すぐに公開</h3><p>URLですぐ読める</p></div></div>
+              <div className={styles.featureCard}><div className={styles.featureIcon}>📖</div><div><h3>本らしい読書体験</h3><p>ページめくりに対応</p></div></div>
+              <div className={styles.featureCard}><div className={styles.featureIcon}>✨</div><div><h3>簡単に共有できる</h3><p>X・note・LINEに対応</p></div></div>
+            </div>
           </div>
 
           <div className={styles.heroBook}>
             <div className={styles.heroShowcaseFrame}>
               <Ver2BookShowcase />
-              <Image
-                className={styles.heroShiori}
-                src="/characters/shiori-standing.png"
-                width={158}
-                height={402}
-                alt="編集アシスタント しおり"
-                priority
-              />
-              <Image
-                className={styles.heroBooky}
-                src="/characters/booky-sitting.png"
-                width={118}
-                height={220}
-                alt="編集部猫 ブッキー"
-                priority
-              />
-              <div className={`${styles.heroSpeech} ${styles.heroSpeechShiori}`}>
-                <small>編集アシスタント しおり</small>
-                <strong>一緒に作品にしましょう！</strong>
-              </div>
-              <div className={`${styles.heroSpeech} ${styles.heroSpeechBooky}`}>
-                <small>編集部猫 ブッキー</small>
-                <strong>しおりも準備済みです。</strong>
-              </div>
             </div>
           </div>
-        </div>
-
-        <div className={styles.featureCards}>
-          <div className={styles.featureCard}><div className={styles.featureIcon}>🔗</div><div><h3>すぐに公開</h3><p>URLですぐ読める</p></div></div>
-          <div className={styles.featureCard}><div className={styles.featureIcon}>📖</div><div><h3>本らしい読書体験</h3><p>ページめくりに対応</p></div></div>
-          <div className={styles.featureCard}><div className={styles.featureIcon}>✨</div><div><h3>簡単に共有できる</h3><p>X・note・LINEに対応</p></div></div>
         </div>
       </div>
     </section>
