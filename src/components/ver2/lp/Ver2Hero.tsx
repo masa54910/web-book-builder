@@ -87,7 +87,7 @@ export default function Ver2Hero({
               <div className={styles.reassuranceItem}><span className={styles.reassuranceIcon}>↻</span><div><strong>自動保存に対応</strong><small>途中で閉じても安心です</small></div></div>
               <div className={styles.reassuranceItem}><span className={styles.reassuranceIcon}>🔒</span><div><strong>勝手に公開されません</strong><small>確認してから公開できます</small></div></div>
             </div>
-            <textarea id="heroText" className={styles.textarea} value={heroText} onChange={(event) => onHeroTextChange(event.target.value)} placeholder={"ここに文章を貼り付けてください。\n\nまたは、PDF・Word・Markdown・TXTファイルをドラッグ＆ドロップ。\n改行もそのまま反映されます。"} />
+            <textarea id="heroText" className={styles.textarea} value={heroText} onChange={(event) => onHeroTextChange(event.target.value)} placeholder={"ここに文章をコピペしてください。\n\nまたは、PDF・Word・Markdown・TXTファイルをドラッグ＆ドロップ。\n改行もそのまま反映されます。"} />
             <input
               ref={inputRef}
               className={styles.fileInputHidden}

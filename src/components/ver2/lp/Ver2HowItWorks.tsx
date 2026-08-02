@@ -1,3 +1,4 @@
+import Link from "next/link";
 import styles from "./Ver2Landing.module.css";
 
 export default function Ver2HowItWorks() {
@@ -21,7 +22,7 @@ export default function Ver2HowItWorks() {
           </article>
           <article className={styles.step}>
             <div className={styles.stepHead}><span className={styles.stepNum}>3</span><h3>公開して、読者へ届ける</h3></div>
-            <div className={styles.sharebox}><div className={styles.url}>https://webbookmaker.app/books/123456</div><div className={styles.socials}><span className={`${styles.social} ${styles.x}`}>𝕏</span><span className={`${styles.social} ${styles.note}`}>note</span><span className={`${styles.social} ${styles.line}`}>LINE</span><span className={`${styles.social} ${styles.link}`}>🔗</span></div></div>
+            <div className={styles.sharebox}><div className={styles.url}>https://webbookmaker.app/books/123456</div><div className={styles.socials}><Link className={`${styles.social} ${styles.x}`} href="/demo/x" aria-label="X共有の見本を見る">𝕏</Link><Link className={`${styles.social} ${styles.note}`} href="/demo/note" aria-label="note共有の見本を見る">note</Link><Link className={`${styles.social} ${styles.line}`} href="/demo/line" aria-label="LINE共有の見本を見る">LINE</Link><Link className={`${styles.social} ${styles.link}`} href="/demo/share" aria-label="リンク共有の見本を見る">🔗</Link></div></div>
           </article>
           <article className={`${styles.step} ${styles.growCard}`}>
             <div className={styles.stepHead}><span className={styles.stepNum}>4</span><h3>公開後も作品を分析</h3></div>
@@ -29,7 +30,7 @@ export default function Ver2HowItWorks() {
               <div className={styles.growthMetric}><span className={styles.growthIcon}>◔</span><div><strong>読了率</strong><small>読者がどこまで読んだか確認</small></div></div>
               <div className={styles.growthMetric}><span className={styles.growthIcon}>↗</span><div><strong>アクセス数</strong><small>公開後の広がりを把握</small></div></div>
               <div className={styles.growthMetric}><span className={styles.growthIcon}>★</span><div><strong>人気ページ</strong><small>読者の反応が集まる場所を確認</small></div></div>
-              <a className={styles.growthButton} href="/dashboard">分析レポート →</a>
+              <Link className={styles.growthButton} href="/demo/analytics">分析レポートを見る →</Link>
             </div>
           </article>
         </div>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t d">
+  <title id="t">本の中へ続く街</title>
+  <desc id="d">開いた本から夜の街が立ち上がるイメージ</desc>
+  <defs>
+    <linearGradient id="nightBook" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101f3a"/>
+      <stop offset="1" stop-color="#304970"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#nightBook)"/>
+  <ellipse cx="800" cy="760" rx="560" ry="90" fill="#f5b86a" opacity="0.34"/>
+  <path d="M360 700q220-120 440 0v120q-220-120-440 0z" fill="#f6ebd4"/>
+  <path d="M1240 700q-220-120-440 0v120q220-120 440 0z" fill="#f6ebd4"/>
+  <path d="M800 700v120" stroke="#d8c39d" stroke-width="8"/>
+  <g fill="#152b48">
+    <rect x="600" y="520" width="60" height="180"/><rect x="700" y="500" width="70" height="200"/>
+    <rect x="830" y="540" width="60" height="160"/><rect x="950" y="510" width="72" height="190"/>
+  </g>
+  <g fill="#ffdca0">
+    <circle cx="630" cy="600" r="9"/><circle cx="735" cy="570" r="10"/><circle cx="860" cy="620" r="9"/><circle cx="990" cy="590" r="10"/>
+  </g>
+  <text x="120" y="842" fill="#f8ecd0" font-size="34" font-family="'Noto Sans JP', sans-serif">本の世界に灯る街の記憶</text>
+</svg>

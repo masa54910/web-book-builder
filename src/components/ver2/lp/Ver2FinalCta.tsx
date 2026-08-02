@@ -64,7 +64,7 @@ export default function Ver2FinalCta({
                 <Link className={styles.sampleLink} href={SAMPLE_BOOK_ROUTE}>サンプルのWebブックを見る</Link>
               </div>
               <div className={styles.fileBadges}><span>PDF</span><span>Word</span><span>Markdown</span><span>TXT</span></div>
-              <textarea id="ctaText" className={styles.textarea} value={ctaText} onChange={(event) => onCtaTextChange(event.target.value)} placeholder="ここにあなたの文章を貼り付けてください…" />
+              <textarea id="ctaText" className={styles.textarea} value={ctaText} onChange={(event) => onCtaTextChange(event.target.value)} placeholder="ここに文章をコピペしてください…" />
               <input
                 ref={inputRef}
                 className={styles.fileInputHidden}

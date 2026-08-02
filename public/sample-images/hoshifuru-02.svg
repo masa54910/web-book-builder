@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t d">
+  <title id="t">窓辺と銀色の手紙</title>
+  <desc id="d">夜の窓辺で封筒と地図を広げる少女のイメージ</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#112544"/>
+      <stop offset="1" stop-color="#2b3d62"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect x="180" y="160" width="1240" height="620" rx="26" fill="#1b3254"/>
+  <rect x="250" y="220" width="760" height="420" rx="18" fill="#f5ead3"/>
+  <path d="M300 310h620M300 360h500M300 410h560M300 460h420" stroke="#d1bb97" stroke-width="14" stroke-linecap="round"/>
+  <rect x="1060" y="250" width="260" height="170" rx="16" fill="#d9dde7"/>
+  <path d="M1060 270l130 95 130-95" fill="none" stroke="#a8afc2" stroke-width="8"/>
+  <circle cx="1190" cy="600" r="120" fill="#f3a85f" opacity="0.35"/>
+  <path d="M1130 640q60-140 120 0" stroke="#ffe5c0" stroke-width="10" fill="none"/>
+  <circle cx="460" cy="560" r="48" fill="#f9ce8a"/>
+  <path d="M438 552q22 10 44 0" stroke="#8a5f35" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <text x="250" y="720" fill="#f6ead2" font-size="34" font-family="'Noto Sans JP', sans-serif">銀色の手紙と夜の地図</text>
+</svg>

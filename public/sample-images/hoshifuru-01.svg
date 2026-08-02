@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t d">
+  <title id="t">星降る街の時計台</title>
+  <desc id="d">夜空と時計台、街明かりを描いたイラスト</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#091a3a"/>
+      <stop offset="1" stop-color="#203a63"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffe4a3" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#ef9f4f" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <circle cx="1250" cy="190" r="120" fill="#fff8dc" opacity="0.25"/>
+  <g fill="#fff2c4" opacity="0.9">
+    <circle cx="120" cy="140" r="2"/><circle cx="300" cy="80" r="2"/><circle cx="520" cy="170" r="1.8"/>
+    <circle cx="680" cy="110" r="2"/><circle cx="900" cy="70" r="1.8"/><circle cx="1100" cy="130" r="2"/>
+    <circle cx="1320" cy="90" r="2"/><circle cx="1460" cy="160" r="1.8"/>
+  </g>
+  <path d="M170 670h190l70-220h120l50 220h240l80-280h140l40 280h170v230H170z" fill="#10253f"/>
+  <rect x="710" y="260" width="180" height="460" rx="16" fill="#162f4f"/>
+  <rect x="748" y="320" width="104" height="150" rx="12" fill="#213e63"/>
+  <circle cx="800" cy="400" r="45" fill="#f9d88d"/>
+  <path d="M800 400l20-18" stroke="#8b5a28" stroke-width="6" stroke-linecap="round"/>
+  <path d="M800 400v26" stroke="#8b5a28" stroke-width="6" stroke-linecap="round"/>
+  <rect x="0" y="720" width="1600" height="180" fill="#0e1f33"/>
+  <ellipse cx="820" cy="860" rx="520" ry="80" fill="url(#glow)"/>
+  <text x="90" y="830" fill="#f5e5be" font-size="36" font-family="'Noto Sans JP', sans-serif">星降る街の記録 - 時計台の夜</text>
+</svg>

@@ -17,7 +17,7 @@ import Ver2Hero from "@/components/ver2/lp/Ver2Hero";
 import Ver2HowItWorks from "@/components/ver2/lp/Ver2HowItWorks";
 import styles from "@/components/ver2/lp/Ver2Landing.module.css";
 import Ver2Pricing from "@/components/ver2/lp/Ver2Pricing";
-import Ver2PromotionCenter from "@/components/ver2/lp/Ver2PromotionCenter";
+import Ver2PromotionDemoCenter from "@/components/ver2/lp/Ver2PromotionDemoCenter";
 
 type ComposerTarget = "hero" | "cta";
 
@@ -206,7 +206,7 @@ export default function LandingPage() {
         />
         <Ver2FeatureStrip />
         <Ver2HowItWorks />
-        <Ver2PromotionCenter />
+        <Ver2PromotionDemoCenter />
         <Ver2Pricing />
         <Ver2FinalCta
           ctaText={ctaText}

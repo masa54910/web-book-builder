@@ -27,7 +27,7 @@ export default function SamplePage() {
           <p style={{ marginTop: "8px" }}>{sample.config.description}</p>
           <div className={styles.actions}>
             <Link href={SAMPLE_BOOK_ROUTE} className={styles.actionPrimary}>この作品を読む</Link>
-            <Link href="/#create" className={styles.actionSecondary}>この形式で自分の作品を作る</Link>
+            <Link href="/signup?next=%2Fbooks%2Fnew" className={styles.actionSecondary}>この形式で自分の作品を作る</Link>
           </div>
         </section>
       </main>
