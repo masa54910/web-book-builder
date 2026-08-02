@@ -104,7 +104,6 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
         <Link className="auth-home-link" href="/">
           ← ホームへ戻る
         </Link>
-        <p className="maker-kicker">WebBookMaker beta</p>
         <h1>{title}</h1>
         {authMode === "demo" ? (
           <p className="auth-notice">

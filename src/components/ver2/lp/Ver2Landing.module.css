@@ -707,7 +707,15 @@
 
 .growthButton {
   margin-top: auto;
-  width: 100%;
+  width: calc(100% - 48px);
+  margin-inline: 24px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  text-align: center;
+  white-space: nowrap;
   min-height: 48px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
