@@ -28,7 +28,7 @@ export default function LandingHeader() {
           <Link href="/pricing" className="rounded-full px-3 py-2 hover:bg-white/80">料金プラン</Link>
           <Link href="/faq" className="rounded-full px-3 py-2 hover:bg-white/80">FAQ</Link>
           <Link href="/login" className="rounded-full border border-[rgba(16,120,90,.12)] bg-[rgba(255,255,255,.82)] px-4 py-2 text-emerald-950 shadow-sm backdrop-blur">ログイン</Link>
-          <Link href={user ? "/books/new" : "/#create"} className="rounded-full bg-[#0D7A62] px-5 py-2 text-white shadow-sm transition-colors hover:bg-[#13906f]">Webブックを作る</Link>
+          <Link href={user ? "/books/new" : "/signup?next=%2Fbooks%2Fnew"} className="rounded-full bg-[#0D7A62] px-5 py-2 text-white shadow-sm transition-colors hover:bg-[#13906f]">はじめる</Link>
         </nav>
       </div>
       {open ? (
@@ -38,7 +38,7 @@ export default function LandingHeader() {
           <Link href="/pricing" onClick={() => setOpen(false)} className="rounded-xl px-3 py-2 hover:bg-emerald-50">料金プラン</Link>
           <Link href="/faq" onClick={() => setOpen(false)} className="rounded-xl px-3 py-2 hover:bg-emerald-50">FAQ</Link>
           <Link href="/login" onClick={() => setOpen(false)} className="rounded-xl border border-[rgba(16,120,90,.12)] bg-[rgba(255,255,255,.82)] px-3 py-2 text-emerald-950">ログイン</Link>
-          <Link href={user ? "/books/new" : "/#create"} onClick={() => setOpen(false)} className="rounded-xl bg-[#0D7A62] px-3 py-2 text-center text-white">Webブックを作る</Link>
+          <Link href={user ? "/books/new" : "/signup?next=%2Fbooks%2Fnew"} onClick={() => setOpen(false)} className="rounded-xl bg-[#0D7A62] px-3 py-2 text-center text-white">はじめる</Link>
         </nav>
       ) : null}
     </header>

@@ -184,7 +184,7 @@ export default function LandingPage() {
         ? "出版プランの案内へ移動します。現在ベータ版では決済は有効化していません。"
         : "作家プランの案内へ移動します。現在ベータ版では決済は有効化していません。",
     );
-    router.push("/#pricing");
+    router.push("/pricing");
   };
 
   return (
@@ -255,10 +255,10 @@ export default function LandingPage() {
                     入力へ戻る
                   </button>
                   <button type="button" className={styles.dialogSecondary} onClick={() => choosePlan("publishing")}>
-                    出版プランを選ぶ
+                    出版プランを見る
                   </button>
                   <button type="button" className={styles.dialogPrimary} onClick={() => choosePlan("writer")}>
-                    作家プランを選ぶ
+                    作家プランを見る
                   </button>
                 </>
               ) : (

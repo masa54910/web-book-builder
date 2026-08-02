@@ -67,8 +67,11 @@ export default function Ver2Header() {
           <Link href="/promote">作品を広める</Link>
           <Link href="/faq">よくある質問</Link>
           <Link className={styles.navBtn} href="/login">ログイン</Link>
-          <Link className={`${styles.navBtn} ${styles.navBtnPrimary}`} href={user ? "/books/new" : "/#create"}>
-            Webブックを作る
+          <Link
+            className={`${styles.navBtn} ${styles.navBtnPrimary}`}
+            href={user ? "/books/new" : "/signup?next=%2Fbooks%2Fnew"}
+          >
+            はじめる
           </Link>
         </nav>
       </div>

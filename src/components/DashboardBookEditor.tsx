@@ -13,7 +13,7 @@ import {
 import { importManuscriptFile } from "@/lib/fileImport";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getBook, saveBook, updatePublication, type CloudBookRecord } from "@/lib/bookRepository";
-import { deleteDraft, loadDraft, savePreviewProject } from "@/lib/browserBookStorage";
+import { deleteDraft, loadDraft, saveDraft, savePreviewProject } from "@/lib/browserBookStorage";
 import { uploadBookProjectAssets } from "@/lib/bookAssetStorage";
 import { createSlugCandidate, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
@@ -240,6 +240,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [isLoading, setIsLoading] = useState(mode === "edit");
   const [isSaving, setIsSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [autosaveAt, setAutosaveAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (mode !== "edit" || !params.id || !user) return;
@@ -281,6 +282,73 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       })),
     [state.rawText],
   );
+
+  const estimatedPages = useMemo(() => {
+    const charsPerPage = Math.max(180, Number(state.charactersPerPage) || 380);
+    const characterCount = state.rawText.trim().length;
+    if (!characterCount) return 0;
+    return Math.max(1, Math.ceil(characterCount / charsPerPage));
+  }, [state.charactersPerPage, state.rawText]);
+
+  const autosaveDraftFields = useMemo(
+    () => ({
+      mode,
+      title: state.title,
+      author: state.author,
+      subtitle: state.subtitle,
+      description: state.description,
+      rawText: state.rawText,
+      coverImage: state.coverImage,
+      coverFileName: state.coverFileName,
+      theme: state.theme,
+      language: state.language,
+      authorHandle: state.authorHandle,
+      authorBio: state.authorBio,
+      authorWebsiteUrl: state.authorWebsiteUrl,
+      authorXUrl: state.authorXUrl,
+      authorNoteUrl: state.authorNoteUrl,
+      images,
+    }),
+    [
+      mode,
+      state.title,
+      state.author,
+      state.subtitle,
+      state.description,
+      state.rawText,
+      state.coverImage,
+      state.coverFileName,
+      state.theme,
+      state.language,
+      state.authorHandle,
+      state.authorBio,
+      state.authorWebsiteUrl,
+      state.authorXUrl,
+      state.authorNoteUrl,
+      images,
+    ],
+  );
+
+  const autosaveLabel = useMemo(() => {
+    if (!autosaveAt) return "未保存";
+    const dt = new Date(autosaveAt);
+    if (Number.isNaN(dt.getTime())) return "未保存";
+    const hh = String(dt.getHours()).padStart(2, "0");
+    const mm = String(dt.getMinutes()).padStart(2, "0");
+    const ss = String(dt.getSeconds()).padStart(2, "0");
+    return `${hh}:${mm}:${ss}`;
+  }, [autosaveAt]);
+
+  useEffect(() => {
+    if (mode !== "new") return;
+    if (!dirty) return;
+    const timeoutId = window.setTimeout(() => {
+      const saved = saveDraft(autosaveDraftFields);
+      if (!saved) return;
+      setAutosaveAt(saved.savedAt);
+    }, 700);
+    return () => window.clearTimeout(timeoutId);
+  }, [autosaveDraftFields, dirty, mode]);
 
   const update = <K extends keyof EditorState>(key: K, value: EditorState[K]) => {
     setState((current) => ({
@@ -604,11 +672,27 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             <p className="maker-kicker">Realtime preview</p>
             <h2>{state.title || "無題のWebブック"}</h2>
             <p>{state.description || "説明文を入力すると、公開時の紹介文として使われます。"}</p>
+            <p className="maker-note">
+              文字数: {state.rawText.trim().length.toLocaleString()}字 / 推定ページ数: {estimatedPages}ページ / 自動保存: {autosaveLabel}
+            </p>
             <div className={`mini-book-preview theme-${state.theme} book-bg-${state.background} book-font-${state.fontFamily}`}>
               <strong>{state.title || "TITLE"}</strong>
               <span>{state.author || "Author"}</span>
               <p>{state.rawText.replace(/^# .+$/gm, "").trim().slice(0, 110) || "本文のプレビューがここに表示されます。"}</p>
             </div>
+          </section>
+
+          <section className="maker-card">
+            <h2>章構成プレビュー</h2>
+            {chapterOptions.length ? (
+              <ol className="maker-note">
+                {chapterOptions.map((chapter) => (
+                  <li key={chapter.value}>{chapter.label}</li>
+                ))}
+              </ol>
+            ) : (
+              <p className="maker-note">見出し（# 第一章）の形式で入力すると章構成が表示されます。</p>
+            )}
           </section>
 
         <div className="maker-card">
