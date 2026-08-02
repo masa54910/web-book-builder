@@ -3304,6 +3304,104 @@
   background: linear-gradient(90deg, var(--wbm-gold-500), rgba(201, 154, 69, .12));
 }
 
+/* Final pre-release polish: contrast, spacing, and quieter input controls */
+.navBtn:not(.navBtnPrimary) {
+  color: #24352f;
+  border-color: rgba(16, 120, 90, .12);
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255, 255, 255, .96), transparent 34%) padding-box,
+    linear-gradient(145deg, rgba(255, 255, 255, .86), rgba(247, 255, 251, .62)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .96), rgba(16, 120, 90, .12), rgba(201, 154, 69, .12)) border-box;
+}
+
+.navBtnPrimary {
+  color: #fff !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .18), transparent 44%) padding-box,
+    linear-gradient(135deg, #159070, #0d7a62) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .58), rgba(13, 122, 98, .42), rgba(201, 154, 69, .22)) border-box;
+}
+
+.navBtnPrimary:hover {
+  color: #fff !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .2), transparent 44%) padding-box,
+    linear-gradient(135deg, #1aa27e, #10886d) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .62), rgba(13, 122, 98, .46), rgba(201, 154, 69, .24)) border-box;
+}
+
+.sub {
+  line-height: 1.55;
+}
+
+.desc {
+  line-height: 1.62;
+}
+
+.textarea {
+  padding-left: 24px;
+}
+
+.fileBadges span,
+.fileBadges span:nth-child(1),
+.fileBadges span:nth-child(2),
+.fileBadges span:nth-child(3),
+.fileBadges span:nth-child(4) {
+  color: rgba(36, 53, 47, .68);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .9), rgba(255, 253, 248, .72)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(16, 120, 90, .12)) border-box;
+  border: 1px solid transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .92);
+}
+
+.reassuranceItem,
+.reassuranceItem:nth-child(1),
+.reassuranceItem:nth-child(2),
+.reassuranceItem:nth-child(3) {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .82), rgba(255, 255, 255, .62)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .94), rgba(16, 120, 90, .12), rgba(201, 154, 69, .1)) border-box;
+}
+
+.featureBadges {
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.featureBadges span {
+  min-height: 46px;
+  padding: 11px 13px;
+}
+
+.footerIcons span {
+  transition: var(--wbm-control-transition);
+}
+
+.footerIcons span:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .94),
+    0 12px 24px rgba(34, 55, 47, .09),
+    0 20px 42px rgba(34, 55, 47, .08);
+}
+
+@media (min-width: 1281px) {
+  .heroShowcaseFrame,
+  .heroShowcaseFrame:hover {
+    transform: translateY(-50px);
+  }
+
+  .heroShowcaseFrame .bookShowcase {
+    transform: scale(1.02);
+    transform-origin: center;
+  }
+
+  .heroShowcaseFrame:hover .bookShowcase {
+    transform: scale(1.03);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page *,
   .page *::before,
