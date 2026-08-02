@@ -130,6 +130,20 @@ a {
   font-weight: 800;
 }
 
+.app-user-chip {
+  max-width: 220px;
+  padding: 8px 14px;
+  border: 1px solid rgba(15, 111, 93, 0.2);
+  border-radius: 999px;
+  color: #1f3f38;
+  background: rgba(235, 248, 243, 0.8);
+  font-size: 12px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .landing-hero {
   display: grid;
   width: min(1180px, calc(100% - 32px));

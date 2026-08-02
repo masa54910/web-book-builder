@@ -6,7 +6,7 @@ import { getAppEnv } from "@/lib/appEnv";
 import { safeExternalUrl } from "@/lib/productTypes";
 
 export default function AppHeader() {
-  const { user, isLoading, signOut } = useAuth();
+  const { user, isLoading } = useAuth();
   const isPreview = getAppEnv() === "preview";
   const feedbackUrl = safeExternalUrl(process.env.NEXT_PUBLIC_FEEDBACK_URL ?? "");
 
@@ -23,26 +23,26 @@ export default function AppHeader() {
           WebBookMaker <span>beta</span>
         </Link>
         <nav aria-label="主要ナビゲーション">
-          <Link href="/#features">機能</Link>
-          <Link href="/blog">Blog</Link>
-          <Link href="/help">Help</Link>
-          <Link href="/sample">サンプル</Link>
-          {feedbackUrl ? (
-            <a href={feedbackUrl} target="_blank" rel="noopener noreferrer nofollow">
-              フィードバック
-            </a>
-          ) : null}
           {isLoading ? null : user ? (
             <>
-              <Link href="/dashboard">マイライブラリ</Link>
-              <Link href="/books/new">新しい作品</Link>
-              <Link href="/dashboard/settings">アカウント</Link>
-              <button type="button" onClick={() => void signOut()}>
-                ログアウト
-              </button>
+              <Link href="/dashboard">作品一覧</Link>
+              <Link href="/analytics">分析</Link>
+              <Link href="/settings">設定</Link>
+              <Link className="app-user-chip" href="/settings" aria-label="アカウント設定へ移動">
+                {user.displayName || user.email || "ユーザー"}
+              </Link>
             </>
           ) : (
             <>
+              <Link href="/#features">機能</Link>
+              <Link href="/blog">Blog</Link>
+              <Link href="/help">Help</Link>
+              <Link href="/sample">サンプル</Link>
+              {feedbackUrl ? (
+                <a href={feedbackUrl} target="_blank" rel="noopener noreferrer nofollow">
+                  フィードバック
+                </a>
+              ) : null}
               <Link href="/login">ログイン</Link>
               <Link className="nav-cta" href="/signup">
                 無料で始める

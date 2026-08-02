@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { BookConfig } from "@/config/bookConfig";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { buildReaderPages, toBoundPageOrder } from "@/lib/paginateText";
 import { recordReaderProgress } from "@/lib/readerAnalytics";
 import { themeClassNames } from "@/lib/themeSystem";
@@ -59,6 +60,7 @@ export default function BookReader({
   editHref?: string;
   cloudBookId?: string;
 }) {
+  const { user } = useAuth();
   const flipBookRef = useRef<FlipBookHandle | null>(null);
   const storage = useMemo(() => getSafeLocalStorage(), []);
   const [isMobile, setIsMobile] = useState(() =>
@@ -364,8 +366,8 @@ export default function BookReader({
           ) : null}
         </div>
         <div className="reader-masthead-actions">
-          <Link className="reader-edit-link" href="/">
-            ← ホームへ戻る
+          <Link className="reader-edit-link" href={user ? "/dashboard" : "/"}>
+            {user ? "← TOPへ戻る" : "← ホームへ戻る"}
           </Link>
           {editHref ? (
             <a className="reader-edit-link" href={editHref}>

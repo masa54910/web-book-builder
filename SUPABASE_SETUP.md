@@ -69,7 +69,25 @@ NEXT_PUBLIC_ENABLE_DEMO_MODE=false
 - 既存の検証アカウントを再利用する
 - 429発生時は時間を空け、まずSupabase Authログで原因を確認する
 
-## 7. RLS確認
+## 7. Confirm signupメールのブランド設定
+
+Supabase Dashboard > Authentication > Email Templates > Confirm signup で以下を設定します。
+
+- Subject: `【WebBookMaker】メールアドレスの確認をお願いします`
+- Sender Name: `WebBookMaker`
+- HTML template: `supabase/email-templates/confirm-signup.html` を貼り付け
+
+テンプレートは以下を利用します。
+
+- `supabase/email-templates/confirm-signup.html`
+
+注意:
+
+- SMTP未設定の場合、送信元メールアドレス（`mail.app.supabase.io`）はSupabase管理ドメインのままです。
+- この場合でも件名・差出人名・本文のブランド化は可能です。
+- 将来Resend等へ切り替える場合は、SMTP SettingsでカスタムSMTPを設定してください。
+
+## 8. RLS確認
 
 - ownerは自分の作品をCRUDできる
 - visitorは `published` かつ `public/unlisted` の作品だけ読める

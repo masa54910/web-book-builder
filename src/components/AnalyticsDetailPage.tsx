@@ -46,7 +46,6 @@ export default function AnalyticsDetailPage() {
 
   useEffect(() => {
     if (!user || !params.bookId) return;
-    setIsLoading(true);
     getBook(params.bookId, user.id)
       .then((record) => {
         if (!record) {
@@ -99,7 +98,10 @@ export default function AnalyticsDetailPage() {
               key={item.key}
               className={item.key === period ? "maker-primary-button" : "maker-secondary-button"}
               type="button"
-              onClick={() => setPeriod(item.key)}
+              onClick={() => {
+                setIsLoading(true);
+                setPeriod(item.key);
+              }}
             >
               {item.label}
             </button>

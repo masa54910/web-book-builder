@@ -293,7 +293,7 @@ export async function summarizeCloudAnalyticsDetailed(cloudBookId: string, perio
     .limit(10000);
   if (startAt) query = query.gte("created_at", startAt);
 
-  let base = await query;
+  const base = await query;
   let data = base.data;
   let error = base.error;
   if (error && error.message.toLowerCase().includes("referrer_source")) {

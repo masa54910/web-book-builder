@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { useAuth } from "@/lib/auth/AuthContext";
 import styles from "@/components/ver2/PricingShowcasePage.module.css";
+import HomeBackLink from "@/components/HomeBackLink";
 
 const compareRows = [
   { label: "作成可能ページ", free: "20ページまで", publish: "1冊ごとに無制限", writer: "無制限" },
@@ -11,21 +12,6 @@ const compareRows = [
   { label: "共有素材", free: "基本", publish: "拡張", writer: "拡張 + 分析" },
   { label: "紹介動画", free: "-", publish: "準備中", writer: "準備中" },
   { label: "分析レポート", free: "-", publish: "簡易", writer: "詳細" },
-];
-
-const faqs = [
-  {
-    q: "無料プランでも公開できますか？",
-    a: "はい。20ページまでなら無料で作成・公開できます。",
-  },
-  {
-    q: "出版プランはいつ使えますか？",
-    a: "現在は公開デモを先行提供中です。正式提供時はLPとダッシュボードでお知らせします。",
-  },
-  {
-    q: "作家プランはいつ開始しますか？",
-    a: "Plus機能は準備中です。先行案内はお問い合わせページから受け付けています。",
-  },
 ];
 
 export default function PricingShowcasePage() {
@@ -36,9 +22,7 @@ export default function PricingShowcasePage() {
     <main className={styles.page}>
       <div className={styles.shell}>
         <div className={styles.topBar}>
-          <Link className="auth-home-link" href="/">
-            ←ホームへ戻る
-          </Link>
+          <HomeBackLink />
         </div>
 
         <section className={styles.hero}>
@@ -74,7 +58,7 @@ export default function PricingShowcasePage() {
               <li>共有テンプレート拡張</li>
             </ul>
             <div className={styles.cardActions}>
-              <Link className={`maker-secondary-link ${styles.planAction} ${styles.publishAction}`} href="/demo/share">出版プランを見る</Link>
+              <Link className={`maker-secondary-link ${styles.planAction} ${styles.publishAction}`} href="/signup?plan=publish">出版プランではじめる</Link>
             </div>
           </article>
 
@@ -89,7 +73,7 @@ export default function PricingShowcasePage() {
               <li>作品ごとのアクセス分析</li>
             </ul>
             <div className={styles.cardActions}>
-              <p className={styles.writerPending} aria-live="polite">作家プランは準備中です（決済は未開始）</p>
+              <Link className={`maker-secondary-link ${styles.planAction} ${styles.writerAction}`} href="/signup?plan=writer">作家プランではじめる</Link>
             </div>
           </article>
         </section>
@@ -120,24 +104,12 @@ export default function PricingShowcasePage() {
           </div>
         </section>
 
-        <section className={styles.faq}>
-          <h2>FAQ</h2>
-          <div className={styles.faqGrid}>
-            {faqs.map((item) => (
-              <article key={item.q} className={styles.faqItem}>
-                <h3>{item.q}</h3>
-                <p>{item.a}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section className={styles.cta}>
-          <h2>まずは無料で試してみましょう</h2>
+          <h2>まずは無料ではじめてみましょう</h2>
           <p>登録後すぐに、下書きの続きから作品を作成できます。</p>
           <div className={styles.ctaActions}>
             <Link className="maker-primary-link" href={startHref}>無料ではじめる</Link>
-            <Link className="auth-home-link" href="/">←ホームへ戻る</Link>
+            <HomeBackLink />
           </div>
         </section>
       </div>

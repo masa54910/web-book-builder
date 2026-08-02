@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import HomeBackLink from "@/components/HomeBackLink";
 import Ver2Header from "@/components/ver2/lp/Ver2Header";
 import styles from "@/components/ver2/StandalonePage.module.css";
 import { loadSampleBookProject } from "@/lib/sampleBook";
@@ -14,7 +15,7 @@ export default function SamplePage() {
     <div className={styles.page}>
       <Ver2Header />
       <main className={styles.container}>
-        <Link href="/" className={styles.backLink}>← ホームへ戻る</Link>
+        <HomeBackLink />
         <section className={styles.hero}>
           <p className={styles.kicker}>Sample Books</p>
           <h1 className={styles.title}>本物のサンプルWebブック</h1>

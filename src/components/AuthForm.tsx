@@ -12,6 +12,12 @@ function safeNextPath(value: string | null) {
   return value;
 }
 
+function selectedPlanMessage(plan: string | null) {
+  if (plan === "publish") return "出版プランは現在準備中です。無料プランで先に作品作成を始められます。";
+  if (plan === "writer") return "作家プランは現在準備中です。無料プランで先に作品作成を始められます。";
+  return "";
+}
+
 export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot" }) {
   const router = useRouter();
   const { signIn, signUp, resetPassword, authMode, configurationError } = useAuth();
@@ -71,6 +77,15 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
       setMessage(forgotResult.message ?? "再設定手順を送信しました。");
       return;
     }
+
+    if (mode === "signup") {
+      const planMessage = selectedPlanMessage(new URLSearchParams(window.location.search).get("plan"));
+      if (planMessage) {
+        setMessage(planMessage);
+        return;
+      }
+    }
+
     router.push(safeNextPath(new URLSearchParams(window.location.search).get("next")));
   };
 
