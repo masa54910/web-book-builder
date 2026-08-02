@@ -561,16 +561,24 @@
 }
 
 .textPanel button,
-.textPanelCta {
+.textPanelSampleCta {
   position: absolute;
   right: 12px;
   bottom: 12px;
-  border: 0;
+  border: 1px solid rgba(111, 82, 31, 0.24);
   border-radius: 12px;
-  background: #fbeccb;
+  background: linear-gradient(145deg, rgba(251, 236, 203, 0.92), rgba(255, 246, 226, 0.84));
   color: #6f521f;
   font-weight: 700;
   padding: 9px 18px;
+  font-size: 13px;
+}
+
+.textPanelSampleCta {
+  opacity: 0.9;
+  cursor: default;
+  user-select: none;
+  pointer-events: none;
 }
 
 .coverGrid {

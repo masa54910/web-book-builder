@@ -12,7 +12,7 @@ export default function Ver2HowItWorks() {
             <div className={styles.stepHead}><span className={styles.stepNum}>1</span><h3>文章を貼り付ける</h3></div>
             <div className={styles.textPanel}>
               むかしむかし、ある町に<br />一人の少女がいました。<br /><br />少女は星が大好きで、<br />夜になるといつも空を<br />見上げていました。
-              <a className={styles.textPanelCta} href="/signup?next=%2Fbooks%2Fnew">はじめる</a>
+              <span className={styles.textPanelSampleCta} role="presentation" aria-hidden="true">Webブックを作る</span>
             </div>
           </article>
           <article className={styles.step}>

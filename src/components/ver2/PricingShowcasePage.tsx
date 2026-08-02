@@ -48,40 +48,49 @@ export default function PricingShowcasePage() {
         </section>
 
         <section className={styles.cards}>
-          <article className={styles.card}>
+          <article className={`${styles.card} ${styles.cardFree}`}>
             <span className={styles.badge}>Free</span>
             <h2>無料プラン</h2>
             <p className={styles.price}>¥0 <small>/ 月</small></p>
-            <ul>
+            <p className={styles.planLead}>まずは気軽に、無料で20ページまで公開できます。</p>
+            <ul className={styles.featureList}>
               <li>20ページまで</li>
               <li>作品作成・公開</li>
               <li>基本共有機能</li>
             </ul>
-            <Link className="maker-primary-link" href={startHref}>無料ではじめる</Link>
+            <div className={styles.cardActions}>
+              <Link className={`maker-primary-link ${styles.planAction}`} href={startHref}>無料ではじめる</Link>
+            </div>
           </article>
 
           <article className={`${styles.card} ${styles.cardPublish}`}>
             <span className={styles.badge}>Publish</span>
             <h2>出版プラン</h2>
             <p className={styles.price}>¥980 <small>/ 1作品</small></p>
-            <ul>
+            <p className={styles.planLead}>買い切りで1作品をしっかり仕上げる出版向けプランです。</p>
+            <ul className={styles.featureList}>
               <li>作品ごと買い切り</li>
               <li>公開導線の最適化</li>
               <li>共有テンプレート拡張</li>
             </ul>
-            <Link className="maker-secondary-link" href="/demo/share">出版プランを見る</Link>
+            <div className={styles.cardActions}>
+              <Link className={`maker-secondary-link ${styles.planAction} ${styles.publishAction}`} href="/demo/share">出版プランを見る</Link>
+            </div>
           </article>
 
           <article className={`${styles.card} ${styles.cardWriter}`}>
             <span className={styles.badge}>Writer</span>
             <h2>作家プラン</h2>
             <p className={styles.price}>¥1,980 <small>/ 月</small></p>
-            <ul>
+            <p className={styles.planLead}>連載や複数作品を継続運用する方向けの上位プランです。</p>
+            <ul className={styles.featureList}>
               <li>ページ数制限なし</li>
               <li>作者ページ運用</li>
               <li>作品ごとのアクセス分析</li>
             </ul>
-            <button className="maker-secondary-button" type="button" disabled>Plusを準備中</button>
+            <div className={styles.cardActions}>
+              <p className={styles.writerPending} aria-live="polite">作家プランは準備中です（決済は未開始）</p>
+            </div>
           </article>
         </section>
 

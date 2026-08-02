@@ -17,6 +17,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
   const { signIn, signUp, resetPassword, authMode, configurationError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -32,6 +33,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
   }, [authMode, configurationError]);
 
   const submit = async () => {
+    if (isSubmitting || authMode === "blocked") return;
     setError("");
     setMessage("");
     if (!email.trim()) {
@@ -40,6 +42,14 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
     }
     if (mode !== "forgot" && password.length < 8) {
       setError("パスワードは8文字以上で入力してください。");
+      return;
+    }
+    if (mode === "signup" && !passwordConfirm.trim()) {
+      setError("パスワード（確認）を入力してください。");
+      return;
+    }
+    if (mode === "signup" && password !== passwordConfirm) {
+      setError("パスワードが一致しません。");
       return;
     }
 
@@ -138,6 +148,17 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+        ) : null}
+        {mode === "signup" ? (
+          <label>
+            <span>パスワード（確認）</span>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={passwordConfirm}
+              onChange={(event) => setPasswordConfirm(event.target.value)}
             />
           </label>
         ) : null}
