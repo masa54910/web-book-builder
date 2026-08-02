@@ -16,7 +16,7 @@ export default function Ver2HowItWorks() {
           </article>
           <article className={styles.step}>
             <div className={styles.stepHead}><span className={styles.stepNum}>2</span><h3>表紙とテーマを選ぶ</h3></div>
-            <div className={styles.coverGrid}><div className={`${styles.cover} ${styles.c1}`}>星降る街の<br />小さな記録</div><div className={`${styles.cover} ${styles.c2}`}>風の庭</div><div className={`${styles.cover} ${styles.c3}`}>小さな記録</div><div className={`${styles.cover} ${styles.c4}`}>旅の記憶</div></div>
+            <div className={styles.coverGrid}><div className={`${styles.cover} ${styles.c1}`}>星降る街の<br />小さな記録</div><div className={`${styles.cover} ${styles.c2}`}>風の庭</div><div className={`${styles.cover} ${styles.c3}`}>フォトブック</div><div className={`${styles.cover} ${styles.c4}`}>旅の記憶</div></div>
             <div className={styles.swatches}><i /><i /><i /><i /><i /><b>＋</b></div>
           </article>
           <article className={styles.step}>
@@ -24,12 +24,12 @@ export default function Ver2HowItWorks() {
             <div className={styles.sharebox}><div className={styles.url}>https://webbookmaker.app/books/123456</div><div className={styles.socials}><span className={`${styles.social} ${styles.x}`}>𝕏</span><span className={`${styles.social} ${styles.note}`}>note</span><span className={`${styles.social} ${styles.line}`}>LINE</span><span className={`${styles.social} ${styles.link}`}>🔗</span></div></div>
           </article>
           <article className={`${styles.step} ${styles.growCard}`}>
-            <div className={styles.stepHead}><span className={styles.stepNum}>4</span><h3>公開後も作品を育てる</h3></div>
+            <div className={styles.stepHead}><span className={styles.stepNum}>4</span><h3>公開後も作品を分析</h3></div>
             <div className={styles.growthPanel}>
               <div className={styles.growthMetric}><span className={styles.growthIcon}>◔</span><div><strong>読了率</strong><small>読者がどこまで読んだか確認</small></div></div>
-              <div className={styles.growthMetric}><span className={styles.growthIcon}>🔗</span><div><strong>人気の章</strong><small>反応の良い章を把握</small></div></div>
-              <div className={styles.growthMetric}><span className={styles.growthIcon}>✎</span><div><strong>公開後も編集</strong><small>同じURLのまま更新</small></div></div>
-              <button type="button" className={styles.growthButton}>作品レポート →</button>
+              <div className={styles.growthMetric}><span className={styles.growthIcon}>↗</span><div><strong>アクセス数</strong><small>公開後の広がりを把握</small></div></div>
+              <div className={styles.growthMetric}><span className={styles.growthIcon}>★</span><div><strong>人気ページ</strong><small>読者の反応が集まる場所を確認</small></div></div>
+              <button type="button" className={styles.growthButton}>分析レポート →</button>
             </div>
           </article>
         </div>

@@ -3301,7 +3301,7 @@
 }
 
 .reassuranceItem:nth-child(3)::after {
-  background: linear-gradient(90deg, var(--wbm-gold-500), rgba(201, 154, 69, .12));
+  background: linear-gradient(90deg, rgba(118, 128, 124, .56), rgba(118, 128, 124, .1));
 }
 
 /* Final pre-release polish: contrast, spacing, and quieter input controls */
