@@ -9,6 +9,7 @@ WebBookMakerは、ユーザーが自分の原稿からページめくり付きWe
 ## 主な機能
 
 - 登録 / ログイン（ローカル開発のみデモ認証可。Preview/ProductionはSupabase必須）
+- 新規登録のパスワード再確認（クライアント検証）
 - マイライブラリ
 - 作品の作成、編集、保存、複製、ソフト削除
 - 公開 / 限定公開 / 非公開
@@ -29,6 +30,8 @@ WebBookMakerは、ユーザーが自分の原稿からページめくり付きWe
 - 作品ごとのテーマ設定（背景、フォント、文字サイズ、余白、ページ幅）
 - 外部販売/関連リンク表示
 - ローカル閲覧解析と、公開作品向けSupabaseイベント集約
+- `/analytics` + `/analytics/[bookId]` の実データ分析（期間別、流入元、デバイス、日別推移）
+- `/settings` で登録情報管理（表示名、プロフィール、SNS、通知、パスワード変更、ログアウト、退会）
 - 静的サンプル作品 `/sample`
 
 ## ベータ制限
@@ -89,7 +92,8 @@ Preview/Productionでは `NEXT_PUBLIC_ENABLE_DEMO_MODE=false` とし、Supabase�
 - `/reader` ローカルプレビュー
 - `/sample` サンプル作品
 - `/analytics` 作品分析案内
-- `/settings` プロフィール設定ショートカット
+- `/analytics/[bookId]` 作品分析詳細
+- `/settings` 登録情報管理
 - `/author` 作者ページ案内
 - `/terms` `/privacy` `/commerce` `/guidelines` `/refund` `/contact`
 - `/help` ヘルプ
@@ -108,6 +112,14 @@ Preview/Productionでは `NEXT_PUBLIC_ENABLE_DEMO_MODE=false` とし、Supabase�
 ## 本番化前の注意
 
 Supabase migrationは `supabase/migrations/001_initial_beta_schema.sql` にあります。Vercel Preview公開前に専用Supabaseプロジェクトへ適用してください。
+追加のGate5向け変更として `supabase/migrations/002_profile_preferences_and_analytics_dimensions.sql` を適用してください。
+
+## 認証運用メモ（Gate5）
+
+- Supabase側でメール確認が必須の場合、`signup` 直後に `session` が返らないため、確認メール完了前のログインは失敗します。
+- 連続登録や短時間の再試行はAuthレート制限 (`429`) を誘発します。E2E検証では同一IP/同一ドメインでの連打を避けてください。
+- 本リポジトリは `emailRedirectTo: ${location.origin}/auth/callback` を使用します。Supabase AuthのSite URLとRedirect URLに `http://localhost:3001` およびVercel URLを登録してください。
+- 退会API（`/api/account/delete`）は `SUPABASE_SERVICE_ROLE_KEY` が未設定だと `503` を返します。
 
 ## ベータ運用ドキュメント
 
@@ -117,5 +129,4 @@ Supabase migrationは `supabase/migrations/001_initial_beta_schema.sql` にあ�
 - `SUPABASE_SETUP.md`
 - `ENVIRONMENT_VARIABLES.md`
 - `KNOWN_ISSUES.md`
-- `DATA_DELETE_PROCEDURE.md`
 - `DATA_DELETION_PROCEDURE.md`

@@ -52,7 +52,7 @@ export default function AuthorPage() {
           {profile?.snsLinks.length ? (
             <div className="author-links">
               {profile.snsLinks.map((link) => (
-                <a key={link.id} href={link.url} target="_blank" rel="noreferrer">
+                <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer">
                   {link.label}
                 </a>
               ))}

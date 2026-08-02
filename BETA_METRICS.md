@@ -13,6 +13,22 @@ select count(*) as share_clicks from public.book_analytics_events where event_ty
 select count(distinct book_id) as viewed_books from public.book_analytics_events where event_type = 'view_start';
 select count(*) as completions from public.book_analytics_events where event_type = 'completed';
 select count(*) as external_cta_clicks from public.book_analytics_events where event_type = 'external_link_click';
+select referrer_source, count(*) as views
+from public.book_analytics_events
+where event_type = 'view_start'
+group by referrer_source
+order by views desc;
+select device_type, count(*) as views
+from public.book_analytics_events
+where event_type = 'view_start'
+group by device_type
+order by views desc;
+select count(*) as users_enabled_email_notifications
+from public.profile_preferences
+where email_notifications = true;
+select count(*) as users_enabled_campaign_notifications
+from public.profile_preferences
+where campaign_notifications = true;
 select count(*) as second_book_users
 from (
   select owner_id

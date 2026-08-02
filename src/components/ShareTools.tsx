@@ -34,13 +34,13 @@ export default function ShareTools({ bookId, cloudBookId, title }: { bookId: str
   return (
     <div className="share-tools" aria-label="作品を共有">
       <span>共有</span>
-      <a href={shareUrl("x", url, title)} target="_blank" rel="noreferrer" onClick={() => recordShare(bookId, cloudBookId)}>
+      <a href={shareUrl("x", url, title)} target="_blank" rel="noopener noreferrer" onClick={() => recordShare(bookId, cloudBookId)}>
         X
       </a>
-      <a href={shareUrl("facebook", url, title)} target="_blank" rel="noreferrer" onClick={() => recordShare(bookId, cloudBookId)}>
+      <a href={shareUrl("facebook", url, title)} target="_blank" rel="noopener noreferrer" onClick={() => recordShare(bookId, cloudBookId)}>
         Facebook
       </a>
-      <a href={shareUrl("line", url, title)} target="_blank" rel="noreferrer" onClick={() => recordShare(bookId, cloudBookId)}>
+      <a href={shareUrl("line", url, title)} target="_blank" rel="noopener noreferrer" onClick={() => recordShare(bookId, cloudBookId)}>
         LINE
       </a>
       <button type="button" onClick={() => void copy()}>
