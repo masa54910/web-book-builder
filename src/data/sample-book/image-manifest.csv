@@ -1,7 +1,7 @@
 chapter_order,chapter_title,image_index,image_url,alt,caption,source_path,local_path
-1,はじまりの灯,001,/sample-images/hoshifuru-01.svg,時計台の夜景,時計台から見た星空の記録,public/sample-images/hoshifuru-01.svg,
-1,はじまりの灯,002,/sample-images/hoshifuru-02.svg,銀色の手紙,手帳と封筒に届いた夜の地図,public/sample-images/hoshifuru-02.svg,
-2,銀色の手紙,003,/sample-images/hoshifuru-03.svg,流れ星の街路,夜景の道路を横切る流れ星,public/sample-images/hoshifuru-03.svg,
-2,銀色の手紙,004,/sample-images/hoshifuru-04.svg,朝を待つ望遠鏡,夜明け前の丘と古い望遠鏡,public/sample-images/hoshifuru-04.svg,
-3,朝を待つ望遠鏡,005,/sample-images/hoshifuru-05.svg,本の世界へ続く街,開いた本から立ち上がる夜の街,public/sample-images/hoshifuru-05.svg,
-3,朝を待つ望遠鏡,006,/sample-images/hoshifuru-06.svg,少女と流れ星,夜空に約束を描く少女,public/sample-images/hoshifuru-06.svg,
+1,はじまりの灯,001,/sample-images/hoshifuru-01.webp,時計台の夜景,時計台から見た星空の記録,public/sample-images/hoshifuru-01.webp,
+1,はじまりの灯,002,/sample-images/hoshifuru-02.webp,銀色の手紙,手帳と封筒に届いた夜の地図,public/sample-images/hoshifuru-02.webp,
+2,銀色の手紙,003,/sample-images/hoshifuru-03.webp,流れ星の街路,夜景の道路を横切る流れ星,public/sample-images/hoshifuru-03.webp,
+2,銀色の手紙,004,/sample-images/hoshifuru-04.webp,朝を待つ望遠鏡,夜明け前の丘と古い望遠鏡,public/sample-images/hoshifuru-04.webp,
+3,朝を待つ望遠鏡,005,/sample-images/hoshifuru-05.webp,本の世界へ続く街,開いた本から立ち上がる夜の街,public/sample-images/hoshifuru-05.webp,
+3,朝を待つ望遠鏡,006,/sample-images/hoshifuru-06.webp,少女と流れ星,夜空に約束を描く少女,public/sample-images/hoshifuru-06.webp,
