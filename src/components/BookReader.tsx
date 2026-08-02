@@ -3,6 +3,7 @@
 import HTMLFlipBook from "react-pageflip";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
 import type { BookConfig } from "@/config/bookConfig";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -248,6 +249,19 @@ export default function BookReader({
     [stickyNotes],
   );
 
+  const readerStyle = useMemo(() => {
+    const settings = config.themeSettings;
+    const style: CSSProperties & Record<string, string | undefined> = {};
+    if (settings?.textColor) style["--book-text-color"] = settings.textColor;
+    if (settings?.accentColor) style["--book-accent-color"] = settings.accentColor;
+    return style;
+  }, [config.themeSettings]);
+
+  const displayTitleLines = useMemo(
+    () => config.displayTitleLines?.filter((line) => line.trim().length > 0),
+    [config.displayTitleLines],
+  );
+
   const toggleAutoFlip = useCallback(() => {
     setAutoFlipEnabled((enabled) => {
       const nextEnabled = !enabled;
@@ -354,11 +368,19 @@ export default function BookReader({
       : "右矢印キーで次へ、左矢印キーで前へ。ページの角をドラッグ、またはタップしても移動できます。";
 
   return (
-    <main className={`reader-shell ${themeClassNames(config.theme, config.themeSettings)}`}>
+    <main className={`reader-shell ${themeClassNames(config.theme, config.themeSettings)}`} style={readerStyle}>
       <header className="reader-masthead">
         <div>
           <p className="reader-kicker">Digital Book Builder · Static Preview</p>
-          <h1>{config.title}</h1>
+          {displayTitleLines?.length ? (
+            <h1 className="fixed-title-lines fixed-title-lines-masthead" aria-label={config.title}>
+              {displayTitleLines.map((line) => (
+                <span key={line}>{line}</span>
+              ))}
+            </h1>
+          ) : (
+            <h1>{config.title}</h1>
+          )}
           {config.authorProfile?.handle ? (
             <a className="reader-author-link" href={`/authors/${config.authorProfile.handle}`}>
               @{config.authorProfile.handle} の作者ページ

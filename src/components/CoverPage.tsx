@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import Image from "next/image";
+import type { CSSProperties } from "react";
 import type { BookConfig } from "@/config/bookConfig";
 
 function CoverImage({
@@ -41,9 +42,12 @@ export default function CoverPage({
   back?: boolean;
   config: BookConfig;
 }) {
+  const coverStyle = config.themeSettings?.coverStyle || "overlay";
+  const coverTone = config.themeSettings?.accentColor || "#6bb9ad";
+  const displayTitleLines = config.displayTitleLines?.filter((line) => line.trim().length > 0);
   if (back) {
     return (
-      <div className="back-cover-page">
+      <div className={`back-cover-page book-cover-style-${coverStyle}`} style={{ "--book-accent-color": coverTone } as CSSProperties}>
         {config.coverImage ? (
           <CoverImage
             src={config.coverImage}
@@ -57,7 +61,7 @@ export default function CoverPage({
   }
 
   return (
-    <div className="cover-page">
+    <div className={`cover-page book-cover-style-${coverStyle}`} style={{ "--book-accent-color": coverTone } as CSSProperties}>
       {config.coverImage ? (
         <CoverImage
           src={config.coverImage}
@@ -67,7 +71,15 @@ export default function CoverPage({
       ) : null}
       <span className="cover-series">Web Book Builder</span>
       <div className="cover-copy">
-        <h2>{config.title}</h2>
+        {displayTitleLines?.length ? (
+          <h2 className="fixed-title-lines fixed-title-lines-cover" aria-label={config.title}>
+            {displayTitleLines.map((line) => (
+              <span key={line}>{line}</span>
+            ))}
+          </h2>
+        ) : (
+          <h2>{config.title}</h2>
+        )}
         <p>{config.subtitle}</p>
       </div>
       <span className="cover-author">{config.author}</span>

@@ -8,6 +8,7 @@ import { SAMPLE_BOOK_ROUTE, SAMPLE_BOOK_THEME } from "@/lib/sampleBookConstants"
 
 export default function SamplePage() {
   const sample = loadSampleBookProject();
+  const displayTitleLines = sample.config.displayTitleLines?.filter((line) => line.trim().length > 0);
   const chapterCount = sample.chapters.length;
   const pageEstimate = Math.max(1, Math.ceil(sample.chapters.reduce((sum, chapter) => sum + chapter.body.length, 0) / sample.config.charactersPerPage));
 
@@ -23,7 +24,15 @@ export default function SamplePage() {
         </section>
 
         <section className={styles.section}>
-          <h2>{sample.config.title}</h2>
+          {displayTitleLines?.length ? (
+            <h2 className="fixed-title-lines fixed-title-lines-inner" aria-label={sample.config.title}>
+              {displayTitleLines.map((line) => (
+                <span key={line}>{line}</span>
+              ))}
+            </h2>
+          ) : (
+            <h2>{sample.config.title}</h2>
+          )}
           <p>著者: {sample.config.author} / テーマ: {SAMPLE_BOOK_THEME} / 章数: {chapterCount} / 推定ページ数: {pageEstimate}</p>
           <p style={{ marginTop: "8px" }}>{sample.config.description}</p>
           <div className={styles.actions}>

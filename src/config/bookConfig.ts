@@ -17,6 +17,7 @@ export type BookTheme = ThemeId;
 export type BookConfig = {
   bookId: string;
   title: string;
+  displayTitleLines?: string[];
   subtitle: string;
   author: string;
   description: string;

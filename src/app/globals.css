@@ -983,6 +983,32 @@ a {
   line-height: 1.7;
 }
 
+.chapter-manager-list {
+  display: grid;
+  gap: 12px;
+}
+
+.chapter-manager-item {
+  padding: 12px;
+  border: 1px solid rgba(79, 67, 48, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.chapter-manager-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.theme-color-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
 .manuscript-input {
   min-height: 430px;
   font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
@@ -1187,6 +1213,8 @@ a {
   min-height: 100vh;
   padding: 24px clamp(12px, 3vw, 48px) 28px;
   isolation: isolate;
+  --book-text-color: var(--ink);
+  --book-accent-color: var(--cyan);
 }
 
 .reader-shell::before {
@@ -1244,6 +1272,32 @@ a {
   font-size: clamp(19px, 2.2vw, 28px);
   font-weight: 500;
   letter-spacing: 0.08em;
+}
+
+.fixed-title-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: inherit;
+  gap: 0.12em;
+}
+
+.fixed-title-lines span {
+  display: block;
+  white-space: nowrap;
+  text-wrap: nowrap;
+}
+
+.fixed-title-lines-cover {
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.fixed-title-lines-inner {
+  line-height: 1.24;
+}
+
+.fixed-title-lines-masthead {
+  line-height: 1.2;
 }
 
 .reader-author-link {
@@ -1309,7 +1363,7 @@ a {
   position: relative;
   height: 100%;
   overflow: hidden;
-  color: var(--ink);
+  color: var(--book-text-color);
   background:
     linear-gradient(90deg, rgba(50, 43, 33, 0.06), transparent 9%, transparent 91%, rgba(50, 43, 33, 0.07)),
     var(--paper);
@@ -1441,7 +1495,7 @@ a {
 .cover-author::before {
   width: 35px;
   height: 1px;
-  background: var(--cyan);
+  background: var(--book-accent-color);
   content: "";
 }
 
@@ -1538,7 +1592,7 @@ a {
 
 .contents-link:hover,
 .contents-link:focus-visible {
-  color: #276963;
+  color: var(--book-accent-color);
   outline: none;
 }
 
@@ -1608,7 +1662,7 @@ a {
   padding: 0;
   border: 0;
   cursor: pointer;
-  color: #5f4a2f;
+  color: color-mix(in srgb, var(--book-accent-color) 68%, #412a13);
   background: transparent;
   font: inherit;
   text-align: left;
@@ -2479,6 +2533,18 @@ a {
   font-size: 18px;
 }
 
+.book-leading-tight .text-page {
+  line-height: 1.72;
+}
+
+.book-leading-normal .text-page {
+  line-height: 1.95;
+}
+
+.book-leading-relaxed .text-page {
+  line-height: 2.16;
+}
+
 .book-margin-compact .text-page,
 .book-margin-compact .chapter-title-page,
 .book-margin-compact .contents-page {
@@ -2489,6 +2555,40 @@ a {
 .book-margin-wide .chapter-title-page,
 .book-margin-wide .contents-page {
   padding-inline: 72px;
+}
+
+.book-image-layout-full .image-frame {
+  border: 0;
+  margin-inline: -20px;
+}
+
+.book-image-layout-contained .image-frame {
+  border-style: dashed;
+  padding: 10px;
+  background: rgba(231, 225, 213, 0.56);
+}
+
+.book-cover-style-solid.cover-page,
+.book-cover-style-solid.back-cover-page {
+  background: color-mix(in srgb, var(--book-accent-color) 42%, #0f1622);
+}
+
+.book-cover-style-solid.cover-page::before,
+.book-cover-style-solid.back-cover-page::before {
+  background: linear-gradient(160deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.56));
+}
+
+.book-cover-style-band .cover-copy {
+  border-top: 0;
+  border-bottom: 0;
+  padding: 18px;
+  border-left: 3px solid var(--book-accent-color);
+  background: rgba(5, 8, 12, 0.3);
+}
+
+.book-cover-style-band .cover-series {
+  border-color: color-mix(in srgb, var(--book-accent-color) 62%, white);
+  color: color-mix(in srgb, var(--book-accent-color) 74%, #f9f3e4);
 }
 
 @media (max-width: 760px) {
