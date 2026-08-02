@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { BookProject } from "@/lib/bookProject";
 import { loadPreviewProject } from "@/lib/browserBookStorage";
 import BookReaderShell from "./BookReaderShell";
+import HomeBackLink from "./HomeBackLink";
 
 export default function DynamicReaderPage() {
   const [project, setProject] = useState<BookProject | null>(null);
@@ -32,6 +33,7 @@ export default function DynamicReaderPage() {
       <main className="empty-reader-page">
         <section>
           <p className="maker-kicker">WebBookMaker</p>
+          <HomeBackLink />
           <h1>作成中のWeb書籍がありません</h1>
           <p>作成画面で本文と基本情報を入力し、「プレビューを作成」を押してください。</p>
           <Link className="maker-primary-link" href="/">

@@ -3411,6 +3411,12 @@
     0 12px 28px rgba(34, 55, 47, .09);
 }
 
+.attachBtn:disabled {
+  cursor: wait;
+  opacity: .72;
+  transform: none;
+}
+
 .attachIcon {
   width: 18px;
   height: 18px;
@@ -3426,6 +3432,177 @@
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.fileInputHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.attachedFiles {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.attachedFiles span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: min(100%, 380px);
+  padding: 7px 10px 7px 12px;
+  border-radius: var(--wbm-radius-pill);
+  border: 1px solid rgba(15, 111, 93, .12);
+  background: rgba(255, 255, 255, .72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .88), var(--wbm-shadow-sm);
+  color: rgba(36, 53, 47, .82);
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.attachedFiles small {
+  color: rgba(36, 53, 47, .55);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.attachedFiles button {
+  border: 0;
+  border-radius: var(--wbm-radius-pill);
+  padding: 4px 8px;
+  background: rgba(239, 139, 61, .12);
+  color: var(--wbm-green-900);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: var(--wbm-control-transition);
+}
+
+.attachedFiles button:hover {
+  background: rgba(239, 139, 61, .2);
+  transform: translateY(-1px);
+}
+
+.flowDialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 253, 248, .72), transparent 42%),
+    rgba(16, 28, 24, .28);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.flowDialog {
+  width: min(100%, 620px);
+  padding: 30px;
+  border: 1px solid transparent;
+  border-radius: var(--wbm-radius-large);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .88), rgba(255, 252, 246, .76)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .96), rgba(15, 111, 93, .22), rgba(217, 164, 82, .2)) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .95),
+    var(--wbm-shadow-lg);
+  color: var(--wbm-text);
+}
+
+.dialogKicker {
+  margin: 0 0 8px;
+  color: var(--wbm-green-700);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.flowDialog h2 {
+  margin: 0 0 12px;
+  font-size: clamp(24px, 4vw, 34px);
+  letter-spacing: -.04em;
+}
+
+.flowDialog p {
+  margin: 12px 0 0;
+  color: var(--wbm-text-muted);
+  line-height: 1.75;
+}
+
+.dialogStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.dialogStats span,
+.dialogWarning {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .62);
+  border: 1px solid rgba(15, 111, 93, .11);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .86);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dialogWarning {
+  margin-top: 16px;
+  color: #8a4a18;
+  background: rgba(255, 242, 218, .82);
+  border-color: rgba(233, 138, 43, .22);
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.dialogPrimary,
+.dialogSecondary {
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--wbm-radius-pill);
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--wbm-control-transition);
+}
+
+.dialogPrimary {
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .23), transparent 44%) padding-box,
+    linear-gradient(135deg, var(--wbm-orange-400), var(--wbm-orange-600)) padding-box;
+  box-shadow: 0 16px 32px rgba(194, 116, 28, .24);
+}
+
+.dialogSecondary {
+  color: var(--wbm-text);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .78), rgba(255, 252, 246, .58)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .95), rgba(15, 111, 93, .18)) border-box;
+  box-shadow: var(--wbm-shadow-sm);
+}
+
+.dialogPrimary:hover,
+.dialogSecondary:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.03);
 }
 
 .textPanel {

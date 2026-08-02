@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import HomeBackLink from "@/components/HomeBackLink";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 export default function AuthCallbackPage() {
@@ -33,6 +34,7 @@ export default function AuthCallbackPage() {
     <main className="empty-reader-page">
       <section>
         <p className="maker-kicker">WebBookMaker beta</p>
+        <HomeBackLink />
         <h1>認証確認</h1>
         <p>{message}</p>
         <Link className="maker-secondary-link" href="/login">

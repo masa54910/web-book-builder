@@ -10,7 +10,11 @@
 - [x] 公開 / 限定公開 / 公開停止
 - [x] 公開URL `/books/[slug]`
 - [x] 作者ページ `/authors/[handle]`
-- [x] TXT / Markdown / Word / ZIP入力
+- [x] LP直接入力
+- [x] LPファイル添付
+- [x] 20ページ確認ダイアログ
+- [x] 登録前入力の保持
+- [x] TXT / Markdown / Word / PDF / ZIP入力
 - [x] 表紙画像
 - [x] 本文画像
 - [x] 付箋
@@ -44,6 +48,6 @@
 
 ## 外部変更未実行
 
-- GitHub push: 未実行
+- GitHub push: 作業単位ごとに実行
 - Vercel link/deploy: 未実行
 - Supabase本番migration: 未実行

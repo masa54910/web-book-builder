@@ -1,6 +1,7 @@
 "use client";
 
 import HTMLFlipBook from "react-pageflip";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { BookConfig } from "@/config/bookConfig";
@@ -363,6 +364,9 @@ export default function BookReader({
           ) : null}
         </div>
         <div className="reader-masthead-actions">
+          <Link className="reader-edit-link" href="/">
+            ← ホームへ戻る
+          </Link>
           {editHref ? (
             <a className="reader-edit-link" href={editHref}>
               編集画面へ戻る

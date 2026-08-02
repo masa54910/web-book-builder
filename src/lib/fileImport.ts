@@ -44,12 +44,12 @@ export function validateZipPath(path: string) {
 export function validateImportFile(file: File) {
   const extension = extensionOf(file.name);
   if (!BETA_LIMITS.allowedImportExtensions.includes(extension as never)) {
-    return "対応形式は .txt / .md / .markdown / .docx / .zip です。";
+    return "対応形式は .txt / .md / .markdown / .docx / .pdf / .zip です。";
   }
   if (extension === ".zip" && file.size > BETA_LIMITS.maxZipBytes) {
     return "ZIPファイルは50MBまでです。";
   }
-  if (extension !== ".zip" && file.size > BETA_LIMITS.maxTextBytes && extension !== ".docx") {
+  if (extension !== ".zip" && file.size > BETA_LIMITS.maxTextBytes) {
     return "原稿ファイルが大きすぎます。";
   }
   return "";
@@ -66,6 +66,57 @@ async function readDocxFile(file: File): Promise<ImportedManuscript> {
   return {
     text: result.value.trim(),
     warnings: result.messages.map((message) => message.message),
+  };
+}
+
+function decodePdfLiteral(value: string) {
+  return value
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\\\(/g, "(")
+    .replace(/\\\)/g, ")")
+    .replace(/\\\\/g, "\\")
+    .replace(/\\([0-7]{1,3})/g, (_match, octal: string) =>
+      String.fromCharCode(Number.parseInt(octal, 8)),
+    );
+}
+
+function decodePdfHex(hex: string) {
+  const normalized = hex.replace(/\s+/g, "");
+  if (!normalized || normalized.length % 2 !== 0) return "";
+  const bytes = normalized.match(/.{2}/g)?.map((pair) => Number.parseInt(pair, 16)) ?? [];
+  if (!bytes.length) return "";
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+    let output = "";
+    for (let index = 2; index + 1 < bytes.length; index += 2) {
+      output += String.fromCharCode((bytes[index] << 8) | bytes[index + 1]);
+    }
+    return output;
+  }
+  return new TextDecoder("utf-8", { fatal: false }).decode(new Uint8Array(bytes));
+}
+
+async function readPdfFile(file: File): Promise<ImportedManuscript> {
+  const buffer = await file.arrayBuffer();
+  const source = new TextDecoder("latin1", { fatal: false }).decode(buffer);
+  const literalTexts = [...source.matchAll(/\((?:\\.|[^\\)]){2,}\)/g)]
+    .map((match) => decodePdfLiteral(match[0].slice(1, -1)).trim())
+    .filter((text) => /[\p{Letter}\p{Number}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u.test(text));
+  const hexTexts = [...source.matchAll(/<([0-9A-Fa-f\s]{8,})>/g)]
+    .map((match) => decodePdfHex(match[1]).trim())
+    .filter((text) => /[\p{Letter}\p{Number}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u.test(text));
+  const text = [...literalTexts, ...hexTexts]
+    .join("\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  if (!text) {
+    throw new Error("PDFから文字情報を抽出できませんでした。画像だけのPDFはベータ版ではOCR対象外です。");
+  }
+  return {
+    text,
+    warnings: ["PDFはベータ版の簡易抽出です。改行や文字順が崩れる場合は、TXT・Markdown・Wordをご利用ください。"],
   };
 }
 
@@ -135,6 +186,7 @@ export async function importManuscriptFile(file: File): Promise<ImportedManuscri
   if (validation) throw new Error(validation);
   const extension = extensionOf(file.name);
   if (extension === ".docx") return readDocxFile(file);
+  if (extension === ".pdf") return readPdfFile(file);
   if (extension === ".zip") return readZipFile(file);
   return {
     text: await readTextFile(file),

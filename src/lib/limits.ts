@@ -9,7 +9,7 @@ export const BETA_LIMITS = {
   maxTextBytes: 5 * 1024 * 1024,
   allowedImageTypes: ["image/jpeg", "image/png", "image/webp"],
   allowedImageExtensions: [".jpg", ".jpeg", ".png", ".webp"],
-  allowedImportExtensions: [".txt", ".md", ".markdown", ".docx", ".zip"],
+  allowedImportExtensions: [".txt", ".md", ".markdown", ".docx", ".pdf", ".zip"],
   reservedSlugs: [
     "admin",
     "api",

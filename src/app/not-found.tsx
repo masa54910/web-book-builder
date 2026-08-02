@@ -8,7 +8,7 @@ export default function NotFound() {
         <h1>ページが見つかりません</h1>
         <p>URLが変更されたか、公開が停止されている可能性があります。</p>
         <Link className="maker-primary-link" href="/">
-          トップへ戻る
+          ← ホームへ戻る
         </Link>
       </section>
     </main>

@@ -6,6 +6,12 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@/lib/auth/AuthContext";
 
+function safeNextPath(value: string | null) {
+  if (!value) return "/dashboard";
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("://")) return "/dashboard";
+  return value;
+}
+
 export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot" }) {
   const router = useRouter();
   const { signIn, signUp, resetPassword, authMode, configurationError } = useAuth();
@@ -55,9 +61,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
       setMessage(forgotResult.message ?? "再設定手順を送信しました。");
       return;
     }
-    const next = new URLSearchParams(window.location.search).get("next");
-    const target = next && next.startsWith("/") ? next : "/dashboard";
-    router.push(target);
+    router.push(safeNextPath(new URLSearchParams(window.location.search).get("next")));
   };
 
   return (

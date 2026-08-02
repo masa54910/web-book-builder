@@ -11,7 +11,7 @@ export default function Ver2HowItWorks() {
             <div className={styles.stepHead}><span className={styles.stepNum}>1</span><h3>文章を貼り付ける</h3></div>
             <div className={styles.textPanel}>
               むかしむかし、ある町に<br />一人の少女がいました。<br /><br />少女は星が大好きで、<br />夜になるといつも空を<br />見上げていました。
-              <a className={styles.textPanelCta} href="#signup">Webブックを作る</a>
+              <a className={styles.textPanelCta} href="#create">Webブックを作る</a>
             </div>
           </article>
           <article className={styles.step}>
@@ -29,7 +29,7 @@ export default function Ver2HowItWorks() {
               <div className={styles.growthMetric}><span className={styles.growthIcon}>◔</span><div><strong>読了率</strong><small>読者がどこまで読んだか確認</small></div></div>
               <div className={styles.growthMetric}><span className={styles.growthIcon}>↗</span><div><strong>アクセス数</strong><small>公開後の広がりを把握</small></div></div>
               <div className={styles.growthMetric}><span className={styles.growthIcon}>★</span><div><strong>人気ページ</strong><small>読者の反応が集まる場所を確認</small></div></div>
-              <button type="button" className={styles.growthButton}>分析レポート →</button>
+              <a className={styles.growthButton} href="/dashboard">分析レポート →</a>
             </div>
           </article>
         </div>

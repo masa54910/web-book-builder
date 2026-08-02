@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import HomeBackLink from "@/components/HomeBackLink";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
       <main className="empty-reader-page">
         <section>
           <p className="maker-kicker">WebBookMaker beta</p>
+          <HomeBackLink />
           {authMode === "blocked" ? (
             <>
               <h1>Preview環境の設定が不足しています</h1>

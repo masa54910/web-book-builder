@@ -1,4 +1,5 @@
 import AppHeader from "@/components/AppHeader";
+import HomeBackLink from "@/components/HomeBackLink";
 
 export default function ContactPage() {
   return (
@@ -6,6 +7,7 @@ export default function ContactPage() {
       <AppHeader />
       <article className="maker-card">
         <p className="maker-kicker">Contact</p>
+        <HomeBackLink />
         <h1>お問い合わせ</h1>
         <p>ベータ版のため、問い合わせフォームは未実装です。限定ベータ開始前に運営メール、削除依頼先、著作権侵害申告先、または外部フォームを設定してください。</p>
       </article>

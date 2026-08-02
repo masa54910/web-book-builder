@@ -1,4 +1,5 @@
 import AppHeader from "@/components/AppHeader";
+import HomeBackLink from "@/components/HomeBackLink";
 
 export const metadata = {
   title: "Help | WebBookMaker",
@@ -12,6 +13,7 @@ export default function HelpPage() {
       <section className="dashboard-heading">
         <div>
           <p className="maker-kicker">Help</p>
+          <HomeBackLink />
           <h1>WebBookMakerの使い方</h1>
           <p>文章を貼り付け、表紙とテーマを選び、Web作品として公開するまでの基本ガイドです。</p>
         </div>

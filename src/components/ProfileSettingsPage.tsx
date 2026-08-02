@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import AppHeader from "@/components/AppHeader";
+import HomeBackLink from "@/components/HomeBackLink";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getOwnProfile, saveOwnProfile, type ProfileRecord } from "@/lib/profileRepository";
 import { normalizeHandle } from "@/lib/productTypes";
@@ -45,6 +46,7 @@ export default function ProfileSettingsPage() {
       <AppHeader />
       <section className="maker-card">
         <p className="maker-kicker">Account</p>
+        <HomeBackLink />
         <h1>プロフィール設定</h1>
         <p>
           作者ページに表示する情報を設定します。ハンドルを変更すると作者ページURLも変わります。

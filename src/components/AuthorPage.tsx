@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import AppHeader from "@/components/AppHeader";
+import HomeBackLink from "@/components/HomeBackLink";
 import { listPublishedBooksByAuthorHandle, type CloudBookRecord } from "@/lib/bookRepository";
 
 function estimateReadingMinutes(book: CloudBookRecord) {
@@ -44,6 +45,7 @@ export default function AuthorPage() {
         </div>
         <div>
           <p className="maker-kicker">Author page</p>
+          <HomeBackLink />
           <h1>{displayName}</h1>
           <p className="author-handle">@{handle}</p>
           <p>{profile?.bio || "この作者の公開作品一覧です。"}</p>

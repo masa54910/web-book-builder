@@ -40,6 +40,8 @@ assert.ok(validateZipPath("/absolute.txt"), "Absolute zip path should be rejecte
 
 const txt = new File(["hello"], "book.txt", { type: "text/plain" });
 assert.equal(validateImportFile(txt), "");
+const pdf = new File(["%PDF-1.7"], "book.pdf", { type: "application/pdf" });
+assert.equal(validateImportFile(pdf), "");
 const script = new File(["alert(1)"], "x.js", { type: "application/javascript" });
 assert.ok(validateImportFile(script), "Unsupported import extension should be rejected");
 

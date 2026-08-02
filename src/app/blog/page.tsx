@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AppHeader from "@/components/AppHeader";
+import HomeBackLink from "@/components/HomeBackLink";
 
 export const metadata = {
   title: "Blog | WebBookMaker",
@@ -32,6 +33,7 @@ export default function BlogPage() {
       <section className="dashboard-heading">
         <div>
           <p className="maker-kicker">WebBookMaker Blog</p>
+          <HomeBackLink />
           <h1>編集部ノート</h1>
           <p>Webで作品を届けるための考え方、更新情報、使い方のヒントをまとめます。</p>
         </div>

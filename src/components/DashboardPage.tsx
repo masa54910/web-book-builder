@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import AppHeader from "@/components/AppHeader";
+import HomeBackLink from "@/components/HomeBackLink";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
   duplicateBook,
@@ -103,6 +104,7 @@ export default function DashboardPage() {
       <div className="dashboard-heading">
         <div>
           <p className="maker-kicker">My library</p>
+          <HomeBackLink />
           <h1>マイライブラリ</h1>
           <p>作成したWeb書籍の保存、編集、公開URL管理を行います。</p>
         </div>

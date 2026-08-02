@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import styles from "./Ver2Landing.module.css";
 
 export default function Ver2Footer() {
@@ -5,7 +7,7 @@ export default function Ver2Footer() {
     <footer className={styles.footer} id="help">
       <div className={`${styles.container} ${styles.footerRow}`}>
         <div><strong>WebBookMaker</strong><br /><small>あなたの文章を、そのままWeb書籍に。</small></div>
-        <div className={styles.footerLinks}><a href="#howto">作り方</a><a href="#samples">サンプル</a><a href="#pricing">料金プラン</a><a href="#promotion">作品を広める</a><a href="#faq">よくある質問</a><a href="/terms">利用規約</a><a href="/privacy">プライバシー</a></div>
+        <div className={styles.footerLinks}><a href="#howto">作り方</a><a href="#samples">サンプル</a><a href="#pricing">料金プラン</a><a href="#promotion">作品を広める</a><a href="#faq">よくある質問</a><Link href="/terms">利用規約</Link><Link href="/privacy">プライバシー</Link><Link href="/commerce">特商法表記</Link><Link href="/guidelines">投稿ガイドライン</Link><Link href="/refund">返金方針</Link><Link href="/contact">お問い合わせ</Link></div>
         <div className={styles.footerIcons}><span>𝕏</span><span>◎</span><span>LINE</span><span>✉</span></div>
       </div>
       <div className={styles.copy}>© 2026 WebBookMaker All rights reserved.</div>

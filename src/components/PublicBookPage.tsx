@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import BookReaderShell from "@/components/BookReaderShell";
+import HomeBackLink from "@/components/HomeBackLink";
 import { canReadPublishedBook } from "@/lib/accessControl";
 import { materializeBookProjectAssets } from "@/lib/bookAssetStorage";
 import { getPublishedBookBySlug, type CloudBookRecord } from "@/lib/bookRepository";
@@ -41,6 +42,7 @@ export default function PublicBookPage() {
       <main className="empty-reader-page">
         <section>
           <p className="maker-kicker">WebBookMaker</p>
+          <HomeBackLink />
           <h1>Web書籍が見つかりません</h1>
           <p>{message || "公開停止、非公開、またはURLが変更された可能性があります。"}</p>
           <Link className="maker-primary-link" href="/">WebBookMakerへ</Link>

@@ -14,7 +14,8 @@ WebBookMakerは、ユーザーが自分の原稿からページめくり付きWe
 - 公開 / 限定公開 / 非公開
 - `/books/[slug]` 形式の公開読書ページ
 - `/authors/[handle]` 形式の作者ページ
-- TXT / Markdown / Word `.docx` / ZIP原稿入力
+- LPからの直接入力、ファイル添付、20ページ確認、登録前入力の引き継ぎ
+- TXT / Markdown / Word `.docx` / PDF / ZIP原稿入力
 - 表紙画像、本文画像、`[[image:画像ID]]` 挿入記法
 - 右綴じ / 左綴じ、PC見開き、スマホ単ページ
 - 目次ジャンプ、ページジャンプ、付箋、続きから読む
@@ -87,7 +88,10 @@ Preview/Productionでは `NEXT_PUBLIC_ENABLE_DEMO_MODE=false` とし、Supabase�
 - `/authors/[handle]` 作者ページ
 - `/reader` ローカルプレビュー
 - `/sample` サンプル作品
-- `/terms` `/privacy` `/contact`
+- `/analytics` 作品分析案内
+- `/settings` プロフィール設定ショートカット
+- `/author` 作者ページ案内
+- `/terms` `/privacy` `/commerce` `/guidelines` `/refund` `/contact`
 - `/help` ヘルプ
 - `/blog` 編集部ノート
 
@@ -104,3 +108,14 @@ Preview/Productionでは `NEXT_PUBLIC_ENABLE_DEMO_MODE=false` とし、Supabase�
 ## 本番化前の注意
 
 Supabase migrationは `supabase/migrations/001_initial_beta_schema.sql` にあります。Vercel Preview公開前に専用Supabaseプロジェクトへ適用してください。
+
+## ベータ運用ドキュメント
+
+- `BETA_RELEASE_CHECKLIST.md`
+- `BETA_UI_OPERATION_AUDIT.md`
+- `DEPLOYMENT.md`
+- `SUPABASE_SETUP.md`
+- `ENVIRONMENT_VARIABLES.md`
+- `KNOWN_ISSUES.md`
+- `DATA_DELETE_PROCEDURE.md`
+- `DATA_DELETION_PROCEDURE.md`

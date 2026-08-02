@@ -1,4 +1,5 @@
 import AppHeader from "@/components/AppHeader";
+import HomeBackLink from "@/components/HomeBackLink";
 
 export default function TermsPage() {
   return (
@@ -6,6 +7,7 @@ export default function TermsPage() {
       <AppHeader />
       <article className="maker-card">
         <p className="maker-kicker">Terms</p>
+        <HomeBackLink />
         <h1>利用規約（ベータ版ドラフト）</h1>
         <p>WebBookMakerは、ユーザー自身の原稿からWeb書籍を作成・保存・公開するためのベータサービスです。</p>
         <p>この文書はベータ版ドラフトです。正式公開前に運営者情報を確定し、専門家確認を行ってください。</p>

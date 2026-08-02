@@ -1,16 +1,51 @@
 import Link from "next/link";
+import { useRef, type DragEvent } from "react";
 
 import styles from "./Ver2Landing.module.css";
 import Ver2BookShowcase from "./Ver2BookShowcase";
+
+type AttachedFileSummary = {
+  name: string;
+  size: number;
+  fingerprint: string;
+};
 
 type Props = {
   heroText: string;
   onHeroTextChange: (value: string) => void;
   onStart: () => void;
+  onFileSelected: (file: File) => void;
+  attachedFiles: AttachedFileSummary[];
+  onRemoveAttachedFile: (fingerprint: string) => void;
+  isImporting?: boolean;
   status?: string;
 };
 
-export default function Ver2Hero({ heroText, onHeroTextChange, onStart, status }: Props) {
+const ACCEPTED_MANUSCRIPT_TYPES = ".txt,.md,.markdown,.docx,.pdf,.zip,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip";
+
+function readableFileSize(size: number) {
+  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)}MB`;
+  if (size >= 1024) return `${Math.ceil(size / 1024)}KB`;
+  return `${size}B`;
+}
+
+export default function Ver2Hero({
+  heroText,
+  onHeroTextChange,
+  onStart,
+  onFileSelected,
+  attachedFiles,
+  onRemoveAttachedFile,
+  isImporting,
+  status,
+}: Props) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (file) onFileSelected(file);
+  };
+
   return (
     <section className={styles.hero}>
       <div className={styles.container}>
@@ -33,8 +68,12 @@ export default function Ver2Hero({ heroText, onHeroTextChange, onStart, status }
           </div>
         </div>
 
-        <div className={styles.heroComposerRow}>
-          <div className={styles.composer}>
+        <div className={styles.heroComposerRow} id="create">
+          <div
+            className={styles.composer}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={handleDrop}
+          >
             <div className={styles.composerHead}>
               <div className={styles.composerLead}><strong>文章を貼り付ける</strong></div>
               <Link className={styles.sampleLink} href="/sample">サンプルのWebブックを見る</Link>
@@ -48,25 +87,25 @@ export default function Ver2Hero({ heroText, onHeroTextChange, onStart, status }
               <div className={styles.reassuranceItem}><span className={styles.reassuranceIcon}>🔒</span><div><strong>勝手に公開されません</strong><small>確認してから公開できます</small></div></div>
             </div>
             <textarea id="heroText" className={styles.textarea} value={heroText} onChange={(event) => onHeroTextChange(event.target.value)} placeholder={"ここに文章を貼り付けてください。\n\nまたは、PDF・Word・Markdown・TXTファイルをドラッグ＆ドロップ。\n改行もそのまま反映されます。"} />
+            <input
+              ref={inputRef}
+              className={styles.fileInputHidden}
+              type="file"
+              accept={ACCEPTED_MANUSCRIPT_TYPES}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onFileSelected(file);
+                event.currentTarget.value = "";
+              }}
+            />
             <div className={styles.composerFooter}>
               <div className={styles.composerMeta}>
                 <span className={styles.charCount}><span id="heroCount">{heroText.length}</span>文字</span>
                 <button
                   type="button"
                   className={styles.attachBtn}
-                  onClick={() => {
-                    // TODO:
-                    // PDF
-                    // Word
-                    // Markdown
-                    // TXT
-                    // を読み込み
-                    //
-                    // 手入力を含め
-                    // 無料版20ページ以内か判定
-                    //
-                    // OKならWebブック生成へ進む
-                  }}
+                  disabled={isImporting}
+                  onClick={() => inputRef.current?.click()}
                 >
                   <span className={styles.attachIcon} aria-hidden="true">
                     <svg viewBox="0 0 24 24">
@@ -75,11 +114,23 @@ export default function Ver2Hero({ heroText, onHeroTextChange, onStart, status }
                       <path d="m9.5 11.5 2.5-2.5 2.5 2.5" />
                     </svg>
                   </span>
-                  ファイルを添付
+                  {isImporting ? "読み込み中…" : "ファイルを添付"}
                 </button>
               </div>
               <button type="button" className={styles.createBtn} onClick={onStart}>Webブックを作る</button>
             </div>
+            {attachedFiles.length ? (
+              <div className={styles.attachedFiles} aria-label="添付済みファイル">
+                {attachedFiles.map((file) => (
+                  <span key={file.fingerprint}>
+                    {file.name} <small>{readableFileSize(file.size)}</small>
+                    <button type="button" onClick={() => onRemoveAttachedFile(file.fingerprint)}>
+                      解除
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
             {status ? <p style={{ margin: "8px 0 0", color: "#0f6f5d", fontSize: "12px", fontWeight: 700 }}>{status}</p> : null}
           </div>
         </div>

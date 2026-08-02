@@ -21,6 +21,7 @@ import { normalizeHandle, safeExternalUrl, type ExternalLink, type ThemeId } fro
 import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
 import { themePresets, type BookThemeSettings } from "@/lib/themeSystem";
 import CharacterAssistant from "@/components/CharacterAssistant";
+import HomeBackLink from "@/components/HomeBackLink";
 
 type EditorState = {
   title: string;
@@ -493,6 +494,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       <div className="dashboard-heading">
         <div>
           <p className="maker-kicker">Book editor</p>
+          <HomeBackLink />
           <h1>{mode === "new" ? "新しい作品" : "作品を編集"}</h1>
           <p>ベータ制限：最大5作品、本文20万文字、画像30枚、画像10MBまで。</p>
         </div>
@@ -576,11 +578,11 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         <div className="maker-card">
           <h2>原稿</h2>
           <label>
-            <span>TXT / Markdown / Word / ZIPを読み込む</span>
+            <span>TXT / Markdown / Word / PDF / ZIPを読み込む</span>
             <input
               ref={manuscriptInputRef}
               type="file"
-              accept=".txt,.md,.markdown,.docx,.zip"
+              accept=".txt,.md,.markdown,.docx,.pdf,.zip"
               onChange={(event) => void handleImport(event.target.files?.[0])}
             />
           </label>

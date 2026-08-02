@@ -1,4 +1,5 @@
 import AppHeader from "@/components/AppHeader";
+import HomeBackLink from "@/components/HomeBackLink";
 
 export default function PrivacyPage() {
   return (
@@ -6,6 +7,7 @@ export default function PrivacyPage() {
       <AppHeader />
       <article className="maker-card">
         <p className="maker-kicker">Privacy</p>
+        <HomeBackLink />
         <h1>プライバシーポリシー（ベータ版ドラフト）</h1>
         <p>ログイン、作品保存、公開URL提供のために、メールアドレス、作品データ、閲覧補助データを扱います。</p>
         <p>この文書はベータ版ドラフトです。正式公開前に運営者情報を確定し、専門家確認を行ってください。</p>

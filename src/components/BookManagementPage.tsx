@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import AppHeader from "@/components/AppHeader";
+import HomeBackLink from "@/components/HomeBackLink";
 import PromotionCenter from "@/components/PromotionCenter";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getBook, updatePublication, type CloudBookRecord } from "@/lib/bookRepository";
@@ -50,6 +51,7 @@ export default function BookManagementPage() {
       {!book ? (
         <section className="maker-card">
           <h1>作品管理</h1>
+          <HomeBackLink />
           <p>{message || "作品を読み込んでいます…"}</p>
           <Link className="maker-secondary-link" href="/dashboard">戻る</Link>
         </section>
@@ -58,6 +60,7 @@ export default function BookManagementPage() {
           <div className="dashboard-heading">
             <div>
               <p className="maker-kicker">Book settings</p>
+              <HomeBackLink />
               <h1>{book.title}</h1>
               <p>{book.description || "説明文は未設定です。"}</p>
             </div>

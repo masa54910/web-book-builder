@@ -11,7 +11,7 @@ export default function Ver2Header() {
   return (
     <header className={styles.header}>
       <div className={`${styles.container} ${styles.nav}`}>
-        <a className={styles.brand} href="#" aria-label="WebBookMaker ホーム">
+        <Link className={styles.brand} href="/" aria-label="WebBookMaker ホーム">
           <span className={styles.logoIcon}>
             <svg className={styles.logoTablet} viewBox="0 0 96 82" aria-hidden="true">
               <defs>
@@ -52,7 +52,7 @@ export default function Ver2Header() {
             <strong className={styles.logoWord}><span>WebBook</span><em>Maker</em></strong>
             <small className={styles.logoTagline}>あなたの文章を世界に1冊のWebブックに。</small>
           </span>
-        </a>
+        </Link>
 
         <button className={styles.menuToggle} aria-label="メニューを開く" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
           ☰
@@ -65,7 +65,7 @@ export default function Ver2Header() {
           <a href="#promotion">作品を広める</a>
           <a href="#help">よくある質問</a>
           <Link className={styles.navBtn} href="/login">ログイン</Link>
-          <a className={`${styles.navBtn} ${styles.navBtnPrimary}`} href="#signup">Webブックを作る</a>
+          <a className={`${styles.navBtn} ${styles.navBtnPrimary}`} href="#create">Webブックを作る</a>
         </nav>
       </div>
     </header>
