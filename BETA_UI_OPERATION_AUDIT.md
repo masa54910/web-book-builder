@@ -10,13 +10,13 @@ Ver.2 LP のデザインを維持したまま、画面上に存在する主要�
 
 | 表示 | 配置 | 現在の動作 | 状態 |
 | --- | --- | --- | --- |
-| Webブックを作る | Header | LP入力欄 `#create` へ移動 | 動作済み |
+| Webブックを作る | Header | 未ログイン時 `/` の入力欄、ログイン時 `/books/new` | 動作済み |
 | ログイン | Header | `/login` へ遷移 | 動作済み |
-| 作り方 | Header/Footer | `#howto` へスクロール | 動作済み |
-| サンプル | Header/Footer | `#samples` へスクロール | 動作済み |
-| 料金プラン | Header/Footer | `#pricing` へスクロール | 動作済み |
-| 作品を広める | Header/Footer | `#promotion` へスクロール | 動作済み |
-| よくある質問 | Header/Footer | FAQへスクロール | 動作済み |
+| 作り方 | Header/Footer | `/how-to` へ遷移 | 動作済み |
+| サンプル | Header/Footer | `/sample` へ遷移 | 動作済み |
+| 料金プラン | Header/Footer | `/pricing` へ遷移 | 動作済み |
+| 作品を広める | Header/Footer | `/promote` へ遷移 | 動作済み |
+| よくある質問 | Header/Footer | `/faq` へ遷移 | 動作済み |
 | サンプルのWebブックを見る | Hero/下部CTA | `/sample` へ遷移 | 動作済み |
 | ファイルを添付 | Hero/下部CTA | ファイル選択、drag & drop、抽出、本文追記 | 動作済み |
 | Webブックを作る | Hero/下部CTA | 推定ページ数確認ダイアログを表示 | 動作済み |
@@ -32,6 +32,15 @@ Ver.2 LP のデザインを維持したまま、画面上に存在する主要�
 | 投稿ガイドライン | Footer | `/guidelines` | 動作済み |
 | 返金方針 | Footer | `/refund` | 動作済み |
 | お問い合わせ | Footer | `/contact` | 動作済み |
+
+## 独立ページ（Gate 1）
+
+| ページ | 主な内容 | ホームへ戻る |
+| --- | --- | --- |
+| `/how-to` | 制作フロー、作成CTA、サンプル導線 | 設置済み |
+| `/pricing` | 無料枠とベータ期間の課金状態説明 | 設置済み |
+| `/promote` | 共有チャネル説明、ダッシュボード導線 | 設置済み |
+| `/faq` | FAQ要点と問い合わせ導線 | 設置済み |
 
 ## 認証
 

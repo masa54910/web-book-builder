@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { useAuth } from "@/lib/auth/AuthContext";
 import styles from "./Ver2Landing.module.css";
 
 export default function Ver2Header() {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
 
   return (
@@ -59,13 +61,15 @@ export default function Ver2Header() {
         </button>
 
         <nav className={`${styles.mainNav} ${open ? styles.mainNavOpen : ""}`}>
-          <a href="#howto">作り方</a>
-          <a href="#samples">サンプル</a>
-          <a href="#pricing">料金プラン</a>
-          <a href="#promotion">作品を広める</a>
-          <a href="#help">よくある質問</a>
+          <Link href="/how-to">作り方</Link>
+          <Link href="/sample">サンプル</Link>
+          <Link href="/pricing">料金プラン</Link>
+          <Link href="/promote">作品を広める</Link>
+          <Link href="/faq">よくある質問</Link>
           <Link className={styles.navBtn} href="/login">ログイン</Link>
-          <a className={`${styles.navBtn} ${styles.navBtnPrimary}`} href="#create">Webブックを作る</a>
+          <Link className={`${styles.navBtn} ${styles.navBtnPrimary}`} href={user ? "/books/new" : "/#create"}>
+            Webブックを作る
+          </Link>
         </nav>
       </div>
     </header>
