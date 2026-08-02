@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useRef, type DragEvent } from "react";
 
+import { SAMPLE_BOOK_ROUTE } from "@/lib/sampleBookConstants";
 import Ver2BookShowcase from "./Ver2BookShowcase";
 import styles from "./Ver2Landing.module.css";
 
@@ -60,7 +61,7 @@ export default function Ver2FinalCta({
             >
               <div className={styles.composerHead}>
                 <div className={styles.composerLead}><strong>文章を貼り付ける</strong></div>
-                <Link className={styles.sampleLink} href="/sample">サンプルのWebブックを見る</Link>
+                <Link className={styles.sampleLink} href={SAMPLE_BOOK_ROUTE}>サンプルのWebブックを見る</Link>
               </div>
               <div className={styles.fileBadges}><span>PDF</span><span>Word</span><span>Markdown</span><span>TXT</span></div>
               <textarea id="ctaText" className={styles.textarea} value={ctaText} onChange={(event) => onCtaTextChange(event.target.value)} placeholder="ここにあなたの文章を貼り付けてください…" />
@@ -111,7 +112,7 @@ export default function Ver2FinalCta({
               {status ? <p style={{ margin: "8px 0 0", color: "#0f6f5d", fontSize: "12px", fontWeight: 700 }}>{status}</p> : null}
             </div>
           </div>
-          <Link className={styles.finalBookLink} href="/sample" aria-label="サンプルのWebブックを見る">
+          <Link className={styles.finalBookLink} href={SAMPLE_BOOK_ROUTE} aria-label="サンプルのWebブックを見る">
             <Ver2BookShowcase />
           </Link>
         </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useRef, type DragEvent } from "react";
 
+import { SAMPLE_BOOK_ROUTE } from "@/lib/sampleBookConstants";
 import styles from "./Ver2Landing.module.css";
 import Ver2BookShowcase from "./Ver2BookShowcase";
 
@@ -62,7 +63,7 @@ export default function Ver2Hero({
           </div>
 
           <div className={styles.heroBook}>
-            <Link className={styles.heroShowcaseFrame} href="/sample" aria-label="サンプルのWebブックを見る">
+            <Link className={styles.heroShowcaseFrame} href={SAMPLE_BOOK_ROUTE} aria-label="サンプルのWebブックを見る">
               <Ver2BookShowcase />
             </Link>
           </div>
@@ -76,7 +77,7 @@ export default function Ver2Hero({
           >
             <div className={styles.composerHead}>
               <div className={styles.composerLead}><strong>文章を貼り付ける</strong></div>
-              <Link className={styles.sampleLink} href="/sample">サンプルのWebブックを見る</Link>
+              <Link className={styles.sampleLink} href={SAMPLE_BOOK_ROUTE}>サンプルのWebブックを見る</Link>
             </div>
             <div className={styles.fileBadges} aria-label="対応ファイル形式">
               <span>PDF</span><span>Word</span><span>Markdown</span><span>TXT</span>
