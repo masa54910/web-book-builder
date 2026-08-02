@@ -1,3 +1,6 @@
+import Image from "next/image";
+
+import { SAMPLE_BOOK_PREVIEW_IMAGE, SAMPLE_BOOK_TITLE } from "@/lib/sampleBookConstants";
 import styles from "./Ver2Landing.module.css";
 
 export default function Ver2PromotionCenter() {
@@ -9,7 +12,18 @@ export default function Ver2PromotionCenter() {
         <div className={styles.promoGrid}>
           <article className={`${styles.promo} ${styles.videoCard}`}>
             <div className={styles.promoCopy}><span className={styles.promoLabel}>動画で伝える</span><h3>紹介動画を作成</h3><p>作品の魅力を動画で伝えましょう。YouTubeやSNSへ、そのまま紹介できます。</p><ul className={styles.promoChecks}><li>表紙と本文を自動で映像化</li><li>BGM・ナレーションに対応</li><li>ワンクリックで書き出し</li></ul></div>
-            <div className={`${styles.promoPreview} ${styles.videoPreview}`}><div className={styles.videoScreen}><div className={styles.videoBook} /><span className={styles.playButton}>▶</span></div></div>
+            <div className={`${styles.promoPreview} ${styles.videoPreview}`}>
+              <div className={styles.videoScreen}>
+                <Image
+                  className={styles.videoPreviewImage}
+                  src={SAMPLE_BOOK_PREVIEW_IMAGE}
+                  alt={`${SAMPLE_BOOK_TITLE} の紹介動画プレビュー`}
+                  fill
+                  sizes="(max-width: 640px) 90vw, (max-width: 1200px) 46vw, 420px"
+                />
+                <span className={styles.playButton}>▶</span>
+              </div>
+            </div>
             <a className={`${styles.promoCta} ${styles.videoCta}`} href="/signup?next=%2Fdashboard">動画を作る →</a>
           </article>
           <article className={`${styles.promo} ${styles.xCard}`}>
