@@ -1,18 +1,13 @@
-import Image from "next/image";
-
 function ReaderImage({ src, alt }: { src: string; alt: string }) {
-  if (src.startsWith("data:") || src.startsWith("blob:")) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={alt} />;
-  }
-
+  // Use intrinsic sizing so portrait assets are never stretched to the frame.
+  // eslint-disable-next-line @next/next/no-img-element
   return (
-    <Image
+    <img
+      className="reader-image"
       src={src}
       alt={alt}
-      fill
-      sizes="(max-width: 760px) 100vw, 50vw"
-      style={{ objectFit: "contain" }}
+      loading="lazy"
+      decoding="async"
     />
   );
 }
