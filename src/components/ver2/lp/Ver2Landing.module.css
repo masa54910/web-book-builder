@@ -560,7 +560,8 @@
   font-size: 14px;
 }
 
-.textPanel button {
+.textPanel button,
+.textPanelCta {
   position: absolute;
   right: 12px;
   bottom: 12px;
@@ -2822,7 +2823,8 @@
 .createBtn,
 .growthButton,
 .promoCta,
-.textPanel button {
+.textPanel button,
+.textPanelCta {
   position: relative;
   isolation: isolate;
   gap: 8px;
@@ -2841,7 +2843,8 @@
 .createBtn::after,
 .growthButton::after,
 .promoCta::after,
-.textPanel button::after {
+.textPanel button::after,
+.textPanelCta::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -2905,7 +2908,8 @@
 }
 
 .createBtn,
-.textPanel button {
+.textPanel button,
+.textPanelCta {
   color: #fff;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, .23), transparent 44%) padding-box,
@@ -2929,7 +2933,8 @@
 .createBtn:hover,
 .growthButton:hover,
 .promoCta:hover,
-.textPanel button:hover {
+.textPanel button:hover,
+.textPanelCta:hover {
   transform: translateY(-2px);
   filter: brightness(1.035);
 }
@@ -2939,7 +2944,8 @@
 .createBtn:active,
 .growthButton:active,
 .promoCta:active,
-.textPanel button:active {
+.textPanel button:active,
+.textPanelCta:active {
   transform: translateY(0) scale(.985);
 }
 
@@ -2949,6 +2955,7 @@
 .growthButton:focus-visible,
 .promoCta:focus-visible,
 .textPanel button:focus-visible,
+.textPanelCta:focus-visible,
 .footerLinks a:focus-visible,
 .footerIcons span:focus-visible {
   outline: none;
@@ -3156,6 +3163,31 @@
   box-shadow: var(--wbm-shadow-sm);
   font-size: 13px;
   font-weight: 800;
+}
+
+.textPanelCta {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: var(--wbm-radius-pill);
+  font-size: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.creditCardIcon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 @media (prefers-reduced-motion: reduce) {

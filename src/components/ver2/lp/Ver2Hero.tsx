@@ -37,7 +37,7 @@ export default function Ver2Hero({ heroText, onHeroTextChange, onStart, status }
           <div className={styles.composer}>
             <div className={styles.composerHead}>
               <div className={styles.composerLead}><strong>文章を貼り付ける</strong></div>
-              <Link className={styles.sampleLink} href="/sample">▣ サンプル文を見る</Link>
+              <Link className={styles.sampleLink} href="/sample">サンプルのWebブックを見る</Link>
             </div>
             <div className={styles.fileBadges} aria-label="対応ファイル形式">
               <span>PDF</span><span>Word</span><span>Markdown</span><span>TXT</span>

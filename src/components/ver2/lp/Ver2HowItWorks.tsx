@@ -9,7 +9,10 @@ export default function Ver2HowItWorks() {
         <div className={styles.steps}>
           <article className={styles.step}>
             <div className={styles.stepHead}><span className={styles.stepNum}>1</span><h3>文章を貼り付ける</h3></div>
-            <div className={styles.textPanel}>むかしむかし、ある町に<br />一人の少女がいました。<br /><br />少女は星が大好きで、<br />夜になるといつも空を<br />見上げていました。<button>貼り付ける</button></div>
+            <div className={styles.textPanel}>
+              むかしむかし、ある町に<br />一人の少女がいました。<br /><br />少女は星が大好きで、<br />夜になるといつも空を<br />見上げていました。
+              <a className={styles.textPanelCta} href="#signup">Webブックを作る</a>
+            </div>
           </article>
           <article className={styles.step}>
             <div className={styles.stepHead}><span className={styles.stepNum}>2</span><h3>表紙とテーマを選ぶ</h3></div>
