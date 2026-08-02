@@ -22,7 +22,7 @@ export default function AppHeader() {
       ) : null}
       <header className="app-header">
         <BrandLogo
-          href={user ? "/dashboard" : "/"}
+          href="/"
           ariaLabel="WebBookMaker TOP"
           className={styles.brand}
           iconClassName={styles.logoIcon}
@@ -37,9 +37,6 @@ export default function AppHeader() {
               <Link href="/dashboard">作品一覧</Link>
               <Link href="/analytics">分析</Link>
               <Link href="/settings">設定</Link>
-              <Link className="app-user-chip" href="/settings" aria-label="アカウント設定へ移動">
-                {user.displayName || user.email || "ユーザー"}
-              </Link>
             </>
           ) : (
             <>

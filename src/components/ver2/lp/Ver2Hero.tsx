@@ -63,6 +63,7 @@ export default function Ver2Hero({
           </div>
 
           <div className={styles.heroBook}>
+            <p className={styles.sampleGuide}>クリックするとサンプルのWebブックが読めます。</p>
             <Link className={styles.heroShowcaseFrame} href={SAMPLE_BOOK_ROUTE} aria-label="サンプルのWebブックを見る">
               <Ver2BookShowcase />
             </Link>

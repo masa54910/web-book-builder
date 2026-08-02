@@ -1,4 +1,4 @@
-export type CharacterEventType = "welcome" | "save" | "publish" | "loading" | "analytics" | "error";
+export type CharacterEventType = "welcome" | "createBook" | "save" | "publish" | "loading" | "analytics" | "error";
 
 export type CharacterMessage = {
   id: string;
@@ -12,6 +12,10 @@ const messages: Record<CharacterEventType, CharacterMessage[]> = {
   welcome: [
     { id: "welcome-mio-1", type: "welcome", speaker: "mio", mood: "smile", message: "文章を貼るだけで、作品の形が見えてきますよ。" },
     { id: "welcome-booky-1", type: "welcome", speaker: "booky", mood: "calm", message: "ブッキーはしおりの準備をしています。" },
+  ],
+  createBook: [
+    { id: "create-book-booky-1", type: "createBook", speaker: "booky", mood: "cheer", message: "素敵なWebブックを作るにゃん！" },
+    { id: "create-book-mio-1", type: "createBook", speaker: "mio", mood: "smile", message: "素敵なWebブックを作りましょう！" },
   ],
   save: [
     { id: "save-mio-1", type: "save", speaker: "mio", mood: "cheer", message: "保存できました。公開前のバックアップも忘れずに。" },

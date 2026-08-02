@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   defaultCharacterMessage,
@@ -26,14 +27,16 @@ export default function CharacterAssistant({
   event?: CharacterEventType;
   compact?: boolean;
 }) {
-  const [message, setMessage] = useState<CharacterMessage>(() => defaultCharacterMessage(event));
+  const pathname = usePathname();
+  const effectiveEvent = pathname === "/books/new" && event === "save" ? "createBook" : event;
+  const [message, setMessage] = useState<CharacterMessage>(() => defaultCharacterMessage(effectiveEvent));
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setMessage(pickCharacterMessage(event));
+      setMessage(pickCharacterMessage(effectiveEvent));
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [event]);
+  }, [effectiveEvent]);
 
   return (
     <aside className={`character-assistant ${compact ? "compact" : ""} mood-${message.mood}`}>

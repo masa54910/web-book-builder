@@ -112,9 +112,12 @@ export default function Ver2FinalCta({
               {status ? <p style={{ margin: "8px 0 0", color: "#0f6f5d", fontSize: "12px", fontWeight: 700 }}>{status}</p> : null}
             </div>
           </div>
-          <Link className={styles.finalBookLink} href={SAMPLE_BOOK_ROUTE} aria-label="サンプルのWebブックを見る">
-            <Ver2BookShowcase />
-          </Link>
+          <div>
+            <p className={styles.sampleGuide}>クリックするとサンプルのWebブックが読めます。</p>
+            <Link className={styles.finalBookLink} href={SAMPLE_BOOK_ROUTE} aria-label="サンプルのWebブックを見る">
+              <Ver2BookShowcase />
+            </Link>
+          </div>
         </div>
       </div>
     </section>

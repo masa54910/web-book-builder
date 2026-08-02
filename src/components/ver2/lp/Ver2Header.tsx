@@ -8,8 +8,9 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import styles from "./Ver2Landing.module.css";
 
 export default function Ver2Header() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [open, setOpen] = useState(false);
+  const loginHref = user ? "/dashboard" : "/login";
 
   return (
     <header className={styles.header}>
@@ -30,11 +31,14 @@ export default function Ver2Header() {
 
         <nav className={`${styles.mainNav} ${open ? styles.mainNavOpen : ""}`}>
           <Link href="/#samples">作り方</Link>
-          <Link href="/sample">サンプル</Link>
           <Link href="/pricing">料金プラン</Link>
           <Link href="/#promotion">作品を広める</Link>
           <Link href="/#faq">よくある質問</Link>
-          <Link className={styles.navBtn} href="/login">ログイン</Link>
+          {isLoading ? (
+            <span className={`${styles.navBtn} ${styles.navBtnLoading}`} aria-disabled="true">ログイン</span>
+          ) : (
+            <Link className={styles.navBtn} href={loginHref}>ログイン</Link>
+          )}
           <Link
             className={`${styles.navBtn} ${styles.navBtnPrimary}`}
             href={user ? "/books/new" : "/signup?next=%2Fbooks%2Fnew"}
