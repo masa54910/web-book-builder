@@ -18,13 +18,21 @@ export type ProfileRecord = {
 
 const LOCAL_PROFILE_KEY_PREFIX = "webBookMaker:demo:profile:";
 
-function fallbackProfile(userId: string, email = ""): ProfileRecord {
+type ProfileSeed = {
+  email?: string;
+  displayName?: string;
+};
+
+function fallbackProfile(userId: string, seed: ProfileSeed = {}): ProfileRecord {
   const now = new Date().toISOString();
+  const email = seed.email?.trim() || "";
+  const displayName = seed.displayName?.trim() || email || "";
+  const handleSeed = email.split("@")[0] || displayName || userId;
   return {
     id: userId,
     email,
-    displayName: email || "WebBookMakerユーザー",
-    handle: normalizeHandle(email.split("@")[0] || userId, "author"),
+    displayName,
+    handle: normalizeHandle(handleSeed, "author"),
     bio: "",
     avatarPath: "",
     websiteUrl: "",
@@ -53,8 +61,12 @@ function mapProfile(row: Record<string, unknown>): ProfileRecord {
   };
 }
 
-export async function getOwnProfile(userId: string, email = "") {
+export async function getOwnProfile(userId: string, seedInput: ProfileSeed = {}) {
   const supabase = getSupabaseClient();
+  const seed: ProfileSeed = {
+    email: seedInput.email,
+    displayName: seedInput.displayName,
+  };
   if (!supabase) {
     assertLocalFallbackAllowed();
     try {
@@ -65,29 +77,22 @@ export async function getOwnProfile(userId: string, email = "") {
     } catch {
       // Ignore broken local demo profile.
     }
-    return fallbackProfile(userId, email);
+    return fallbackProfile(userId, seed);
   }
 
   const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-  if (error) throw error;
+  if (error) {
+    console.error("profiles.select failed", {
+      userId,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+    });
+    throw new Error("PROFILE_FETCH_FAILED");
+  }
   if (data) return mapProfile(data);
 
-  const initial = fallbackProfile(userId, email);
-  const { data: inserted, error: insertError } = await supabase
-    .from("profiles")
-    .insert({
-      id: userId,
-      email,
-      display_name: initial.displayName,
-      handle: initial.handle,
-      bio: "",
-      website_url: "",
-      is_public: true,
-    })
-    .select("*")
-    .single();
-  if (insertError) throw insertError;
-  return mapProfile(inserted);
+  return fallbackProfile(userId, seed);
 }
 
 export async function saveOwnProfile(profile: ProfileRecord) {
@@ -111,7 +116,11 @@ export async function saveOwnProfile(profile: ProfileRecord) {
     return next;
   }
 
-  const { data, error } = await supabase.from("profiles").upsert(payload).select("*").single();
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert(payload, { onConflict: "id" })
+    .select("*")
+    .single();
   if (error) throw error;
   return mapProfile(data);
 }

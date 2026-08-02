@@ -471,6 +471,14 @@ a {
   padding: 0 16px 56px;
 }
 
+.profile-settings-page .settings-sections {
+  display: flex;
+  width: min(1160px, 100%);
+  margin: 24px auto 0;
+  flex-direction: column;
+  gap: 28px;
+}
+
 .dashboard-heading {
   display: flex;
   width: min(1160px, 100%);
@@ -2607,6 +2615,10 @@ a {
 }
 
 @media (max-width: 760px) {
+  .profile-settings-page .settings-sections {
+    gap: 18px;
+  }
+
   .analytics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

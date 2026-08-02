@@ -54,12 +54,17 @@ export default function BookReader({
   images,
   editHref,
   cloudBookId,
+  backLink,
 }: {
   config: BookConfig;
   chapters: NovelChapter[];
   images: ImageManifestRow[];
   editHref?: string;
   cloudBookId?: string;
+  backLink?: {
+    destination?: "auto" | "home" | "dashboard";
+    label?: string;
+  };
 }) {
   const flipBookRef = useRef<FlipBookHandle | null>(null);
   const storage = useMemo(() => getSafeLocalStorage(), []);
@@ -387,7 +392,11 @@ export default function BookReader({
           ) : null}
         </div>
         <div className="reader-masthead-actions">
-          <HomeBackLink className="reader-edit-link" />
+          <HomeBackLink
+            className="reader-edit-link"
+            destination={backLink?.destination}
+            label={backLink?.label}
+          />
           {editHref ? (
             <a className="reader-edit-link" href={editHref}>
               編集画面へ戻る

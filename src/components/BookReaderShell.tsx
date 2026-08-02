@@ -15,12 +15,17 @@ export default function BookReaderShell({
   images,
   editHref,
   cloudBookId,
+  backLink,
 }: {
   config: BookConfig;
   chapters: NovelChapter[];
   images: ImageManifestRow[];
   editHref?: string;
   cloudBookId?: string;
+  backLink?: {
+    destination?: "auto" | "home" | "dashboard";
+    label?: string;
+  };
 }) {
   return (
     <BookReader
@@ -29,6 +34,7 @@ export default function BookReaderShell({
       images={images}
       editHref={editHref}
       cloudBookId={cloudBookId}
+      backLink={backLink}
     />
   );
 }

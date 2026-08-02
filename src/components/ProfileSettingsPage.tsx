@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 
 import AppHeader from "@/components/AppHeader";
 import HomeBackLink from "@/components/HomeBackLink";
+import Button from "@/components/ui/Button";
+import LoadingState from "@/components/ui/LoadingState";
+import StatusMessage from "@/components/ui/StatusMessage";
 import {
   getOwnAuthorLinks,
   getOwnProfilePreferences,
@@ -15,6 +18,9 @@ import {
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getOwnProfile, saveOwnProfile, type ProfileRecord } from "@/lib/profileRepository";
 import { normalizeHandle } from "@/lib/productTypes";
+
+const PROFILE_LOAD_ERROR_MESSAGE = "プロフィール情報を読み込めませんでした。時間をおいて再度お試しください。";
+const PROFILE_SAVE_ERROR_MESSAGE = "登録情報を保存できませんでした。時間をおいて再度お試しください。";
 
 function socialValue(links: AuthorLinkRecord[], type: AuthorLinkRecord["linkType"]) {
   return links.find((link) => link.linkType === type)?.url || "";
@@ -37,6 +43,7 @@ function buildSocialLinks(xUrl: string, noteUrl: string, otherUrl: string) {
 export default function ProfileSettingsPage() {
   const { user, signOut, changePassword, deleteAccount } = useAuth();
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [preferences, setPreferences] = useState<ProfilePreferences>({
     emailNotifications: true,
     campaignNotifications: false,
@@ -60,21 +67,60 @@ export default function ProfileSettingsPage() {
 
   useEffect(() => {
     if (!user) return;
-    Promise.all([
-      getOwnProfile(user.id, user.email),
+    let active = true;
+    setIsProfileLoading(true);
+    setErrorMessage("");
+
+    Promise.allSettled([
+      getOwnProfile(user.id, { email: user.email, displayName: user.displayName }),
       getOwnAuthorLinks(user.id),
       getOwnProfilePreferences(user.id),
     ])
-      .then(([loadedProfile, links, loadedPreferences]) => {
-        setProfile(loadedProfile);
-        setXUrl(socialValue(links, "x"));
-        setNoteUrl(socialValue(links, "note"));
-        setOtherUrl(socialValue(links, "other") || socialValue(links, "website"));
-        setPreferences(loadedPreferences);
+      .then(([profileResult, linksResult, preferencesResult]) => {
+        if (!active) return;
+
+        if (profileResult.status === "fulfilled") {
+          setProfile(profileResult.value);
+        } else {
+          console.error("settings.profile.load failed", profileResult.reason);
+          setErrorMessage(PROFILE_LOAD_ERROR_MESSAGE);
+          setIsProfileLoading(false);
+          return;
+        }
+
+        if (linksResult.status === "fulfilled") {
+          setXUrl(socialValue(linksResult.value, "x"));
+          setNoteUrl(socialValue(linksResult.value, "note"));
+          setOtherUrl(socialValue(linksResult.value, "other") || socialValue(linksResult.value, "website"));
+        } else {
+          console.error("settings.authorLinks.load failed", linksResult.reason);
+          setXUrl("");
+          setNoteUrl("");
+          setOtherUrl("");
+        }
+
+        if (preferencesResult.status === "fulfilled") {
+          setPreferences(preferencesResult.value);
+        } else {
+          console.error("settings.preferences.load failed", preferencesResult.reason);
+          setPreferences({
+            emailNotifications: true,
+            campaignNotifications: false,
+          });
+        }
+
+        setIsProfileLoading(false);
       })
       .catch((error) => {
-        setErrorMessage(error instanceof Error ? error.message : "プロフィールを読み込めませんでした。");
+        if (!active) return;
+        console.error("settings.initialLoad.failed", error);
+        setErrorMessage(PROFILE_LOAD_ERROR_MESSAGE);
+        setIsProfileLoading(false);
       });
+
+    return () => {
+      active = false;
+    };
   }, [user]);
 
   const update = <K extends keyof ProfileRecord>(key: K, value: ProfileRecord[K]) => {
@@ -94,7 +140,8 @@ export default function ProfileSettingsPage() {
       setProfile(next);
       setMessage("登録情報を保存しました。");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "登録情報の保存に失敗しました。");
+      console.error("settings.profile.save failed", error);
+      setErrorMessage(PROFILE_SAVE_ERROR_MESSAGE);
     } finally {
       setIsSaving(false);
     }
@@ -154,20 +201,23 @@ export default function ProfileSettingsPage() {
   };
 
   return (
-    <main className="dashboard-page">
+    <main className="dashboard-page profile-settings-page">
       <AppHeader />
-      <section className="maker-card">
-        <p className="maker-kicker">Account</p>
-        <HomeBackLink />
-        <h1>登録情報管理</h1>
-        <p>
-          表示名、作者プロフィール、SNS、通知設定を管理できます。ハンドルを変更すると作者ページURLも変わります。
-        </p>
-        {!profile ? (
-          <div className="reader-loading">プロフィールを読み込んでいます…</div>
-        ) : (
-          <>
-            <div className="maker-grid">
+      <div className="settings-sections">
+        <section className="maker-card">
+          <p className="maker-kicker">Account</p>
+          <HomeBackLink />
+          <h1>登録情報管理</h1>
+          <p>
+            表示名、作者プロフィール、SNS、通知設定を管理できます。ハンドルを変更すると作者ページURLも変わります。
+          </p>
+          {isProfileLoading ? (
+            <LoadingState label="プロフィールを読み込んでいます…" className="reader-loading" />
+          ) : !profile ? (
+            <StatusMessage variant="error" message={PROFILE_LOAD_ERROR_MESSAGE} className="maker-status" />
+          ) : (
+            <>
+              <div className="maker-grid">
               <label>
                 <span>表示名</span>
                 <input value={profile.displayName} onChange={(event) => update("displayName", event.target.value)} />
@@ -212,84 +262,85 @@ export default function ProfileSettingsPage() {
                 <input type="checkbox" checked={preferences.campaignNotifications} onChange={(event) => setPreferences((current) => ({ ...current, campaignNotifications: event.target.checked }))} />
                 <span>キャンペーン情報を受け取る</span>
               </label>
-            </div>
-            <label className="maker-full">
-              <span>自己紹介</span>
-              <textarea rows={4} value={profile.bio} onChange={(event) => update("bio", event.target.value)} />
+              </div>
+              <label className="maker-full">
+                <span>自己紹介</span>
+                <textarea rows={4} value={profile.bio} onChange={(event) => update("bio", event.target.value)} />
+              </label>
+              <div className="maker-actions">
+                <Button loading={isSaving} onClick={() => void save()}>
+                  登録情報を保存
+                </Button>
+                <Button variant="secondary" disabled={isSaving} onClick={() => void signOut()}>
+                  ログアウト
+                </Button>
+              </div>
+              <p className="maker-note">メールアドレス変更は現在未対応です。必要な場合はお問い合わせからご連絡ください。</p>
+            </>
+          )}
+          {errorMessage ? <StatusMessage variant="error" message={errorMessage} className="form-error" /> : null}
+          {message ? <StatusMessage variant="success" message={message} className="maker-status" /> : null}
+        </section>
+
+        <section className="maker-card">
+          <h2>パスワード変更</h2>
+          <div className="maker-grid">
+            <label>
+              <span>現在のパスワード</span>
+              <input type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
             </label>
-            <div className="maker-actions">
-              <button className="maker-primary-button" type="button" disabled={isSaving} onClick={() => void save()}>
-                {isSaving ? "保存中…" : "登録情報を保存"}
-              </button>
-              <button className="maker-secondary-button" type="button" disabled={isSaving} onClick={() => void signOut()}>
-                ログアウト
-              </button>
-            </div>
-            <p className="maker-note">メールアドレス変更は現在未対応です。必要な場合はお問い合わせからご連絡ください。</p>
-          </>
-        )}
-        {errorMessage ? <p className="form-error" aria-live="polite">{errorMessage}</p> : null}
-        {message ? <p className="maker-status" aria-live="polite">{message}</p> : null}
-      </section>
-
-      <section className="maker-card">
-        <h2>パスワード変更</h2>
-        <div className="maker-grid">
-          <label>
-            <span>現在のパスワード</span>
-            <input type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
-          </label>
-          <label>
-            <span>新しいパスワード</span>
-            <input type="password" autoComplete="new-password" value={nextPassword} onChange={(event) => setNextPassword(event.target.value)} />
-          </label>
-          <label>
-            <span>新しいパスワード（確認）</span>
-            <input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
-          </label>
-        </div>
-        <div className="maker-actions">
-          <button className="maker-primary-button" type="button" disabled={isChangingPassword} onClick={() => void onChangePassword()}>
-            {isChangingPassword ? "変更中…" : "パスワードを変更"}
-          </button>
-        </div>
-      </section>
-
-      <section className="maker-card">
-        <h2>アカウント削除</h2>
-        <p>この操作は取り消せません。公開作品・プロフィール・分析データが削除されます。</p>
-        {!confirmDeleteOpen ? (
-          <div className="maker-actions">
-            <button className="maker-small-button danger" type="button" onClick={() => setConfirmDeleteOpen(true)}>
-              削除手続きへ進む
-            </button>
+            <label>
+              <span>新しいパスワード</span>
+              <input type="password" autoComplete="new-password" value={nextPassword} onChange={(event) => setNextPassword(event.target.value)} />
+            </label>
+            <label>
+              <span>新しいパスワード（確認）</span>
+              <input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+            </label>
           </div>
-        ) : (
-          <>
-            <p className="maker-note">確認のため「削除します」と入力してください。</p>
-            <label className="maker-full">
-              <span>確認テキスト</span>
-              <input value={deleteConfirmText} onChange={(event) => setDeleteConfirmText(event.target.value)} />
-            </label>
+          <div className="maker-actions">
+            <Button loading={isChangingPassword} onClick={() => void onChangePassword()}>
+              パスワードを変更
+            </Button>
+          </div>
+        </section>
+
+        <section className="maker-card">
+          <h2>アカウント削除</h2>
+          <p>この操作は取り消せません。公開作品・プロフィール・分析データが削除されます。</p>
+          {!confirmDeleteOpen ? (
             <div className="maker-actions">
-              <button className="maker-small-button danger" type="button" disabled={isDeleting} onClick={() => void onDeleteAccount()}>
-                {isDeleting ? "削除中…" : "アカウントを削除"}
-              </button>
-              <button className="maker-secondary-button" type="button" disabled={isDeleting} onClick={() => setConfirmDeleteOpen(false)}>
-                キャンセル
-              </button>
+              <Button variant="danger" size="sm" onClick={() => setConfirmDeleteOpen(true)}>
+                削除手続きへ進む
+              </Button>
             </div>
-          </>
-        )}
-      </section>
-      <section className="maker-card">
-        <h2>限定ベータ中のお願い</h2>
-        <ul className="beta-notes">
-          <li>重要な原稿は必ず手元にも保存してください。</li>
-          <li>不具合・要望はフッターまたはダッシュボードのフィードバック導線から送ってください。</li>
-          <li>データ削除依頼・問い合わせ先は限定ベータ案内文書に記載します。</li>
-        </ul>
-      </section>
+          ) : (
+            <>
+              <p className="maker-note">確認のため「削除します」と入力してください。</p>
+              <label className="maker-full">
+                <span>確認テキスト</span>
+                <input value={deleteConfirmText} onChange={(event) => setDeleteConfirmText(event.target.value)} />
+              </label>
+              <div className="maker-actions">
+                <Button variant="danger" size="sm" loading={isDeleting} onClick={() => void onDeleteAccount()}>
+                  アカウントを削除
+                </Button>
+                <Button variant="secondary" disabled={isDeleting} onClick={() => setConfirmDeleteOpen(false)}>
+                  キャンセル
+                </Button>
+              </div>
+            </>
+          )}
+        </section>
+        <section className="maker-card">
+          <h2>限定ベータ中のお願い</h2>
+          <ul className="beta-notes">
+            <li>重要な原稿は必ず手元にも保存してください。</li>
+            <li>不具合・要望はフッターまたはダッシュボードのフィードバック導線から送ってください。</li>
+            <li>データ削除依頼・問い合わせ先は限定ベータ案内文書に記載します。</li>
+          </ul>
+        </section>
+      </div>
     </main>
   );
 }

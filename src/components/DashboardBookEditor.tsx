@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BETA_LIMITS } from "@/lib/limits";
@@ -19,7 +19,7 @@ import { createSlugCandidate, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
 import { normalizeHandle, safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
 import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
-import { themePresets, type BookThemeSettings } from "@/lib/themeSystem";
+import { colorPresets, contrastRatio, themePresets, type BookThemeSettings } from "@/lib/themeSystem";
 import CharacterAssistant from "@/components/CharacterAssistant";
 import HomeBackLink from "@/components/HomeBackLink";
 
@@ -39,9 +39,14 @@ type EditorState = {
   language: SupportedLocale;
   fontFamily: BookThemeSettings["fontFamily"];
   fontScale: BookThemeSettings["fontScale"];
+  lineHeight: BookThemeSettings["lineHeight"];
   marginScale: BookThemeSettings["marginScale"];
   pageWidth: BookThemeSettings["pageWidth"];
   background: BookThemeSettings["background"];
+  textColor: string;
+  accentColor: string;
+  coverStyle: BookThemeSettings["coverStyle"];
+  imageLayout: BookThemeSettings["imageLayout"];
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
   visibility: "private" | "unlisted" | "public";
@@ -72,9 +77,14 @@ const INITIAL_EDITOR: EditorState = {
   language: "ja",
   fontFamily: "mincho",
   fontScale: "medium",
+  lineHeight: "normal",
   marginScale: "standard",
   pageWidth: "standard",
   background: "paper",
+  textColor: "#2f251d",
+  accentColor: "#6bb9ad",
+  coverStyle: "overlay",
+  imageLayout: "framed",
   charactersPerPage: 380,
   tableOfContentsItemsPerPage: 6,
   visibility: "private",
@@ -167,6 +177,46 @@ function isImageFile(file: File) {
   );
 }
 
+function normalizeColorHex(value: string, fallback: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return fallback;
+  const prefixed = trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
+  const short = /^#([0-9a-fA-F]{3})$/.exec(prefixed);
+  if (short) {
+    const [r, g, b] = short[1].split("");
+    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+  }
+  return /^#([0-9a-fA-F]{6})$/.test(prefixed) ? prefixed.toLowerCase() : fallback;
+}
+
+type EditableChapter = {
+  title: string;
+  body: string;
+};
+
+function parseEditableChapters(rawText: string) {
+  const text = rawText.replace(/\r\n?/g, "\n").trim();
+  if (!text) return [] as EditableChapter[];
+  const headings = [...text.matchAll(/^# (?!#)([^\n]+)$/gm)];
+  if (!headings.length) {
+    return [{ title: "本文", body: text }];
+  }
+  return headings.map((heading, index) => {
+    const start = (heading.index ?? 0) + heading[0].length;
+    const end = headings[index + 1]?.index ?? text.length;
+    return {
+      title: heading[1].trim() || `第${index + 1}章`,
+      body: text.slice(start, end).trim(),
+    };
+  });
+}
+
+function serializeEditableChapters(chapters: EditableChapter[]) {
+  return chapters
+    .map((chapter) => `# ${chapter.title.trim() || "章タイトル"}\n\n${chapter.body.trim()}`.trim())
+    .join("\n\n");
+}
+
 function fromRecord(record: CloudBookRecord): EditorState {
   return {
     title: record.title,
@@ -184,9 +234,14 @@ function fromRecord(record: CloudBookRecord): EditorState {
     language: record.bookProject.config.language,
     fontFamily: record.bookProject.config.themeSettings?.fontFamily || "mincho",
     fontScale: record.bookProject.config.themeSettings?.fontScale || "medium",
+    lineHeight: record.bookProject.config.themeSettings?.lineHeight || "normal",
     marginScale: record.bookProject.config.themeSettings?.marginScale || "standard",
     pageWidth: record.bookProject.config.themeSettings?.pageWidth || "standard",
     background: record.bookProject.config.themeSettings?.background || "paper",
+    textColor: record.bookProject.config.themeSettings?.textColor || "#2f251d",
+    accentColor: record.bookProject.config.themeSettings?.accentColor || "#6bb9ad",
+    coverStyle: record.bookProject.config.themeSettings?.coverStyle || "overlay",
+    imageLayout: record.bookProject.config.themeSettings?.imageLayout || "framed",
     charactersPerPage: record.charactersPerPage,
     tableOfContentsItemsPerPage: record.tocItemsPerPage,
     visibility: record.visibility,
@@ -224,6 +279,7 @@ function imagesFromRecord(record: CloudBookRecord): UploadedBookImage[] {
 export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) {
   const [draftSeed] = useState(() => initialStateFromDraft(mode));
   const router = useRouter();
+  const pathname = usePathname();
   const params = useParams<{ id?: string }>();
   const { user } = useAuth();
   const manuscriptInputRef = useRef<HTMLInputElement | null>(null);
@@ -283,6 +339,13 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     [state.rawText],
   );
 
+  const editableChapters = useMemo(() => parseEditableChapters(state.rawText), [state.rawText]);
+
+  const colorContrast = useMemo(
+    () => contrastRatio(state.textColor, state.background === "night" ? "#1f2528" : "#fffaf0"),
+    [state.background, state.textColor],
+  );
+
   const estimatedPages = useMemo(() => {
     const charsPerPage = Math.max(180, Number(state.charactersPerPage) || 380);
     const characterCount = state.rawText.trim().length;
@@ -302,6 +365,16 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       coverFileName: state.coverFileName,
       theme: state.theme,
       language: state.language,
+      fontFamily: state.fontFamily,
+      fontScale: state.fontScale,
+      lineHeight: state.lineHeight,
+      marginScale: state.marginScale,
+      pageWidth: state.pageWidth,
+      background: state.background,
+      textColor: state.textColor,
+      accentColor: state.accentColor,
+      coverStyle: state.coverStyle,
+      imageLayout: state.imageLayout,
       authorHandle: state.authorHandle,
       authorBio: state.authorBio,
       authorWebsiteUrl: state.authorWebsiteUrl,
@@ -320,6 +393,16 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       state.coverFileName,
       state.theme,
       state.language,
+      state.fontFamily,
+      state.fontScale,
+      state.lineHeight,
+      state.marginScale,
+      state.pageWidth,
+      state.background,
+      state.textColor,
+      state.accentColor,
+      state.coverStyle,
+      state.imageLayout,
       state.authorHandle,
       state.authorBio,
       state.authorWebsiteUrl,
@@ -359,6 +442,46 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     setDirty(true);
   };
 
+  const updateColor = (key: "textColor" | "accentColor", value: string) => {
+    update(key, normalizeColorHex(value, state[key]) as EditorState[typeof key]);
+  };
+
+  const applyChapterChanges = (chapters: EditableChapter[]) => {
+    update("rawText", serializeEditableChapters(chapters));
+  };
+
+  const moveChapter = (index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= editableChapters.length) return;
+    const next = [...editableChapters];
+    const [removed] = next.splice(index, 1);
+    next.splice(nextIndex, 0, removed);
+    applyChapterChanges(next);
+  };
+
+  const updateChapter = (index: number, patch: Partial<EditableChapter>) => {
+    const next = editableChapters.map((chapter, chapterIndex) =>
+      chapterIndex === index ? { ...chapter, ...patch } : chapter,
+    );
+    applyChapterChanges(next);
+  };
+
+  const removeChapter = (index: number) => {
+    if (editableChapters.length <= 1) return;
+    applyChapterChanges(editableChapters.filter((_, chapterIndex) => chapterIndex !== index));
+  };
+
+  const addChapter = () => {
+    const next = [
+      ...editableChapters,
+      {
+        title: `第${editableChapters.length + 1}章`,
+        body: "",
+      },
+    ];
+    applyChapterChanges(next);
+  };
+
   const buildInput = (): BookProjectInput => ({
     title: state.title,
     subtitle: state.subtitle,
@@ -375,9 +498,14 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     themeSettings: {
       fontFamily: state.fontFamily,
       fontScale: state.fontScale,
+      lineHeight: state.lineHeight,
       marginScale: state.marginScale,
       pageWidth: state.pageWidth,
       background: state.background,
+      textColor: state.textColor,
+      accentColor: state.accentColor,
+      coverStyle: state.coverStyle,
+      imageLayout: state.imageLayout,
     },
     charactersPerPage: state.charactersPerPage,
     tableOfContentsItemsPerPage: state.tableOfContentsItemsPerPage,
@@ -525,7 +653,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     const project = buildProject();
     if (!project) return;
     await savePreviewProject(project);
-    router.push("/reader");
+    const returnTo =
+      pathname && pathname.startsWith("/books/") ? pathname : mode === "new" ? "/books/new" : "/dashboard";
+    router.push(`/reader?mode=preview&from=dashboard&returnTo=${encodeURIComponent(returnTo)}`);
   };
 
   const publish = async () => {
@@ -675,7 +805,13 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             <p className="maker-note">
               文字数: {state.rawText.trim().length.toLocaleString()}字 / 推定ページ数: {estimatedPages}ページ / 自動保存: {autosaveLabel}
             </p>
-            <div className={`mini-book-preview theme-${state.theme} book-bg-${state.background} book-font-${state.fontFamily}`}>
+            <div
+              className={`mini-book-preview theme-${state.theme} book-bg-${state.background} book-font-${state.fontFamily} book-size-${state.fontScale} book-leading-${state.lineHeight} book-cover-style-${state.coverStyle} book-image-layout-${state.imageLayout}`}
+              style={{
+                color: state.textColor,
+                borderColor: state.accentColor,
+              }}
+            >
               <strong>{state.title || "TITLE"}</strong>
               <span>{state.author || "Author"}</span>
               <p>{state.rawText.replace(/^# .+$/gm, "").trim().slice(0, 110) || "本文のプレビューがここに表示されます。"}</p>
@@ -683,15 +819,50 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           </section>
 
           <section className="maker-card">
-            <h2>章構成プレビュー</h2>
-            {chapterOptions.length ? (
-              <ol className="maker-note">
-                {chapterOptions.map((chapter) => (
-                  <li key={chapter.value}>{chapter.label}</li>
+            <div className="maker-section-heading">
+              <div>
+                <h2>章構成</h2>
+                <p className="maker-note">章タイトル・本文の微修正、並び替え、追加、削除ができます。</p>
+              </div>
+              <button className="maker-small-button" type="button" onClick={addChapter}>
+                章を追加
+              </button>
+            </div>
+            {editableChapters.length ? (
+              <div className="chapter-manager-list">
+                {editableChapters.map((chapter, index) => (
+                  <article className="chapter-manager-item" key={`${index}-${chapter.title}`}>
+                    <label>
+                      <span>章タイトル {index + 1}</span>
+                      <input
+                        value={chapter.title}
+                        onChange={(event) => updateChapter(index, { title: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      <span>章本文</span>
+                      <textarea
+                        rows={4}
+                        value={chapter.body}
+                        onChange={(event) => updateChapter(index, { body: event.target.value })}
+                      />
+                    </label>
+                    <div className="chapter-manager-actions">
+                      <button className="maker-small-button" type="button" onClick={() => moveChapter(index, -1)} disabled={index === 0}>
+                        ↑ 上へ
+                      </button>
+                      <button className="maker-small-button" type="button" onClick={() => moveChapter(index, 1)} disabled={index === editableChapters.length - 1}>
+                        ↓ 下へ
+                      </button>
+                      <button className="maker-small-button danger" type="button" onClick={() => removeChapter(index)} disabled={editableChapters.length <= 1}>
+                        削除
+                      </button>
+                    </div>
+                  </article>
                 ))}
-              </ol>
+              </div>
             ) : (
-              <p className="maker-note">見出し（# 第一章）の形式で入力すると章構成が表示されます。</p>
+              <p className="maker-note">本文を入力すると章構成が表示されます。</p>
             )}
           </section>
 
@@ -811,6 +982,14 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               </select>
             </label>
             <label>
+              <span>行間</span>
+              <select value={state.lineHeight} onChange={(event) => update("lineHeight", event.target.value as BookThemeSettings["lineHeight"])}>
+                <option value="tight">詰める</option>
+                <option value="normal">標準</option>
+                <option value="relaxed">広め</option>
+              </select>
+            </label>
+            <label>
               <span>余白</span>
               <select value={state.marginScale} onChange={(event) => update("marginScale", event.target.value as BookThemeSettings["marginScale"])}>
                 <option value="compact">狭め</option>
@@ -837,6 +1016,30 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               </select>
             </label>
             <label>
+              <span>本文テキスト色</span>
+              <input value={state.textColor} onChange={(event) => updateColor("textColor", event.target.value)} placeholder="#2f251d" />
+            </label>
+            <label>
+              <span>アクセント色</span>
+              <input value={state.accentColor} onChange={(event) => updateColor("accentColor", event.target.value)} placeholder="#6bb9ad" />
+            </label>
+            <label>
+              <span>表紙スタイル</span>
+              <select value={state.coverStyle} onChange={(event) => update("coverStyle", event.target.value as BookThemeSettings["coverStyle"])}>
+                <option value="overlay">オーバーレイ</option>
+                <option value="solid">ソリッド</option>
+                <option value="band">バンド</option>
+              </select>
+            </label>
+            <label>
+              <span>画像レイアウト</span>
+              <select value={state.imageLayout} onChange={(event) => update("imageLayout", event.target.value as BookThemeSettings["imageLayout"])}>
+                <option value="framed">余白フレーム</option>
+                <option value="full">全面表示</option>
+                <option value="contained">収まり優先</option>
+              </select>
+            </label>
+            <label>
               <span>ページ文字量</span>
               <input type="number" min={180} max={1200} value={state.charactersPerPage} onChange={(event) => update("charactersPerPage", Number(event.target.value) || 380)} />
             </label>
@@ -853,6 +1056,24 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               </select>
             </label>
           </div>
+          <div className="theme-color-presets">
+            {colorPresets.map((preset) => (
+              <button
+                key={preset.name}
+                className="maker-small-button"
+                type="button"
+                onClick={() => {
+                  update("textColor", preset.text);
+                  update("accentColor", preset.accent);
+                }}
+              >
+                {preset.name}
+              </button>
+            ))}
+          </div>
+          {colorContrast < 4.5 ? (
+            <p className="maker-note form-error">配色コントラストが低めです（{colorContrast.toFixed(2)}）。本文可読性のため 4.5 以上を推奨します。</p>
+          ) : null}
           <div className="maker-grid external-link-grid">
             <label>
               <span>作品末尾に表示する外部リンク名</span>

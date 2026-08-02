@@ -6,6 +6,8 @@ import { useAuth } from "@/lib/auth/AuthContext";
 
 type Props = {
   className?: string;
+  destination?: "auto" | "home" | "dashboard";
+  label?: string;
 };
 
 function isDashboardContext(pathname: string) {
@@ -18,16 +20,20 @@ function isDashboardContext(pathname: string) {
   return false;
 }
 
-export default function HomeBackLink({ className = "maker-secondary-link home-back-link" }: Props) {
+export default function HomeBackLink({
+  className = "maker-secondary-link home-back-link",
+  destination = "auto",
+  label,
+}: Props) {
   const { user } = useAuth();
   const pathname = usePathname() ?? "";
   const inDashboardContext = isDashboardContext(pathname);
 
-  if (pathname === "/dashboard") return null;
+  if (destination === "auto" && pathname === "/dashboard") return null;
 
-  const shouldUseDashboardTop = Boolean(user) && inDashboardContext;
+  const shouldUseDashboardTop = destination === "auto" ? Boolean(user) && inDashboardContext : destination === "dashboard";
   const href = shouldUseDashboardTop ? "/dashboard" : "/";
-  const text = shouldUseDashboardTop ? "← TOPへ戻る" : "← ホームへ戻る";
+  const text = label ?? (shouldUseDashboardTop ? "← TOPへ戻る" : "← ホームへ戻る");
 
   return (
     <Link className={className} href={href}>
