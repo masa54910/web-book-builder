@@ -17,6 +17,9 @@ import { validateImportFile, validateZipPath } from "../src/lib/fileImport";
 import { buildReaderPages } from "../src/lib/paginateText";
 import { createPendingImageBlock, insertImageBlocksAtCursor } from "../src/lib/inlineContentBlocks";
 import { resolveSafeInternalReturnPath } from "../src/lib/returnTo";
+import { validateRequiredBookFields } from "../src/lib/editorValidation";
+import { computeInlineImagePopoverLayout } from "../src/lib/inlineImagePopover";
+import { buildEditorDraftFields, seedFromDraftFields, type EditorDraftState } from "../src/lib/editorDraftState";
 
 function blockSignature(blocks: BookContentBlock[]) {
   return blocks.map((block) =>
@@ -237,6 +240,123 @@ assert.equal(resolveSafeInternalReturnPath("/dashboard/books/abc/edit"), "/dashb
 assert.equal(resolveSafeInternalReturnPath("//evil.example/path"), "/dashboard");
 assert.equal(resolveSafeInternalReturnPath("https://evil.example/path"), "/dashboard");
 assert.equal(resolveSafeInternalReturnPath("reader"), "/dashboard");
+
+const requiredMissingTitle = validateRequiredBookFields({ title: "   ", authorName: "Author" });
+assert.equal(requiredMissingTitle.isValid, false);
+assert.equal(requiredMissingTitle.globalError, "未入力項目があります。");
+assert.equal(requiredMissingTitle.fieldErrors.title, "タイトルを入力してください。");
+
+const requiredMissingAuthor = validateRequiredBookFields({ title: "Title", authorName: "  " });
+assert.equal(requiredMissingAuthor.isValid, false);
+assert.equal(requiredMissingAuthor.fieldErrors.author, "作者名を入力してください。");
+
+const requiredBothPresent = validateRequiredBookFields({ title: "Title", authorName: "Author" });
+assert.equal(requiredBothPresent.isValid, true);
+assert.equal(requiredBothPresent.globalError, "");
+
+const desktopPopover = computeInlineImagePopoverLayout({
+  anchorRect: { top: 860, left: 1320, right: 1368, bottom: 908, width: 48, height: 48 },
+  popoverRect: { top: 0, left: 0, right: 300, bottom: 180, width: 300, height: 180 },
+  viewport: { width: 1440, height: 1024 },
+});
+assert.ok(desktopPopover.left >= 12, "Desktop popover should stay inside left padding");
+assert.ok(desktopPopover.top >= 12, "Desktop popover should stay inside top padding");
+assert.ok(desktopPopover.left + 300 <= 1440 - 12, "Desktop popover should stay inside right padding");
+assert.ok(desktopPopover.top + 180 <= 1024 - 88 - 12, "Desktop popover should stay above bottom action area");
+
+const mobilePopover = computeInlineImagePopoverLayout({
+  anchorRect: { top: 720, left: 10, right: 52, bottom: 762, width: 42, height: 42 },
+  popoverRect: { top: 0, left: 0, right: 280, bottom: 170, width: 280, height: 170 },
+  viewport: { width: 390, height: 844 },
+});
+assert.ok((mobilePopover.width || 0) <= 390 - 24, "Mobile popover width should fit viewport");
+assert.ok(mobilePopover.left >= 12, "Mobile popover should stay inside left padding");
+assert.ok(mobilePopover.top >= 12, "Mobile popover should stay inside top padding");
+assert.ok(mobilePopover.top + 170 <= 844 - 88 - 12, "Mobile popover should stay above bottom action area");
+
+const baseEditorState: EditorDraftState = {
+  title: "",
+  subtitle: "",
+  author: "",
+  description: "",
+  publisherName: "WebBookMaker",
+  publishedAt: "",
+  copyrightText: "",
+  rawText: "",
+  bindingDirection: "rtl",
+  theme: "classic",
+  language: "ja",
+  fontFamily: "mincho",
+  fontScale: "medium",
+  lineHeight: "normal",
+  marginScale: "standard",
+  pageWidth: "standard",
+  background: "paper",
+  textColor: "#2f251d",
+  accentColor: "#6bb9ad",
+  coverStyle: "overlay",
+  imageLayout: "framed",
+  charactersPerPage: 380,
+  tableOfContentsItemsPerPage: 6,
+  visibility: "private",
+  status: "draft",
+  slug: "",
+  authorHandle: "",
+  authorBio: "",
+  authorWebsiteUrl: "",
+  authorXUrl: "",
+  authorNoteUrl: "",
+  externalLinkLabel: "",
+  externalLinkUrl: "",
+  externalSalesUrl: "",
+  externalSalesLabel: "",
+};
+
+const draftBlocks: BookContentBlock[] = [
+  { id: "text-001", type: "text", content: "長文テキスト" },
+  {
+    id: "img-001",
+    type: "image",
+    storagePath: "https://cdn.example.com/image.webp",
+    fileName: "image.webp",
+    mimeType: "image/webp",
+    width: 1200,
+    height: 800,
+    caption: "挿絵",
+    altText: "alt",
+    fitMode: "contain",
+    pageMode: "full-page",
+    uploadState: "ready",
+  },
+];
+const draftImages = uploadedImagesFromBlocks(draftBlocks);
+const draftFields = buildEditorDraftFields({
+  mode: "new",
+  draftId: "draft-1",
+  state: {
+    ...baseEditorState,
+    title: "タイトル",
+    author: "作者",
+    rawText: "長文テキスト\n[[image:img-001|挿絵]]",
+    coverImage: "https://cdn.example.com/cover.webp",
+    theme: "photo",
+    fontFamily: "serif",
+  },
+  contentBlocks: draftBlocks,
+  images: draftImages,
+});
+const restoredSeed = seedFromDraftFields({
+  mode: "new",
+  initialState: baseEditorState,
+  fields: draftFields,
+});
+assert.equal(restoredSeed.restored, true, "Draft seed should be restored when draft fields exist");
+assert.equal(restoredSeed.state.title, "タイトル");
+assert.equal(restoredSeed.state.author, "作者");
+assert.equal(restoredSeed.state.theme, "photo");
+assert.equal(restoredSeed.state.fontFamily, "serif");
+assert.equal(restoredSeed.state.coverImage, "https://cdn.example.com/cover.webp");
+assert.equal(restoredSeed.contentBlocks.some((block) => block.type === "image"), true);
 
 const globalsCss = fs.readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
 assert.match(

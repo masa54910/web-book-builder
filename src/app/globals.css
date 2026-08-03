@@ -1044,16 +1044,26 @@ a {
 }
 
 .inline-manuscript-floating-button {
-  width: 42px;
-  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
   border: 1px solid rgba(79, 67, 48, 0.2);
   border-radius: 999px;
   cursor: pointer;
-  color: #2f251d;
+  color: #2c7669;
   background: rgba(255, 252, 246, 0.96);
   box-shadow: 0 8px 18px rgba(38, 31, 20, 0.12);
-  font-size: 18px;
   line-height: 1;
+}
+
+.inline-manuscript-floating-button svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
 }
 
 .inline-manuscript-floating-button:focus-visible {
@@ -1347,6 +1357,12 @@ a {
   line-height: 1.5;
 }
 
+.maker-grid input[aria-invalid="true"],
+.maker-full textarea[aria-invalid="true"] {
+  border-color: rgba(157, 45, 32, 0.7);
+  box-shadow: 0 0 0 1px rgba(157, 45, 32, 0.15);
+}
+
 .maker-warning {
   border-color: rgba(150, 94, 24, 0.26);
   background: rgba(255, 244, 219, 0.9);
@@ -1357,6 +1373,10 @@ a {
   margin: 0;
   color: #6a4a20;
   line-height: 1.7;
+}
+
+.maker-status-error {
+  color: #9d2d20;
 }
 
 .maker-actions {
@@ -2948,8 +2968,13 @@ a {
   }
 
   .inline-manuscript-floating-button {
-    width: 36px;
-    height: 36px;
+    width: 42px;
+    height: 42px;
+  }
+
+  .inline-manuscript-floating-button svg {
+    width: 20px;
+    height: 20px;
   }
 
   .inline-manuscript-popover-panel {
