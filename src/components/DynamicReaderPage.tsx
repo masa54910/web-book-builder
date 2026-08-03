@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import type { BookProject } from "@/lib/bookProject";
 import { loadPreviewProject } from "@/lib/browserBookStorage";
+import { resolveSafeInternalReturnPath } from "@/lib/returnTo";
 import BookReaderShell from "./BookReaderShell";
 import HomeBackLink from "./HomeBackLink";
 
@@ -17,7 +18,7 @@ export default function DynamicReaderPage() {
   const isDashboardPreview =
     searchParams.get("mode") === "preview" && searchParams.get("from") === "dashboard";
   const returnTo = searchParams.get("returnTo") || "";
-  const safeReturnTo = returnTo.startsWith("/") ? returnTo : "/books/new";
+  const safeReturnTo = resolveSafeInternalReturnPath(returnTo);
 
   useEffect(() => {
     let active = true;
@@ -56,6 +57,11 @@ export default function DynamicReaderPage() {
 
   return (
     <>
+      {isDashboardPreview ? (
+        <Link className="reader-preview-return" href={safeReturnTo}>
+          ← 戻る
+        </Link>
+      ) : null}
       {project.missingImageIds.length ? (
         <aside className="reader-warning" aria-live="polite">
           不足している画像ID：{project.missingImageIds.join("、")}

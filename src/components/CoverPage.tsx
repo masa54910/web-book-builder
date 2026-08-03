@@ -54,7 +54,7 @@ export default function CoverPage({
             alt={`${config.title} 裏表紙`}
           />
         ) : null}
-        <div className="back-cover-mark">{config.title.slice(0, 2)}</div>
+        <div className="back-cover-wordmark">WEBBOOKMAKER</div>
         <p>{config.publisherName}</p>
       </div>
     );

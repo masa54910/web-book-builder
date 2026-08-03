@@ -1,7 +1,6 @@
 "use client";
 
 import HTMLFlipBook from "react-pageflip";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
@@ -341,8 +340,6 @@ export default function BookReader({
         <ImagePage
           src={page.src}
           alt={page.alt}
-          caption={page.caption}
-          imageIndex={page.imageIndex}
           missing={page.missing}
         />
       );
