@@ -15,10 +15,12 @@ function ReaderImage({ src, alt }: { src: string; alt: string }) {
 export default function ImagePage({
   src,
   alt,
+  caption,
   missing = false,
 }: {
   src?: string;
   alt: string;
+  caption: string;
   missing?: boolean;
 }) {
   return (
@@ -27,6 +29,7 @@ export default function ImagePage({
         <div className="image-frame">
           {src ? <ReaderImage src={src} alt={alt} /> : <div className="image-fallback">IMAGE</div>}
         </div>
+        {caption.trim().length ? <figcaption className="image-caption">{caption}</figcaption> : null}
         {missing ? <p className="image-missing">画像IDが登録されていません。</p> : null}
       </div>
     </figure>

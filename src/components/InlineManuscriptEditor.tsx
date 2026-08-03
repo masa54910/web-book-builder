@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { BookContentBlock } from "@/lib/bookProject";
@@ -238,12 +239,25 @@ type Props = {
   onPendingChange: (count: number) => void;
 };
 
+function PhotoIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="9" cy="10" r="1.7" fill="currentColor" />
+      <path d="M6 17l4.2-4.2 2.8 2.6 2.2-2 2.8 3.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function InlineManuscriptEditor({ value, revision, onChange, onStatus, onPendingChange }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const floatingButtonRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   const nodesRef = useRef<BookContentBlock[]>(value);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [isInsertModalOpen, setIsInsertModalOpen] = useState(false);
+  const [insertPopoverStyle, setInsertPopoverStyle] = useState<CSSProperties>({});
   const [dragOver, setDragOver] = useState(false);
   const [cursorFallbackMessage, setCursorFallbackMessage] = useState("");
 
@@ -404,15 +418,87 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
     fileInputRef.current?.click();
   };
 
+  const updateInsertPopoverPosition = () => {
+    const anchor = floatingButtonRef.current;
+    const popover = popoverRef.current;
+    if (!anchor || !popover) return;
+
+    const anchorRect = anchor.getBoundingClientRect();
+    const popoverRect = popover.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const margin = 12;
+    const spacing = 10;
+    const reservedBottom = 88;
+    const maxTop = Math.max(margin, viewportHeight - reservedBottom - popoverRect.height);
+    const isMobile = viewportWidth <= 760;
+
+    if (isMobile) {
+      const width = Math.min(320, viewportWidth - margin * 2);
+      let left = anchorRect.left + anchorRect.width / 2 - width / 2;
+      left = Math.max(margin, Math.min(left, viewportWidth - margin - width));
+      let top = anchorRect.bottom + spacing;
+      if (top + popoverRect.height > viewportHeight - reservedBottom) {
+        top = anchorRect.top - popoverRect.height - spacing;
+      }
+      top = Math.max(margin, Math.min(top, maxTop));
+
+      setInsertPopoverStyle({
+        position: "fixed",
+        width,
+        left,
+        top,
+      });
+      return;
+    }
+
+    let left = anchorRect.right + spacing;
+    if (left + popoverRect.width > viewportWidth - margin) {
+      left = anchorRect.left - popoverRect.width - spacing;
+    }
+    left = Math.max(margin, Math.min(left, viewportWidth - margin - popoverRect.width));
+
+    let top = anchorRect.top + anchorRect.height / 2 - popoverRect.height / 2;
+    top = Math.max(margin, Math.min(top, maxTop));
+
+    setInsertPopoverStyle({
+      position: "fixed",
+      left,
+      top,
+      maxWidth: "min(360px, calc(100vw - 24px))",
+    });
+  };
+
   useEffect(() => {
     if (!isInsertModalOpen) return;
+    const update = () => updateInsertPopoverPosition();
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (popoverRef.current?.contains(target)) return;
+      if (floatingButtonRef.current?.contains(target)) return;
+      setIsInsertModalOpen(false);
+    };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsInsertModalOpen(false);
       }
     };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isInsertModalOpen]);
+
+  useEffect(() => {
+    if (!isInsertModalOpen) return;
+    updateInsertPopoverPosition();
   }, [isInsertModalOpen]);
 
   return (
@@ -420,12 +506,13 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
       <div className="inline-manuscript-layout">
         <div className="inline-manuscript-floating-rail" aria-label="画像挿入">
           <button
+            ref={floatingButtonRef}
             className="inline-manuscript-floating-button"
             type="button"
-            onClick={() => setIsInsertModalOpen(true)}
+            onClick={() => setIsInsertModalOpen((current) => !current)}
             aria-label="画像を挿入"
           >
-            📷
+            <PhotoIcon />
           </button>
         </div>
         <div className="inline-manuscript-main">
@@ -494,27 +581,26 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
         }}
       />
       {isInsertModalOpen ? (
-        <div className="inline-manuscript-modal-backdrop" onClick={() => setIsInsertModalOpen(false)}>
-          <div
-            className="inline-manuscript-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="画像を挿入"
-            onClick={(event) => event.stopPropagation()}
+        <div
+          ref={popoverRef}
+          className="inline-manuscript-popover-panel"
+          role="dialog"
+          aria-modal="false"
+          aria-label="画像を挿入"
+          style={insertPopoverStyle}
+        >
+          <h3>画像を挿入</h3>
+          <p>ドラッグ＆ドロップでも挿入できます。</p>
+          <button
+            className="maker-primary-button"
+            type="button"
+            onClick={() => {
+              setIsInsertModalOpen(false);
+              insertImageFromPicker();
+            }}
           >
-            <h3>画像を挿入</h3>
-            <p>ドラッグ＆ドロップでも挿入できます。</p>
-            <button
-              className="maker-primary-button"
-              type="button"
-              onClick={() => {
-                setIsInsertModalOpen(false);
-                insertImageFromPicker();
-              }}
-            >
-              画像を選択
-            </button>
-          </div>
+            画像を選択
+          </button>
         </div>
       ) : null}
       {selectedImage ? (

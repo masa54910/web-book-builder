@@ -340,6 +340,7 @@ export default function BookReader({
         <ImagePage
           src={page.src}
           alt={page.alt}
+          caption={page.caption}
           missing={page.missing}
         />
       );

@@ -1066,32 +1066,23 @@ a {
   gap: 12px;
 }
 
-.inline-manuscript-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1400;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  background: rgba(18, 24, 23, 0.38);
-}
-
-.inline-manuscript-modal {
+.inline-manuscript-popover-panel {
+  z-index: 1202;
   width: min(360px, 100%);
   padding: 16px;
   border: 1px solid rgba(79, 67, 48, 0.16);
   border-radius: 16px;
   background: rgba(255, 252, 246, 0.98);
-  box-shadow: 0 24px 48px rgba(26, 30, 28, 0.2);
+  box-shadow: 0 14px 32px rgba(26, 30, 28, 0.2);
 }
 
-.inline-manuscript-modal h3 {
+.inline-manuscript-popover-panel h3 {
   margin: 0;
   color: #2f251d;
   font-size: 17px;
 }
 
-.inline-manuscript-modal p {
+.inline-manuscript-popover-panel p {
   margin: 8px 0 14px;
   color: #5f564b;
   font-size: 13px;
@@ -2011,22 +2002,27 @@ a {
 }
 
 .image-page {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 0;
 }
 
 .image-page-content {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   min-height: 0;
 }
 
 .image-frame {
   position: relative;
-  min-height: 0;
+  width: 100%;
+  min-height: min(58vh, 420px);
   overflow: hidden;
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2094,18 +2090,6 @@ a {
   align-items: center;
   justify-content: center;
   text-align: center;
-}
-
-.back-cover-wordmark {
-  margin-bottom: 26px;
-  color: rgba(255, 255, 255, 0.9);
-  font-family: "Yu Gothic", sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  writing-mode: vertical-rl;
-  text-orientation: upright;
 }
 
 .back-cover-page p {
@@ -2966,7 +2950,10 @@ a {
   .inline-manuscript-floating-button {
     width: 36px;
     height: 36px;
-    font-size: 16px;
+  }
+
+  .inline-manuscript-popover-panel {
+    width: min(320px, calc(100vw - 24px));
   }
 
   .inline-editor-image-node {
