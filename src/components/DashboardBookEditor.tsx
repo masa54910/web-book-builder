@@ -1,26 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, usePathname, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BETA_LIMITS } from "@/lib/limits";
 import {
   buildBookProject,
+  contentBlocksFromLegacy,
+  contentBlocksToRawText,
+  type BookContentBlock,
+  type BookProject,
   type UploadedBookImage,
   type BookProjectInput,
 } from "@/lib/bookProject";
 import { importManuscriptFile } from "@/lib/fileImport";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getBook, saveBook, updatePublication, type CloudBookRecord } from "@/lib/bookRepository";
-import { deleteDraft, loadDraft, saveDraft, savePreviewProject } from "@/lib/browserBookStorage";
+import { loadDraft, loadPreviewProject, saveDraft, savePreviewProject } from "@/lib/browserBookStorage";
 import { uploadBookProjectAssets } from "@/lib/bookAssetStorage";
 import { createSlugCandidate, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
 import { normalizeHandle, safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
 import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
 import { colorPresets, contrastRatio, themePresets, type BookThemeSettings } from "@/lib/themeSystem";
+import { buildEditorDraftFields, seedFromDraftFields } from "@/lib/editorDraftState";
+import { validateRequiredBookFields } from "@/lib/editorValidation";
 import CharacterAssistant from "@/components/CharacterAssistant";
+import InlineManuscriptEditor from "@/components/InlineManuscriptEditor";
 import HomeBackLink from "@/components/HomeBackLink";
 
 type EditorState = {
@@ -63,6 +70,13 @@ type EditorState = {
   externalSalesLabel: string;
 };
 
+type DraftSeed = {
+  state: EditorState;
+  images: UploadedBookImage[];
+  contentBlocks: BookContentBlock[];
+  restored: boolean;
+};
+
 const INITIAL_EDITOR: EditorState = {
   title: "",
   subtitle: "",
@@ -101,44 +115,21 @@ const INITIAL_EDITOR: EditorState = {
   externalSalesLabel: "",
 };
 
-function initialStateFromDraft(mode: "new" | "edit") {
+function initialStateFromDraft(mode: "new" | "edit"): DraftSeed {
   if (mode !== "new" || typeof window === "undefined") {
-    return { state: INITIAL_EDITOR, restored: false };
+    return {
+      state: INITIAL_EDITOR,
+      images: [],
+      contentBlocks: [{ id: "text-001", type: "text", content: "" }],
+      restored: false,
+    };
   }
   const draft = loadDraft();
-  if (!draft) {
-    return { state: INITIAL_EDITOR, restored: false };
-  }
-
-  const fields = draft.fields;
-  const rawText = typeof fields.rawText === "string" ? fields.rawText : "";
-  if (!rawText.trim()) {
-    return { state: INITIAL_EDITOR, restored: false };
-  }
-
-  deleteDraft();
-  return {
-    state: {
-      ...INITIAL_EDITOR,
-      title: typeof fields.title === "string" && fields.title ? fields.title : INITIAL_EDITOR.title,
-      subtitle: typeof fields.subtitle === "string" ? fields.subtitle : INITIAL_EDITOR.subtitle,
-      author: typeof fields.author === "string" ? fields.author : INITIAL_EDITOR.author,
-      description:
-        typeof fields.description === "string" ? fields.description : INITIAL_EDITOR.description,
-      publisherName:
-        typeof fields.publisherName === "string" && fields.publisherName
-          ? fields.publisherName
-          : INITIAL_EDITOR.publisherName,
-      publishedAt:
-        typeof fields.publishedAt === "string" ? fields.publishedAt : INITIAL_EDITOR.publishedAt,
-      copyrightText:
-        typeof fields.copyrightText === "string"
-          ? fields.copyrightText
-          : INITIAL_EDITOR.copyrightText,
-      rawText,
-    },
-    restored: true,
-  };
+  return seedFromDraftFields({
+    mode,
+    initialState: INITIAL_EDITOR,
+    fields: draft?.fields,
+  });
 }
 
 function fileToDataUrl(file: File) {
@@ -150,24 +141,6 @@ function fileToDataUrl(file: File) {
   });
 }
 
-function imageIdFromName(fileName: string, used: Set<string>) {
-  const base =
-    fileName
-      .replace(/\.[^.]+$/, "")
-      .normalize("NFKD")
-      .toLowerCase()
-      .replace(/[^a-z0-9._-]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "image";
-  let id = base;
-  let suffix = 2;
-  while (used.has(id)) {
-    id = `${base}-${suffix}`;
-    suffix += 1;
-  }
-  used.add(id);
-  return id;
-}
-
 function isImageFile(file: File) {
   const extension = file.name.toLowerCase().match(/\.[^.]+$/)?.[0] ?? "";
   return (
@@ -175,6 +148,24 @@ function isImageFile(file: File) {
     BETA_LIMITS.allowedImageExtensions.includes(extension as never) &&
     file.size <= BETA_LIMITS.maxImageBytes
   );
+}
+
+function uploadedImagesFromBlocks(blocks: BookContentBlock[]): UploadedBookImage[] {
+  const next: UploadedBookImage[] = [];
+  for (const [index, block] of blocks.entries()) {
+    if (block.type !== "image") continue;
+    next.push({
+      id: block.id,
+      fileName: block.fileName,
+      dataUrl: block.publicUrl || block.storagePath,
+      mimeType: block.mimeType,
+      size: 0,
+      caption: block.caption || "",
+      insertChapter: "1",
+      orderInChapter: index + 1,
+    });
+  }
+  return next;
 }
 
 function normalizeColorHex(value: string, fallback: string) {
@@ -187,34 +178,6 @@ function normalizeColorHex(value: string, fallback: string) {
     return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
   }
   return /^#([0-9a-fA-F]{6})$/.test(prefixed) ? prefixed.toLowerCase() : fallback;
-}
-
-type EditableChapter = {
-  title: string;
-  body: string;
-};
-
-function parseEditableChapters(rawText: string) {
-  const text = rawText.replace(/\r\n?/g, "\n").trim();
-  if (!text) return [] as EditableChapter[];
-  const headings = [...text.matchAll(/^# (?!#)([^\n]+)$/gm)];
-  if (!headings.length) {
-    return [{ title: "本文", body: text }];
-  }
-  return headings.map((heading, index) => {
-    const start = (heading.index ?? 0) + heading[0].length;
-    const end = headings[index + 1]?.index ?? text.length;
-    return {
-      title: heading[1].trim() || `第${index + 1}章`,
-      body: text.slice(start, end).trim(),
-    };
-  });
-}
-
-function serializeEditableChapters(chapters: EditableChapter[]) {
-  return chapters
-    .map((chapter) => `# ${chapter.title.trim() || "章タイトル"}\n\n${chapter.body.trim()}`.trim())
-    .join("\n\n");
 }
 
 function fromRecord(record: CloudBookRecord): EditorState {
@@ -276,18 +239,98 @@ function imagesFromRecord(record: CloudBookRecord): UploadedBookImage[] {
   }));
 }
 
+function contentBlocksFromRecord(record: CloudBookRecord) {
+  const storedBlocks = record.bookProject.contentBlocks;
+  if (Array.isArray(storedBlocks) && storedBlocks.length) {
+    return storedBlocks;
+  }
+  return contentBlocksFromLegacy(record.rawText, imagesFromRecord(record));
+}
+
+function stateFromPreviewProject(project: BookProject): EditorState {
+  return {
+    ...INITIAL_EDITOR,
+    title: project.config.title,
+    subtitle: project.config.subtitle,
+    author: project.config.author,
+    description: project.config.description,
+    publisherName: project.config.publisherName,
+    publishedAt: project.config.publishedAt,
+    copyrightText: project.config.copyrightText,
+    rawText: project.rawText,
+    coverImage: project.config.coverImage,
+    bindingDirection: project.config.bindingDirection,
+    theme: project.config.theme,
+    language: project.config.language,
+    fontFamily: project.config.themeSettings?.fontFamily || "mincho",
+    fontScale: project.config.themeSettings?.fontScale || "medium",
+    lineHeight: project.config.themeSettings?.lineHeight || "normal",
+    marginScale: project.config.themeSettings?.marginScale || "standard",
+    pageWidth: project.config.themeSettings?.pageWidth || "standard",
+    background: project.config.themeSettings?.background || "paper",
+    textColor: project.config.themeSettings?.textColor || "#2f251d",
+    accentColor: project.config.themeSettings?.accentColor || "#6bb9ad",
+    coverStyle: project.config.themeSettings?.coverStyle || "overlay",
+    imageLayout: project.config.themeSettings?.imageLayout || "framed",
+    charactersPerPage: project.config.charactersPerPage,
+    tableOfContentsItemsPerPage: project.config.tableOfContentsItemsPerPage,
+    slug: createSlugCandidate(project.config.title),
+    authorHandle: project.config.authorProfile?.handle || "",
+    authorBio: project.config.authorProfile?.bio || "",
+    authorWebsiteUrl: project.config.authorProfile?.websiteUrl || "",
+    authorXUrl: project.config.authorProfile?.snsLinks.find((link) => link.label === "X")?.url || "",
+    authorNoteUrl: project.config.authorProfile?.snsLinks.find((link) => link.type === "note")?.url || "",
+    externalLinkLabel: project.config.externalLinks?.[0]?.label || "",
+    externalLinkUrl: project.config.externalLinks?.[0]?.url || "",
+    externalSalesUrl: project.config.monetization?.externalSalesUrl || "",
+    externalSalesLabel: project.config.monetization?.externalSalesLabel || "",
+  };
+}
+
+function imagesFromPreviewProject(project: BookProject): UploadedBookImage[] {
+  return project.images.map((image, index) => ({
+    id: image.image_id || image.image_index || `image-${index + 1}`,
+    fileName: image.alt || image.source_path || `image-${index + 1}`,
+    dataUrl: image.image_url,
+    mimeType: image.image_url.startsWith("data:image/png")
+      ? "image/png"
+      : image.image_url.startsWith("data:image/webp")
+        ? "image/webp"
+        : "image/jpeg",
+    size: 0,
+    caption: image.caption,
+    insertChapter: image.chapter_order ? String(image.chapter_order) : "",
+    orderInChapter: index + 1,
+  }));
+}
+
+function contentBlocksFromPreviewProject(project: BookProject) {
+  if (Array.isArray(project.contentBlocks) && project.contentBlocks.length) {
+    return project.contentBlocks;
+  }
+  return contentBlocksFromLegacy(project.rawText, imagesFromPreviewProject(project));
+}
+
 export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) {
   const [draftSeed] = useState(() => initialStateFromDraft(mode));
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const previewDraftId = searchParams.get("draftId") || "";
   const params = useParams<{ id?: string }>();
   const { user } = useAuth();
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const authorInputRef = useRef<HTMLInputElement | null>(null);
   const manuscriptInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
-  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [bookId, setBookId] = useState<string | undefined>(params.id);
   const [state, setState] = useState<EditorState>(draftSeed.state);
-  const [images, setImages] = useState<UploadedBookImage[]>([]);
+  const [images, setImages] = useState<UploadedBookImage[]>(draftSeed.images);
+  const [contentBlocks, setContentBlocks] = useState<BookContentBlock[]>(
+    draftSeed.contentBlocks.length ? draftSeed.contentBlocks : [{ id: "text-001", type: "text", content: "" }],
+  );
+  const [editorRevision, setEditorRevision] = useState(0);
+  const [pendingImageCount, setPendingImageCount] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [warnings, setWarnings] = useState<string[]>([]);
   const [statusMessage, setStatusMessage] = useState(
@@ -297,6 +340,33 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [isSaving, setIsSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [autosaveAt, setAutosaveAt] = useState<string | null>(null);
+  const [requiredErrorMessage, setRequiredErrorMessage] = useState("");
+  const [isHydrated, setIsHydrated] = useState(mode !== "new" || !previewDraftId);
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(mode !== "new" || !previewDraftId || draftSeed.restored);
+
+  useEffect(() => {
+    if (mode !== "new" || !previewDraftId) return;
+    let active = true;
+    loadPreviewProject()
+      .then((project) => {
+        if (!active || !project) return;
+        if (project.config.bookId !== previewDraftId) return;
+        if (dirty) return;
+        setState(stateFromPreviewProject(project));
+        setImages(imagesFromPreviewProject(project));
+        setContentBlocks(contentBlocksFromPreviewProject(project));
+        setEditorRevision((current) => current + 1);
+        setStatusMessage("プレビュー前の編集内容を復元しました。");
+      })
+      .finally(() => {
+        if (!active) return;
+        setHasRestoredDraft(true);
+        setIsHydrated(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [dirty, mode, previewDraftId]);
 
   useEffect(() => {
     if (mode !== "edit" || !params.id || !user) return;
@@ -306,15 +376,25 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         if (!active) return;
         if (!book) {
           setStatusMessage("作品が見つからないか、アクセス権がありません。");
+          setIsLoading(false);
           return;
         }
         setState(fromRecord(book));
         setBookId(book.id);
         setImages(imagesFromRecord(book));
+        setContentBlocks(contentBlocksFromRecord(book));
+        setEditorRevision((current) => current + 1);
+        setStatusMessage("作品を読み込みました。");
       })
-      .catch(() => setStatusMessage("作品を読み込めませんでした。"))
+      .catch(() => {
+        if (active) {
+          setStatusMessage("作品を読み込めませんでした。");
+        }
+      })
       .finally(() => {
-        if (active) setIsLoading(false);
+        if (active) {
+          setIsLoading(false);
+        }
       });
     return () => {
       active = false;
@@ -330,17 +410,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [dirty]);
 
-  const chapterOptions = useMemo(
-    () =>
-      [...state.rawText.matchAll(/^# (?!#)([^\n]+)$/gm)].map((match, index) => ({
-        value: String(index + 1),
-        label: match[1].trim() || `第${index + 1}章`,
-      })),
-    [state.rawText],
-  );
-
-  const editableChapters = useMemo(() => parseEditableChapters(state.rawText), [state.rawText]);
-
   const colorContrast = useMemo(
     () => contrastRatio(state.textColor, state.background === "night" ? "#1f2528" : "#fffaf0"),
     [state.background, state.textColor],
@@ -348,68 +417,34 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
   const estimatedPages = useMemo(() => {
     const charsPerPage = Math.max(180, Number(state.charactersPerPage) || 380);
-    const characterCount = state.rawText.trim().length;
-    if (!characterCount) return 0;
-    return Math.max(1, Math.ceil(characterCount / charsPerPage));
-  }, [state.charactersPerPage, state.rawText]);
+    const characterCount = contentBlocks
+      .filter((block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text")
+      .reduce((sum, block) => sum + block.content.trim().length, 0);
+    const imagePages = contentBlocks.filter((block) => block.type === "image").length;
+    const textPages = characterCount ? Math.max(1, Math.ceil(characterCount / charsPerPage)) : 0;
+    return textPages + imagePages;
+  }, [contentBlocks, state.charactersPerPage]);
+
+  const textPages = useMemo(() => {
+    const charsPerPage = Math.max(180, Number(state.charactersPerPage) || 380);
+    const characterCount = contentBlocks
+      .filter((block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text")
+      .reduce((sum, block) => sum + block.content.trim().length, 0);
+    return characterCount ? Math.max(1, Math.ceil(characterCount / charsPerPage)) : 0;
+  }, [contentBlocks, state.charactersPerPage]);
+
+  const imagePages = useMemo(() => contentBlocks.filter((block) => block.type === "image").length, [contentBlocks]);
 
   const autosaveDraftFields = useMemo(
-    () => ({
-      mode,
-      title: state.title,
-      author: state.author,
-      subtitle: state.subtitle,
-      description: state.description,
-      rawText: state.rawText,
-      coverImage: state.coverImage,
-      coverFileName: state.coverFileName,
-      theme: state.theme,
-      language: state.language,
-      fontFamily: state.fontFamily,
-      fontScale: state.fontScale,
-      lineHeight: state.lineHeight,
-      marginScale: state.marginScale,
-      pageWidth: state.pageWidth,
-      background: state.background,
-      textColor: state.textColor,
-      accentColor: state.accentColor,
-      coverStyle: state.coverStyle,
-      imageLayout: state.imageLayout,
-      authorHandle: state.authorHandle,
-      authorBio: state.authorBio,
-      authorWebsiteUrl: state.authorWebsiteUrl,
-      authorXUrl: state.authorXUrl,
-      authorNoteUrl: state.authorNoteUrl,
-      images,
-    }),
-    [
-      mode,
-      state.title,
-      state.author,
-      state.subtitle,
-      state.description,
-      state.rawText,
-      state.coverImage,
-      state.coverFileName,
-      state.theme,
-      state.language,
-      state.fontFamily,
-      state.fontScale,
-      state.lineHeight,
-      state.marginScale,
-      state.pageWidth,
-      state.background,
-      state.textColor,
-      state.accentColor,
-      state.coverStyle,
-      state.imageLayout,
-      state.authorHandle,
-      state.authorBio,
-      state.authorWebsiteUrl,
-      state.authorXUrl,
-      state.authorNoteUrl,
-      images,
-    ],
+    () =>
+      buildEditorDraftFields({
+        mode,
+        state,
+        contentBlocks,
+        images,
+        draftId: bookId || "new-draft",
+      }),
+    [bookId, contentBlocks, images, mode, state],
   );
 
   const autosaveLabel = useMemo(() => {
@@ -425,13 +460,44 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   useEffect(() => {
     if (mode !== "new") return;
     if (!dirty) return;
+    if (!isHydrated || !hasRestoredDraft) return;
     const timeoutId = window.setTimeout(() => {
       const saved = saveDraft(autosaveDraftFields);
       if (!saved) return;
       setAutosaveAt(saved.savedAt);
     }, 700);
     return () => window.clearTimeout(timeoutId);
-  }, [autosaveDraftFields, dirty, mode]);
+  }, [autosaveDraftFields, dirty, hasRestoredDraft, isHydrated, mode]);
+
+  const validateRequiredBeforeAction = () => {
+    const validation = validateRequiredBookFields({
+      title: state.title,
+      authorName: state.author,
+    });
+
+    setErrors((current) => {
+      const next = { ...current };
+      if (validation.fieldErrors.title) {
+        next.title = validation.fieldErrors.title;
+      } else {
+        delete next.title;
+      }
+      if (validation.fieldErrors.author) {
+        next.author = validation.fieldErrors.author;
+      } else {
+        delete next.author;
+      }
+      return next;
+    });
+
+    setRequiredErrorMessage(validation.globalError);
+    if (validation.isValid) return true;
+
+    const firstMissing = !validation.hasTitle ? titleInputRef.current : authorInputRef.current;
+    firstMissing?.scrollIntoView({ behavior: "smooth", block: "center" });
+    firstMissing?.focus();
+    return false;
+  };
 
   const update = <K extends keyof EditorState>(key: K, value: EditorState[K]) => {
     setState((current) => ({
@@ -439,6 +505,23 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       [key]: value,
       slug: key === "title" && !current.slug ? createSlugCandidate(String(value)) : current.slug,
     }));
+    if (key === "title" || key === "author") {
+      setErrors((current) => {
+        const next = { ...current };
+        if (key === "title" && String(value).trim().length > 0) {
+          delete next.title;
+        }
+        if (key === "author" && String(value).trim().length > 0) {
+          delete next.author;
+        }
+        return next;
+      });
+      const nextTitle = key === "title" ? String(value) : state.title;
+      const nextAuthor = key === "author" ? String(value) : state.author;
+      if (nextTitle.trim().length > 0 && nextAuthor.trim().length > 0) {
+        setRequiredErrorMessage("");
+      }
+    }
     setDirty(true);
   };
 
@@ -446,40 +529,16 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     update(key, normalizeColorHex(value, state[key]) as EditorState[typeof key]);
   };
 
-  const applyChapterChanges = (chapters: EditableChapter[]) => {
-    update("rawText", serializeEditableChapters(chapters));
+  const syncContentBlocks = (nextBlocks: BookContentBlock[]) => {
+    setContentBlocks(nextBlocks);
+    setImages(uploadedImagesFromBlocks(nextBlocks));
+    setState((current) => ({ ...current, rawText: contentBlocksToRawText(nextBlocks) }));
+    setDirty(true);
   };
 
-  const moveChapter = (index: number, direction: -1 | 1) => {
-    const nextIndex = index + direction;
-    if (nextIndex < 0 || nextIndex >= editableChapters.length) return;
-    const next = [...editableChapters];
-    const [removed] = next.splice(index, 1);
-    next.splice(nextIndex, 0, removed);
-    applyChapterChanges(next);
-  };
-
-  const updateChapter = (index: number, patch: Partial<EditableChapter>) => {
-    const next = editableChapters.map((chapter, chapterIndex) =>
-      chapterIndex === index ? { ...chapter, ...patch } : chapter,
-    );
-    applyChapterChanges(next);
-  };
-
-  const removeChapter = (index: number) => {
-    if (editableChapters.length <= 1) return;
-    applyChapterChanges(editableChapters.filter((_, chapterIndex) => chapterIndex !== index));
-  };
-
-  const addChapter = () => {
-    const next = [
-      ...editableChapters,
-      {
-        title: `第${editableChapters.length + 1}章`,
-        body: "",
-      },
-    ];
-    applyChapterChanges(next);
+  const applyImportedContent = (nextBlocks: BookContentBlock[]) => {
+    syncContentBlocks(nextBlocks);
+    setEditorRevision((current) => current + 1);
   };
 
   const buildInput = (): BookProjectInput => ({
@@ -509,6 +568,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     },
     charactersPerPage: state.charactersPerPage,
     tableOfContentsItemsPerPage: state.tableOfContentsItemsPerPage,
+    contentBlocks,
     images,
     authorHandle: state.authorHandle,
     authorBio: state.authorBio,
@@ -553,12 +613,15 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     }
     try {
       const imported = await importManuscriptFile(file);
+      const nextRawText = imported.text;
       setState((current) => ({
         ...current,
-        rawText: imported.text,
+        rawText: nextRawText,
         title: current.title || imported.title || current.title,
         description: current.description || imported.description || current.description,
       }));
+      const nextBlocks = contentBlocksFromLegacy(nextRawText, []);
+      applyImportedContent(nextBlocks);
       setWarnings(imported.warnings);
       setStatusMessage(`${file.name} を読み込みました。`);
       setDirty(true);
@@ -580,54 +643,12 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     if (coverInputRef.current) coverInputRef.current.value = "";
   };
 
-  const handleImages = async (files: FileList | null) => {
-    if (!files?.length) return;
-    const used = new Set(images.map((image) => image.id));
-    const next: UploadedBookImage[] = [];
-    const nextWarnings: string[] = [];
-    for (const file of Array.from(files)) {
-      if (!isImageFile(file)) {
-        nextWarnings.push(`${file.name}: JPEG / PNG / WebP、10MBまでです。`);
-        continue;
-      }
-      if (images.length + next.length >= BETA_LIMITS.maxImagesPerBook) {
-        nextWarnings.push(`画像は最大${BETA_LIMITS.maxImagesPerBook}枚までです。`);
-        break;
-      }
-      next.push({
-        id: imageIdFromName(file.name, used),
-        fileName: file.name,
-        dataUrl: await fileToDataUrl(file),
-        mimeType: file.type,
-        size: file.size,
-        caption: "",
-        insertChapter: chapterOptions[0]?.value ?? "",
-        orderInChapter: images.length + next.length + 1,
-      });
-    }
-    setImages((current) => [...current, ...next]);
-    setWarnings(nextWarnings);
-    setDirty(true);
-    if (imageInputRef.current) imageInputRef.current.value = "";
-  };
-
-  const updateImage = (
-    imageId: string,
-    patch: Partial<Pick<UploadedBookImage, "id" | "caption" | "insertChapter" | "orderInChapter">>,
-  ) => {
-    setImages((current) =>
-      current.map((image) => (image.id === imageId ? { ...image, ...patch } : image)),
-    );
-    setDirty(true);
-  };
-
-  const removeImage = (imageId: string) => {
-    setImages((current) => current.filter((image) => image.id !== imageId));
-    setDirty(true);
-  };
-
   const save = async () => {
     if (!user) return null;
+    if (pendingImageCount > 0) {
+      setStatusMessage("画像の読み込みが完了するまで保存できません。");
+      return null;
+    }
     const project = buildProject();
     if (!project) return null;
     setIsSaving(true);
@@ -650,16 +671,42 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const preview = async () => {
+    if (!validateRequiredBeforeAction()) return;
+    if (pendingImageCount > 0) {
+      setStatusMessage("画像の読み込みが完了するまでプレビューできません。");
+      return;
+    }
     const project = buildProject();
     if (!project) return;
-    await savePreviewProject(project);
+    const saved = saveDraft({
+      ...autosaveDraftFields,
+      draftId: project.config.bookId,
+    });
+    if (!saved) {
+      setStatusMessage("下書きを保存できませんでした。通信状態を確認して、もう一度お試しください。");
+      return;
+    }
+    setAutosaveAt(saved.savedAt);
+    try {
+      await savePreviewProject(project);
+    } catch {
+      setStatusMessage("下書きを保存できませんでした。通信状態を確認して、もう一度お試しください。");
+      return;
+    }
     const returnTo =
-      pathname && pathname.startsWith("/books/") ? pathname : mode === "new" ? "/books/new" : "/dashboard";
-    router.push(`/reader?mode=preview&from=dashboard&returnTo=${encodeURIComponent(returnTo)}`);
+      pathname && pathname.startsWith("/books/")
+        ? pathname
+        : mode === "new"
+          ? `/books/new?draftId=${encodeURIComponent(project.config.bookId)}`
+          : "/dashboard";
+    router.push(
+      `/reader?mode=preview&from=dashboard&draftId=${encodeURIComponent(project.config.bookId)}&returnTo=${encodeURIComponent(returnTo)}`,
+    );
   };
 
   const publish = async () => {
     if (!user) return;
+    if (!validateRequiredBeforeAction()) return;
     const saved = await save();
     const id = saved?.id ?? bookId;
     if (!id) return;
@@ -718,13 +765,25 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           <div className="maker-grid">
             <label>
               <span>タイトル 必須</span>
-              <input value={state.title} onChange={(event) => update("title", event.target.value)} />
-              {errors.title ? <small className="form-error">{errors.title}</small> : null}
+              <input
+                ref={titleInputRef}
+                value={state.title}
+                onChange={(event) => update("title", event.target.value)}
+                aria-invalid={Boolean(errors.title)}
+                aria-describedby={errors.title ? "editor-title-error" : undefined}
+              />
+              {errors.title ? <small id="editor-title-error" className="form-error">{errors.title}</small> : null}
             </label>
             <label>
               <span>著者名 必須</span>
-              <input value={state.author} onChange={(event) => update("author", event.target.value)} />
-              {errors.author ? <small className="form-error">{errors.author}</small> : null}
+              <input
+                ref={authorInputRef}
+                value={state.author}
+                onChange={(event) => update("author", event.target.value)}
+                aria-invalid={Boolean(errors.author)}
+                aria-describedby={errors.author ? "editor-author-error" : undefined}
+              />
+              {errors.author ? <small id="editor-author-error" className="form-error">{errors.author}</small> : null}
             </label>
             <label>
               <span>サブタイトル</span>
@@ -784,16 +843,15 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               onChange={(event) => void handleImport(event.target.files?.[0])}
             />
           </label>
-          <label>
-            <span>本文 必須</span>
-            <textarea
-              className="manuscript-input"
-              value={state.rawText}
-              onChange={(event) => update("rawText", event.target.value)}
-              placeholder="# 第一章　はじまり"
-            />
-            {errors.rawText ? <small className="form-error">{errors.rawText}</small> : null}
-          </label>
+          <p className="maker-note">文章の途中にカーソルを置いて、画像を貼り付け・ドラッグ&ドロップ・選択挿入できます。</p>
+          <InlineManuscriptEditor
+            value={contentBlocks}
+            revision={String(editorRevision)}
+            onChange={syncContentBlocks}
+            onStatus={setStatusMessage}
+            onPendingChange={setPendingImageCount}
+          />
+          {errors.rawText ? <small className="form-error">{errors.rawText}</small> : null}
         </div>
         </div>
 
@@ -803,7 +861,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             <h2>{state.title || "無題のWebブック"}</h2>
             <p>{state.description || "説明文を入力すると、公開時の紹介文として使われます。"}</p>
             <p className="maker-note">
-              文字数: {state.rawText.trim().length.toLocaleString()}字 / 推定ページ数: {estimatedPages}ページ / 自動保存: {autosaveLabel}
+              推定ページ数: {estimatedPages} / 20ページ
+              <br />
+              文章: {textPages}ページ / 挿絵: {imagePages}ページ / 自動保存: {autosaveLabel}
             </p>
             <div
               className={`mini-book-preview theme-${state.theme} book-bg-${state.background} book-font-${state.fontFamily} book-size-${state.fontScale} book-leading-${state.lineHeight} book-cover-style-${state.coverStyle} book-image-layout-${state.imageLayout}`}
@@ -818,56 +878,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             </div>
           </section>
 
-          <section className="maker-card">
-            <div className="maker-section-heading">
-              <div>
-                <h2>章構成</h2>
-                <p className="maker-note">章タイトル・本文の微修正、並び替え、追加、削除ができます。</p>
-              </div>
-              <button className="maker-small-button" type="button" onClick={addChapter}>
-                章を追加
-              </button>
-            </div>
-            {editableChapters.length ? (
-              <div className="chapter-manager-list">
-                {editableChapters.map((chapter, index) => (
-                  <article className="chapter-manager-item" key={`${index}-${chapter.title}`}>
-                    <label>
-                      <span>章タイトル {index + 1}</span>
-                      <input
-                        value={chapter.title}
-                        onChange={(event) => updateChapter(index, { title: event.target.value })}
-                      />
-                    </label>
-                    <label>
-                      <span>章本文</span>
-                      <textarea
-                        rows={4}
-                        value={chapter.body}
-                        onChange={(event) => updateChapter(index, { body: event.target.value })}
-                      />
-                    </label>
-                    <div className="chapter-manager-actions">
-                      <button className="maker-small-button" type="button" onClick={() => moveChapter(index, -1)} disabled={index === 0}>
-                        ↑ 上へ
-                      </button>
-                      <button className="maker-small-button" type="button" onClick={() => moveChapter(index, 1)} disabled={index === editableChapters.length - 1}>
-                        ↓ 下へ
-                      </button>
-                      <button className="maker-small-button danger" type="button" onClick={() => removeChapter(index)} disabled={editableChapters.length <= 1}>
-                        削除
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p className="maker-note">本文を入力すると章構成が表示されます。</p>
-            )}
-          </section>
-
         <div className="maker-card">
-          <h2>画像</h2>
+          <h2>表紙画像</h2>
           <div className="cover-picker">
             <div className="cover-preview">
               {state.coverImage ? (
@@ -891,49 +903,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               </button>
             </div>
           </div>
-          <label className="maker-full">
-            <span>本文画像</span>
-            <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => void handleImages(event.target.files)} />
-          </label>
-          {images.length ? (
-            <div className="body-image-list">
-              {images.map((image) => (
-                <article className="body-image-item" key={image.id}>
-                  <div className="body-image-thumb">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={image.dataUrl} alt={image.fileName} />
-                  </div>
-                  <label>
-                    <span>画像ID</span>
-                    <input value={image.id} onChange={(event) => updateImage(image.id, { id: event.target.value.trim() })} />
-                  </label>
-                  <label>
-                    <span>キャプション</span>
-                    <input value={image.caption} onChange={(event) => updateImage(image.id, { caption: event.target.value })} />
-                  </label>
-                  <label>
-                    <span>挿入先の章</span>
-                    <select value={image.insertChapter} onChange={(event) => updateImage(image.id, { insertChapter: event.target.value })}>
-                      <option value="">本文記法のみ</option>
-                      {chapterOptions.map((chapter) => (
-                        <option key={chapter.value} value={chapter.value}>{chapter.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>章内での順序</span>
-                    <input type="number" min={1} value={image.orderInChapter} onChange={(event) => updateImage(image.id, { orderInChapter: Number(event.target.value) || 1 })} />
-                  </label>
-                  <p className="maker-note">挿入記法：<code>{`[[image:${image.id}]]`}</code></p>
-                  <button className="maker-small-button danger" type="button" onClick={() => removeImage(image.id)}>
-                    削除
-                  </button>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="maker-note">保存済み画像はBookProject内に保持されます。新しい画像を追加できます。</p>
-          )}
         </div>
 
         <div className="maker-card">
@@ -1098,6 +1067,11 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       </section>
 
       {warnings.length ? <div className="maker-warning">{warnings.map((warning) => <p key={warning}>{warning}</p>)}</div> : null}
+      {requiredErrorMessage ? (
+        <p className="maker-status maker-status-error" role="alert" aria-live="assertive">
+          {requiredErrorMessage}
+        </p>
+      ) : null}
       {statusMessage ? <p className="maker-status" aria-live="polite">{statusMessage}</p> : null}
 
       <div className="maker-actions sticky-actions">
