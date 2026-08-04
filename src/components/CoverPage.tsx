@@ -55,13 +55,6 @@ export default function CoverPage({
 
   return (
     <div className={`cover-page book-cover-style-${coverStyle}`} style={{ "--book-accent-color": coverTone } as CSSProperties}>
-      {config.coverImage ? (
-        <CoverImage
-          src={config.coverImage}
-          alt={`${config.title} 表紙`}
-          contain
-        />
-      ) : null}
       <span className="cover-series">Web Book Builder</span>
       <div className="cover-copy">
         {displayTitleLines?.length ? (
@@ -75,6 +68,15 @@ export default function CoverPage({
         )}
         <p>{config.subtitle}</p>
       </div>
+      {config.coverImage ? (
+        <div className="cover-image-slot" aria-hidden="true">
+          <CoverImage
+            src={config.coverImage}
+            alt={`${config.title} 表紙`}
+            contain
+          />
+        </div>
+      ) : null}
       <span className="cover-author">{config.author}</span>
     </div>
   );

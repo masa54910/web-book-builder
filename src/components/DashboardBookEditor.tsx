@@ -495,7 +495,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     if (!state.slug.trim()) return "";
     return validateSlug(state.slug);
   }, [state.slug]);
-  const publicBooksBaseUrl = useMemo(() => publicBookBaseUrl(typeof window === "undefined" ? undefined : window.location.origin), []);
+  const publicBooksBaseUrl = useMemo(() => publicBookBaseUrl(), []);
 
   const estimatedPages = useMemo(() => {
     const charsPerPage = Math.max(180, Number(state.charactersPerPage) || 380);
@@ -586,7 +586,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       const next = {
         ...current,
         [key]: value,
-        slug: key === "title" && !current.slug ? createSlugCandidate(String(value)) : current.slug,
       };
       if (key === "background") {
         next.textColor = ensureAaTextColor(next.textColor, next.background);

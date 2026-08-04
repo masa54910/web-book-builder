@@ -118,6 +118,7 @@ export function seedFromDraftFields(input: {
   const draftBlocks = Array.isArray(fields.contentBlocks)
     ? (fields.contentBlocks as BookContentBlock[])
     : contentBlocksFromLegacy(rawText, draftImages);
+  const fromLanding = asString(fields.source) === "landing";
   const hasAnyDraftContent = Boolean(
     asString(fields.title, input.initialState.title).trim() ||
       asString(fields.author, input.initialState.author).trim() ||
@@ -156,7 +157,7 @@ export function seedFromDraftFields(input: {
     tableOfContentsItemsPerPage: asNumber(fields.tableOfContentsItemsPerPage, input.initialState.tableOfContentsItemsPerPage),
     visibility: asString(fields.visibility, input.initialState.visibility) as EditorDraftState["visibility"],
     status: asString(fields.status, input.initialState.status) as EditorDraftState["status"],
-    slug: hasAnyDraftContent ? asString(fields.slug, input.initialState.slug) : "",
+    slug: hasAnyDraftContent && !fromLanding ? asString(fields.slug, input.initialState.slug) : "",
     authorHandle: asString(fields.authorHandle, input.initialState.authorHandle),
     authorBio: asString(fields.authorBio, input.initialState.authorBio),
     authorWebsiteUrl: asString(fields.authorWebsiteUrl, input.initialState.authorWebsiteUrl),

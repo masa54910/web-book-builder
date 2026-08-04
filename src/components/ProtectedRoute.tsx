@@ -6,6 +6,9 @@ import { useAuth } from "@/lib/auth/AuthContext";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading, authMode, configurationError } = useAuth();
+  const nextValue = typeof window === "undefined"
+    ? "/books/new"
+    : `${window.location.pathname || "/books/new"}${window.location.search || ""}`;
 
   if (isLoading) {
     return <div className="reader-loading">アカウント情報を確認しています…</div>;
@@ -26,7 +29,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
             <>
               <h1>ログインが必要です</h1>
               <p>作品の作成・保存・公開にはアカウントが必要です。</p>
-              <Link className="maker-primary-link" href="/login">
+              <Link className="maker-primary-link" href={`/login?next=${encodeURIComponent(nextValue)}`}>
                 ログインする
               </Link>
             </>

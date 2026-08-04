@@ -79,7 +79,7 @@ export default function ReadingTools({
         <button className="reader-button tool-button" type="button" onClick={onToggleAutoFlip}>
           {autoFlipEnabled ? "自動めくり停止" : "自動めくり開始"}
         </button>
-        <label>
+        <label className="auto-flip-pill">
           <span>速度</span>
           <select
             value={autoFlipSeconds}
@@ -91,7 +91,7 @@ export default function ReadingTools({
             <option value={12}>朗読向け（12秒）</option>
           </select>
         </label>
-        <label>
+        <label className="auto-flip-pill">
           <span>開始位置</span>
           <select
             value={autoFlipStartMode}
@@ -101,7 +101,7 @@ export default function ReadingTools({
             <option value="cover">表紙から</option>
           </select>
         </label>
-        <label className="auto-flip-check">
+        <label className="auto-flip-pill auto-flip-check">
           <input
             type="checkbox"
             checked={autoFlipLoop}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import BrandLogo from "@/components/ui/BrandLogo";
@@ -27,14 +27,25 @@ function selectedPlanMessage(plan: string | null) {
 
 export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot" }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { signIn, signUp, resetPassword, authMode, configurationError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const nextPath = safeNextPath(searchParams.get("next"));
+  const planParam = searchParams.get("plan") || "";
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const withNext = (path: string) => {
+    const query = new URLSearchParams();
+    if (nextPath && nextPath !== "/dashboard") query.set("next", nextPath);
+    if (planParam) query.set("plan", planParam);
+    const serialized = query.toString();
+    return serialized ? `${path}?${serialized}` : path;
+  };
 
   const title =
     mode === "login" ? "ログイン" : mode === "signup" ? "無料で始める" : "パスワード再設定";
@@ -86,14 +97,14 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
     }
 
     if (mode === "signup") {
-      const planMessage = selectedPlanMessage(new URLSearchParams(window.location.search).get("plan"));
+      const planMessage = selectedPlanMessage(planParam);
       if (planMessage) {
         setMessage(planMessage);
         return;
       }
     }
 
-    router.push(safeNextPath(new URLSearchParams(window.location.search).get("next")));
+    router.push(nextPath);
   };
 
   return (
@@ -161,9 +172,9 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
           {title}
         </Button>
         <div className="auth-links">
-          {mode !== "login" ? <Link href="/login">ログインへ</Link> : null}
-          {mode !== "signup" ? <Link href="/signup">新規登録へ</Link> : null}
-          {mode !== "forgot" ? <Link href="/forgot-password">パスワードを忘れた方</Link> : null}
+          {mode !== "login" ? <Link href={withNext("/login")}>ログインへ</Link> : null}
+          {mode !== "signup" ? <Link href={withNext("/signup")}>新規登録へ</Link> : null}
+          {mode !== "forgot" ? <Link href={withNext("/forgot-password")}>パスワードを忘れた方</Link> : null}
         </div>
       </section>
     </main>

@@ -1777,9 +1777,19 @@ a {
 }
 
 .cover-copy {
-  padding: 28px 0;
+  padding: 24px 0 18px;
   border-top: 1px solid rgba(255, 255, 255, 0.46);
   border-bottom: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.cover-image-slot {
+  position: relative;
+  width: 100%;
+  min-height: 180px;
+  margin-top: 10px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 12px 24px rgba(9, 10, 14, 0.2);
 }
 
 .cover-copy h2 {
@@ -1804,6 +1814,7 @@ a {
   display: flex;
   align-items: center;
   gap: 11px;
+  margin-top: 10px;
   font-family: Georgia, serif;
   font-size: 13px;
   letter-spacing: 0.12em;
@@ -2744,26 +2755,55 @@ a {
   justify-content: center;
   width: min(980px, 100%);
   margin: 10px auto 0;
-  color: #e9dcc8;
+  color: #f7f5f0;
 }
 
 .auto-flip-tools label {
   display: inline-flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
-  font-size: 11px;
+  font-size: 12px;
+}
+
+.auto-flip-pill {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(72, 110, 148, 0.9), rgba(46, 76, 108, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 8px 16px rgba(12, 19, 28, 0.2);
 }
 
 .auto-flip-tools select {
-  min-height: 34px;
-  border: 1px solid rgba(231, 207, 171, 0.28);
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 999px;
-  color: #f4ead8;
-  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  background: rgba(12, 24, 38, 0.36);
+}
+
+.auto-flip-tools select:focus-visible,
+.auto-flip-pill input:focus-visible {
+  outline: 2px solid rgba(240, 248, 255, 0.75);
+  outline-offset: 2px;
+}
+
+.auto-flip-check {
+  cursor: pointer;
 }
 
 .auto-flip-check input {
-  accent-color: #e6b15a;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.auto-flip-check input:checked {
+  background: linear-gradient(135deg, #ffffff, #d9eaff);
+  border-color: rgba(255, 255, 255, 0.82);
 }
 
 .promotion-center {

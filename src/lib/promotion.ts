@@ -17,7 +17,7 @@ export type PromotionAsset = {
 };
 
 export function publicBookBaseUrl(origin?: string) {
-  const base = origin || process.env.NEXT_PUBLIC_SITE_URL || "https://webbookmaker.com";
+  const base = origin || process.env.NEXT_PUBLIC_SITE_URL || "https://webbookmaker.vercel.app";
   return `${base.replace(/\/$/, "")}/books/`;
 }
 

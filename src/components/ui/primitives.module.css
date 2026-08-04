@@ -291,31 +291,33 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  font-size: 12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 11px;
   font-weight: 900;
   line-height: 1;
 }
 
 .shareButtonX {
   color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.14);
-  background: linear-gradient(135deg, #111111, #2a2a2a);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 12px 24px rgba(12, 12, 12, 0.22);
+  border-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, #0f1115, #232833);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 20px rgba(16, 19, 24, 0.24);
 }
 
 .shareButtonNote {
-  color: #1f3a31;
-  border-color: rgba(56, 112, 94, 0.18);
-  background: linear-gradient(135deg, #f3fbf7, #e5f5ee);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 10px 20px rgba(63, 113, 97, 0.12);
+  color: #1f3028;
+  border-color: rgba(19, 38, 31, 0.18);
+  background: linear-gradient(135deg, #fbfffc, #edf8f1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 10px 20px rgba(34, 70, 57, 0.12);
 }
 
 .shareButtonFacebook {
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.16);
-  background: linear-gradient(135deg, #1877f2, #0f5fc2);
+  background: linear-gradient(135deg, #1877f2, #0d57c5);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 12px 24px rgba(24, 119, 242, 0.24);
 }
 
@@ -328,6 +330,10 @@
 
 .shareWrap .buttonBase:active:not(:disabled) {
   transform: translateY(0);
+}
+
+.shareWrap .buttonBase {
+  border-radius: 999px;
 }
 
 .pageHeader {
