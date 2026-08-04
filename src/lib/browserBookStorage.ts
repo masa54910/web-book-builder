@@ -4,6 +4,7 @@ import { isBookProject, type BookProject } from "@/lib/bookProject";
 
 export const DRAFT_STORAGE_KEY = "webBookMaker:draft:current";
 export const PREVIEW_POINTER_KEY = "webBookMaker:preview:current";
+export const PREVIEW_RETURN_KEY = "webBookMaker:preview:return";
 
 const DATABASE_NAME = "webBookMaker";
 const DATABASE_VERSION = 1;
@@ -13,6 +14,13 @@ const CURRENT_PREVIEW_ID = "current";
 export type MakerDraft = {
   version: 1;
   fields: Record<string, unknown>;
+  savedAt: string;
+};
+
+export type PreviewReturnState = {
+  draftId: string;
+  returnTo: string;
+  scrollY: number;
   savedAt: string;
 };
 
@@ -134,6 +142,59 @@ export async function loadPreviewProject() {
   }
 }
 
+export function savePreviewReturnState(state: Omit<PreviewReturnState, "savedAt">) {
+  const storage = getStorage();
+  if (!storage) return null;
+  const payload: PreviewReturnState = {
+    ...state,
+    savedAt: new Date().toISOString(),
+  };
+  try {
+    storage.setItem(PREVIEW_RETURN_KEY, JSON.stringify(payload));
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export function loadPreviewReturnState(draftId: string) {
+  const storage = getStorage();
+  if (!storage) return null;
+  try {
+    const parsed: unknown = JSON.parse(storage.getItem(PREVIEW_RETURN_KEY) ?? "null");
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      (parsed as PreviewReturnState).draftId === draftId &&
+      typeof (parsed as PreviewReturnState).returnTo === "string" &&
+      typeof (parsed as PreviewReturnState).scrollY === "number" &&
+      typeof (parsed as PreviewReturnState).savedAt === "string"
+    ) {
+      return parsed as PreviewReturnState;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export function deletePreviewReturnState(draftId?: string) {
+  const storage = getStorage();
+  if (!storage) return;
+  try {
+    if (!draftId) {
+      storage.removeItem(PREVIEW_RETURN_KEY);
+      return;
+    }
+    const current = loadPreviewReturnState(draftId);
+    if (current) {
+      storage.removeItem(PREVIEW_RETURN_KEY);
+    }
+  } catch {
+    // Ignore cleanup failures.
+  }
+}
+
 export async function deletePreviewProject() {
   try {
     await withProjectStore("readwrite", (store) => store.delete(CURRENT_PREVIEW_ID));
@@ -145,4 +206,5 @@ export async function deletePreviewProject() {
   } catch {
     // Ignore cleanup failures.
   }
+  deletePreviewReturnState();
 }

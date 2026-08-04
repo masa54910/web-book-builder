@@ -24,6 +24,7 @@ export default function BookReaderShell({
   cloudBookId?: string;
   backLink?: {
     destination?: "auto" | "home" | "dashboard";
+    href?: string;
     label?: string;
   };
 }) {

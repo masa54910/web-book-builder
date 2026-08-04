@@ -41,10 +41,7 @@ export default function DynamicReaderPage() {
       <main className="empty-reader-page">
         <section>
           <p className="maker-kicker">WebBookMaker</p>
-          <HomeBackLink
-            destination={isDashboardPreview ? "dashboard" : "auto"}
-            label={isDashboardPreview ? "← 戻る" : undefined}
-          />
+          {isDashboardPreview ? <Link className="maker-secondary-link home-back-link" href={safeReturnTo}>← 戻る</Link> : <HomeBackLink />}
           <h1>作成中のWeb書籍がありません</h1>
           <p>作成画面で本文と基本情報を入力し、「プレビューを作成」を押してください。</p>
           <Link className="maker-primary-link" href={isDashboardPreview ? safeReturnTo : "/"}>
@@ -75,7 +72,7 @@ export default function DynamicReaderPage() {
         backLink={
           isDashboardPreview
             ? {
-                destination: "dashboard",
+                href: safeReturnTo,
                 label: "← 戻る",
               }
             : undefined

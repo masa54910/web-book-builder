@@ -48,12 +48,6 @@ export default function CoverPage({
   if (back) {
     return (
       <div className={`back-cover-page book-cover-style-${coverStyle}`} style={{ "--book-accent-color": coverTone } as CSSProperties}>
-        {config.coverImage ? (
-          <CoverImage
-            src={config.coverImage}
-            alt={`${config.title} 裏表紙`}
-          />
-        ) : null}
         <p>{config.publisherName}</p>
       </div>
     );

@@ -1,11 +1,9 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { BookContentBlock } from "@/lib/bookProject";
 import { createPendingImageBlock, insertImageBlocksAtCursor } from "@/lib/inlineContentBlocks";
-import { computeInlineImagePopoverLayout } from "@/lib/inlineImagePopover";
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -177,6 +175,12 @@ function getSelectionRoot(root: HTMLElement) {
   return { selection, range };
 }
 
+function cloneSelectionRange(root: HTMLElement) {
+  const selectionInfo = getSelectionRoot(root);
+  if (!selectionInfo) return null;
+  return selectionInfo.range.cloneRange();
+}
+
 function getTextOffsetWithinParagraph(paragraph: HTMLElement, range: Range) {
   const workingRange = document.createRange();
   workingRange.selectNodeContents(paragraph);
@@ -204,9 +208,7 @@ function setCaretAfterNode(node: Node) {
 }
 
 function findParagraphTarget(root: HTMLElement, range?: Range | null) {
-  if (!range) {
-    return root.querySelector<HTMLElement>("p[data-node-type='paragraph']") || null;
-  }
+  if (!range) return null;
   const start = range.startContainer instanceof HTMLElement ? range.startContainer : range.startContainer.parentElement;
   const paragraph = start?.closest?.("p[data-node-type='paragraph']") as HTMLElement | null;
   if (paragraph && root.contains(paragraph)) return paragraph;
@@ -253,14 +255,19 @@ function PhotoIcon() {
 export default function InlineManuscriptEditor({ value, revision, onChange, onStatus, onPendingChange }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const floatingButtonRef = useRef<HTMLButtonElement | null>(null);
-  const popoverRef = useRef<HTMLDivElement | null>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const nodesRef = useRef<BookContentBlock[]>(value);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
-  const [isInsertModalOpen, setIsInsertModalOpen] = useState(false);
-  const [insertPopoverStyle, setInsertPopoverStyle] = useState<CSSProperties>({});
   const [dragOver, setDragOver] = useState(false);
   const [cursorFallbackMessage, setCursorFallbackMessage] = useState("");
+
+  const captureSelectionRange = useCallback(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const range = cloneSelectionRange(root);
+    if (!range) return;
+    savedRangeRef.current = range;
+  }, []);
 
   const pendingCount = useMemo(
     () => value.filter((block) => block.type === "image" && block.uploadState === "pending").length,
@@ -350,42 +357,24 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
   async function insertFiles(files: File[], source: "paste" | "drop" | "picker", clientX?: number, clientY?: number) {
     const root = rootRef.current;
     if (!root) return;
-    const selectionInfo = getSelectionRoot(root);
     const dropRange = source === "drop" ? getRangeFromPoint(root, clientX, clientY) : null;
-    const activeRange = dropRange ?? selectionInfo?.range ?? null;
+    const selectionRange = cloneSelectionRange(root);
+    const activeRange = (dropRange ?? savedRangeRef.current ?? selectionRange)?.cloneRange() ?? null;
     const paragraphTarget = findParagraphTarget(root, activeRange);
-
-    let insertionIndex = nodesRef.current.length;
-    let beforeText = "";
-
-    if (paragraphTarget && activeRange) {
-      const nodeIndex = Array.from(root.children).indexOf(paragraphTarget);
-      if (nodeIndex >= 0) {
-        const split = splitParagraphAtCaret(paragraphTarget, activeRange);
-        beforeText = split.before;
-        insertionIndex = nodeIndex;
-      }
-    }
-
-    if (!selectionInfo && source === "picker") {
-      setCursorFallbackMessage("カーソル位置が取れなかったため、文末へ挿入しました。");
-      onStatus("カーソル位置が取れなかったため、文末へ挿入しました。");
-    } else {
-      setCursorFallbackMessage("");
-    }
 
     if (paragraphTarget && activeRange) {
       const nodeIndex = Array.from(root.children).indexOf(paragraphTarget);
       if (nodeIndex >= 0) {
         const currentParagraph = nodesRef.current[nodeIndex];
         if (currentParagraph?.type === "text") {
+          const split = splitParagraphAtCaret(paragraphTarget, activeRange);
           const pendingImages = files.map((file) =>
             createPendingImageBlock(`pending-${crypto.randomUUID()}`, file.name, file.type),
           );
           const { nextBlocks, insertedImageIds: pendingIds } = insertImageBlocksAtCursor({
             blocks: nodesRef.current,
             paragraphIndex: nodeIndex,
-            cursorOffset: beforeText.length,
+            cursorOffset: split.before.length,
             imageBlocks: pendingImages,
           });
           emitChange(nextBlocks);
@@ -399,91 +388,30 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
       }
     }
 
-    const next = [...nodesRef.current];
-    const insertionAt = Math.min(Math.max(insertionIndex, 0), next.length);
-    const newNodes: BookContentBlock[] = files.map((file) =>
-      createPendingImageBlock(`pending-${crypto.randomUUID()}`, file.name, file.type),
-    );
-    next.splice(insertionAt, 0, ...newNodes);
-    emitChange(next);
-    if (rootRef.current) renderNodes(rootRef.current, next);
-    if (newNodes.length) setSelectedImageId(newNodes[newNodes.length - 1]?.id || null);
-    const insertedNode = root.querySelector<HTMLElement>(`[data-node-id="${newNodes[newNodes.length - 1]?.id}"]`);
-    if (insertedNode) setCaretAfterNode(insertedNode);
-    await finishUpload(files, newNodes.map((node) => node.id));
-    void clientX;
-    void clientY;
+    const message = "カーソル位置を取得できないため、本文中にカーソルを置いてから画像を挿入してください。";
+    setCursorFallbackMessage(message);
+    onStatus(message);
   }
 
   const insertImageFromPicker = () => {
     fileInputRef.current?.click();
   };
 
-  const updateInsertPopoverPosition = () => {
-    const anchor = floatingButtonRef.current;
-    const popover = popoverRef.current;
-    if (!anchor || !popover) return;
-    const layout = computeInlineImagePopoverLayout({
-      anchorRect: anchor.getBoundingClientRect(),
-      popoverRect: popover.getBoundingClientRect(),
-      viewport: {
-        width: window.innerWidth,
-        height: window.innerHeight,
-      },
-    });
-
-    setInsertPopoverStyle({
-      position: "fixed",
-      left: layout.left,
-      top: layout.top,
-      width: layout.width,
-      maxWidth: "min(360px, calc(100vw - 24px))",
-    });
-  };
-
-  useEffect(() => {
-    if (!isInsertModalOpen) return;
-    const update = () => updateInsertPopoverPosition();
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (popoverRef.current?.contains(target)) return;
-      if (floatingButtonRef.current?.contains(target)) return;
-      setIsInsertModalOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsInsertModalOpen(false);
-      }
-    };
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("orientationchange", update);
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("orientationchange", update);
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [isInsertModalOpen]);
-
-  useEffect(() => {
-    if (!isInsertModalOpen) return;
-    updateInsertPopoverPosition();
-  }, [isInsertModalOpen]);
-
   return (
     <section className={`inline-manuscript-editor ${dragOver ? "is-drag-over" : ""}`}>
       <div className="inline-manuscript-layout">
         <div className="inline-manuscript-floating-rail" aria-label="画像挿入">
           <button
-            ref={floatingButtonRef}
             className="inline-manuscript-floating-button inline-image-trigger"
             type="button"
-            onClick={() => setIsInsertModalOpen((current) => !current)}
+            onMouseDown={(event) => {
+              captureSelectionRange();
+              event.preventDefault();
+            }}
+            onClick={() => {
+              setCursorFallbackMessage("");
+              insertImageFromPicker();
+            }}
             aria-label="画像を挿入"
             title="画像を挿入"
           >
@@ -507,7 +435,11 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
               const target = event.target as HTMLElement;
               const image = target.closest("[data-node-type='image']") as HTMLElement | null;
               setSelectedImageId(image?.dataset.nodeId || null);
+              captureSelectionRange();
             }}
+            onMouseUp={captureSelectionRange}
+            onKeyUp={captureSelectionRange}
+            onFocus={captureSelectionRange}
             onInput={() => {
               const root = rootRef.current;
               if (!root) return;
@@ -516,6 +448,7 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
               onChange(next);
               const nextPending = next.filter((block) => block.type === "image" && block.uploadState === "pending").length;
               onPendingChange(nextPending);
+              captureSelectionRange();
             }}
             onPaste={(event) => {
               const files = Array.from(event.clipboardData.files || []).filter(isImageFile);
@@ -555,29 +488,6 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
           event.currentTarget.value = "";
         }}
       />
-      {isInsertModalOpen ? (
-        <div
-          ref={popoverRef}
-          className="inline-manuscript-popover-panel"
-          role="dialog"
-          aria-modal="false"
-          aria-label="画像を挿入"
-          style={insertPopoverStyle}
-        >
-          <h3>画像を挿入</h3>
-          <p>ドラッグ＆ドロップでも挿入できます。</p>
-          <button
-            className="maker-primary-button"
-            type="button"
-            onClick={() => {
-              setIsInsertModalOpen(false);
-              insertImageFromPicker();
-            }}
-          >
-            画像を選択
-          </button>
-        </div>
-      ) : null}
       {selectedImage ? (
         <div className="inline-manuscript-popover" role="group" aria-label="画像設定">
           <label>

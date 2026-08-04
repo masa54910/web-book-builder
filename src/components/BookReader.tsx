@@ -1,6 +1,7 @@
 "use client";
 
 import HTMLFlipBook from "react-pageflip";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
@@ -62,6 +63,7 @@ export default function BookReader({
   cloudBookId?: string;
   backLink?: {
     destination?: "auto" | "home" | "dashboard";
+    href?: string;
     label?: string;
   };
 }) {
@@ -390,11 +392,17 @@ export default function BookReader({
           ) : null}
         </div>
         <div className="reader-masthead-actions">
-          <HomeBackLink
-            className="reader-edit-link"
-            destination={backLink?.destination}
-            label={backLink?.label}
-          />
+          {backLink?.href ? (
+            <Link className="reader-edit-link" href={backLink.href}>
+              {backLink.label || "← 戻る"}
+            </Link>
+          ) : (
+            <HomeBackLink
+              className="reader-edit-link"
+              destination={backLink?.destination}
+              label={backLink?.label}
+            />
+          )}
           {editHref ? (
             <a className="reader-edit-link" href={editHref}>
               編集画面へ戻る
