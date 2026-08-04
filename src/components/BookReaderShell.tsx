@@ -15,6 +15,8 @@ export default function BookReaderShell({
   images,
   editHref,
   cloudBookId,
+  shareUrl,
+  shareDisabledReason,
   backLink,
 }: {
   config: BookConfig;
@@ -22,6 +24,8 @@ export default function BookReaderShell({
   images: ImageManifestRow[];
   editHref?: string;
   cloudBookId?: string;
+  shareUrl?: string;
+  shareDisabledReason?: string;
   backLink?: {
     destination?: "auto" | "home" | "dashboard";
     href?: string;
@@ -35,6 +39,8 @@ export default function BookReaderShell({
       images={images}
       editHref={editHref}
       cloudBookId={cloudBookId}
+      shareUrl={shareUrl}
+      shareDisabledReason={shareDisabledReason}
       backLink={backLink}
     />
   );

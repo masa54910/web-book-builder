@@ -9,6 +9,7 @@ import HomeBackLink from "@/components/HomeBackLink";
 import { canReadPublishedBook } from "@/lib/accessControl";
 import { materializeBookProjectAssets } from "@/lib/bookAssetStorage";
 import { getPublishedBookBySlug, type CloudBookRecord } from "@/lib/bookRepository";
+import { publicBookUrl } from "@/lib/promotion";
 import { recordBookView } from "@/lib/readerAnalytics";
 
 export default function PublicBookPage() {
@@ -57,6 +58,7 @@ export default function PublicBookPage() {
       chapters={book.bookProject.chapters}
       images={book.bookProject.images}
       cloudBookId={book.id}
+      shareUrl={publicBookUrl(decodeURIComponent(params.slug))}
       backLink={
         book.authorHandle
           ? {

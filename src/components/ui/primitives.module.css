@@ -279,6 +279,25 @@
   gap: 8px;
 }
 
+.shareLabel {
+  color: #6f7d77;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.shareIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .shareButtonX {
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.14);
@@ -305,6 +324,10 @@
   border-color: rgba(255, 255, 255, 0.16);
   background: linear-gradient(135deg, #06c755, #0ab54d);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 12px 24px rgba(6, 199, 85, 0.22);
+}
+
+.shareWrap .buttonBase:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .pageHeader {

@@ -69,6 +69,7 @@ export default function DynamicReaderPage() {
         chapters={project.chapters}
         images={project.images}
         editHref={isDashboardPreview ? safeReturnTo : "/"}
+        shareDisabledReason="作品を公開するとSNSで共有できます。"
         backLink={
           isDashboardPreview
             ? {
