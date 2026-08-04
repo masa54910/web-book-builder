@@ -34,6 +34,7 @@ import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/loc
 import { colorPresets, contrastRatio, getThemePreset, themePresets, type BookThemeSettings } from "@/lib/themeSystem";
 import { buildEditorDraftFields, seedFromDraftFields } from "@/lib/editorDraftState";
 import { validateRequiredBookFields } from "@/lib/editorValidation";
+import { logSupabaseIssue } from "@/lib/supabaseDebug";
 import CharacterAssistant from "@/components/CharacterAssistant";
 import InlineManuscriptEditor from "@/components/InlineManuscriptEditor";
 import HomeBackLink from "@/components/HomeBackLink";
@@ -140,6 +141,14 @@ function initialStateFromDraft(mode: "new" | "edit"): DraftSeed {
     };
   }
   const draft = loadDraft();
+  if (draft?.fields && draft.fields.source !== "landing") {
+    return {
+      state: INITIAL_EDITOR,
+      images: [],
+      contentBlocks: [{ id: "text-001", type: "text", content: "" }],
+      restored: false,
+    };
+  }
   return seedFromDraftFields({
     mode,
     initialState: INITIAL_EDITOR,
@@ -840,7 +849,12 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       trackEvent("book_saved", { bookId: record.id });
       if (mode === "new") router.replace(`/dashboard/books/${record.id}/edit`);
       return record;
-    } catch {
+    } catch (error) {
+      logSupabaseIssue({
+        processingName: "save",
+        target: "books / book_images / book_external_links / book-assets",
+        error,
+      });
       if (isMountedRef.current) {
         setStatusMessage(SAVE_FAILURE_MESSAGE);
       }
@@ -901,6 +915,11 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       setStatusMessage(`公開しました: /books/${record.slug}`);
       trackEvent("book_published", { bookId: record.id });
     } catch (error) {
+      logSupabaseIssue({
+        processingName: "publish",
+        target: "books",
+        error,
+      });
       setStatusMessage(error instanceof Error ? error.message : "公開に失敗しました。");
     }
   };

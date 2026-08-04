@@ -7,12 +7,14 @@ export default function ShareTools({
   bookId,
   cloudBookId,
   title,
+  description,
   shareUrl,
   shareDisabledReason,
 }: {
   bookId: string;
   cloudBookId?: string;
   title: string;
+  description?: string;
   shareUrl?: string;
   shareDisabledReason?: string;
 }) {
@@ -22,6 +24,7 @@ export default function ShareTools({
     <ShareButtons
       url={shareUrl || ""}
       title={title}
+      description={description}
       platforms={["x", "note", "facebook", "line", "copy"]}
       className="share-tools"
       disabled={!shareUrl}

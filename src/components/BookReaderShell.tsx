@@ -16,6 +16,7 @@ export default function BookReaderShell({
   editHref,
   cloudBookId,
   shareUrl,
+  shareDescription,
   shareDisabledReason,
   backLink,
 }: {
@@ -25,6 +26,7 @@ export default function BookReaderShell({
   editHref?: string;
   cloudBookId?: string;
   shareUrl?: string;
+  shareDescription?: string;
   shareDisabledReason?: string;
   backLink?: {
     destination?: "auto" | "home" | "dashboard";
@@ -40,6 +42,7 @@ export default function BookReaderShell({
       editHref={editHref}
       cloudBookId={cloudBookId}
       shareUrl={shareUrl}
+      shareDescription={shareDescription}
       shareDisabledReason={shareDisabledReason}
       backLink={backLink}
     />

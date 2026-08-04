@@ -10,6 +10,8 @@ import { resolveSafeInternalReturnPath } from "@/lib/returnTo";
 import BookReaderShell from "./BookReaderShell";
 import HomeBackLink from "./HomeBackLink";
 
+const PUBLIC_SHARE_HOME_URL = "https://webbookmaker.vercel.app/";
+
 export default function DynamicReaderPage() {
   const searchParams = useSearchParams();
   const [project, setProject] = useState<BookProject | null>(null);
@@ -69,7 +71,8 @@ export default function DynamicReaderPage() {
         chapters={project.chapters}
         images={project.images}
         editHref={isDashboardPreview ? safeReturnTo : "/"}
-        shareDisabledReason="作品を公開するとSNSで共有できます。"
+        shareUrl={PUBLIC_SHARE_HOME_URL}
+        shareDescription="WebBookMakerで作成中"
         backLink={
           isDashboardPreview
             ? {

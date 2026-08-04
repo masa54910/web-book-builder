@@ -59,6 +59,7 @@ export default function PublicBookPage() {
       images={book.bookProject.images}
       cloudBookId={book.id}
       shareUrl={publicBookUrl(decodeURIComponent(params.slug))}
+      shareDescription={book.description}
       backLink={
         book.authorHandle
           ? {

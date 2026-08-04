@@ -7,6 +7,7 @@ import { getAppEnv, isDemoModeAllowed } from "@/lib/appEnv";
 import { createSlugCandidate, makeUniqueSlug } from "@/lib/slug";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { parseBookProjectJson } from "@/lib/bookProjectNormalization";
+import { logSupabaseIssue } from "@/lib/supabaseDebug";
 
 export type CloudBookRecord = {
   id: string;
@@ -210,7 +211,10 @@ async function syncBookSideTables(book: CloudBookRecord) {
     .delete()
     .eq("book_id", book.id)
     .eq("owner_id", book.ownerId);
-  if (deleteImagesError) throw deleteImagesError;
+  if (deleteImagesError) {
+    logSupabaseIssue({ processingName: "saveBook", target: "book_images.delete", error: deleteImagesError });
+    throw deleteImagesError;
+  }
 
   if (book.bookProject.images.length) {
     const { error } = await supabase.from("book_images").insert(
@@ -224,7 +228,10 @@ async function syncBookSideTables(book: CloudBookRecord) {
         sort_order: index + 1,
       })),
     );
-    if (error) throw error;
+    if (error) {
+      logSupabaseIssue({ processingName: "saveBook", target: "book_images.insert", error });
+      throw error;
+    }
   }
 
   const { error: deleteLinksError } = await supabase
@@ -232,7 +239,10 @@ async function syncBookSideTables(book: CloudBookRecord) {
     .delete()
     .eq("book_id", book.id)
     .eq("owner_id", book.ownerId);
-  if (deleteLinksError) throw deleteLinksError;
+  if (deleteLinksError) {
+    logSupabaseIssue({ processingName: "saveBook", target: "book_external_links.delete", error: deleteLinksError });
+    throw deleteLinksError;
+  }
 
   const links = book.bookProject.config.externalLinks ?? [];
   if (links.length) {
@@ -247,7 +257,10 @@ async function syncBookSideTables(book: CloudBookRecord) {
         is_enabled: true,
       })),
     );
-    if (error) throw error;
+    if (error) {
+      logSupabaseIssue({ processingName: "saveBook", target: "book_external_links.insert", error });
+      throw error;
+    }
   }
 }
 
@@ -404,7 +417,10 @@ export async function saveBook(
         .select("id", { count: "exact", head: true })
         .eq("owner_id", ownerId)
         .is("deleted_at", null);
-      if (countError) throw countError;
+        if (countError) {
+          logSupabaseIssue({ processingName: "saveBook", target: "books.count", error: countError });
+          throw countError;
+        }
       if ((count ?? 0) >= BETA_LIMITS.maxBooksPerUser) {
         throw new Error(`ベータ版では1ユーザー最大${BETA_LIMITS.maxBooksPerUser}作品まで作成できます。`);
       }
@@ -440,11 +456,15 @@ export async function saveBook(
       updated_at: record.updatedAt,
     };
     const { data, error } = await supabase.from("books").upsert(payload).select("*").single();
-    if (error) throw error;
+    if (error) {
+      logSupabaseIssue({ processingName: "saveBook", target: "books.upsert", error });
+      throw error;
+    }
     const saved = mapSupabaseBook(data) ?? record;
     await syncBookSideTables(saved);
     return saved;
   } catch (error) {
+    logSupabaseIssue({ processingName: "saveBook", target: "books.catch", error });
     if (!canFallbackToLocal(error)) throw error;
     const books = readLocalBooks().filter((book) => book.ownerId === ownerId && !book.deletedAt);
     if (!existing && books.length >= BETA_LIMITS.maxBooksPerUser) {
@@ -494,9 +514,13 @@ export async function updatePublication(
       .eq("owner_id", ownerId)
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) {
+      logSupabaseIssue({ processingName: "updatePublication", target: "books.update", error });
+      throw error;
+    }
     return mapSupabaseBook(data) ?? next;
   } catch (error) {
+    logSupabaseIssue({ processingName: "updatePublication", target: "books.catch", error });
     if (!canFallbackToLocal(error)) throw error;
     writeLocalBooks(readLocalBooks().map((item) => (item.id === next.id ? next : item)));
     return next;

@@ -4,6 +4,7 @@ import type { BookProject } from "@/lib/bookProject";
 import { getAppEnv, isDemoModeAllowed } from "@/lib/appEnv";
 import { BETA_LIMITS, STORAGE_BUCKETS } from "@/lib/limits";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { logSupabaseIssue } from "@/lib/supabaseDebug";
 
 const STORAGE_PREFIX = "storage:";
 const BOOK_ASSET_BUCKET_CANDIDATES = [STORAGE_BUCKETS.bookAssets, "book_assets"] as const;
@@ -102,6 +103,11 @@ async function uploadDataUrl({
       return storageRefForBucket(bucketName, path);
     }
     lastError = error;
+    logSupabaseIssue({
+      processingName: "uploadBookProjectAssets",
+      target: `storage.${bucketName}`,
+      error,
+    });
     const lowerMessage = `${error.message || ""} ${error.name || ""}`.toLowerCase();
     if (!lowerMessage.includes("bucket") || !lowerMessage.includes("not")) {
       throw error;

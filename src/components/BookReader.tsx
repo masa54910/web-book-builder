@@ -55,6 +55,7 @@ export default function BookReader({
   editHref,
   cloudBookId,
   shareUrl,
+  shareDescription,
   shareDisabledReason,
   backLink,
 }: {
@@ -64,6 +65,7 @@ export default function BookReader({
   editHref?: string;
   cloudBookId?: string;
   shareUrl?: string;
+  shareDescription?: string;
   shareDisabledReason?: string;
   backLink?: {
     destination?: "auto" | "home" | "dashboard";
@@ -480,7 +482,14 @@ export default function BookReader({
         onAutoFlipLoopChange={setAutoFlipLoop}
         onAutoFlipStartModeChange={setAutoFlipStartMode}
       />
-      <ShareTools bookId={config.bookId} cloudBookId={cloudBookId} title={config.title} shareUrl={shareUrl} shareDisabledReason={shareDisabledReason} />
+      <ShareTools
+        bookId={config.bookId}
+        cloudBookId={cloudBookId}
+        title={config.title}
+        description={shareDescription}
+        shareUrl={shareUrl}
+        shareDisabledReason={shareDisabledReason}
+      />
       <p className="reader-help">{helpText}</p>
     </main>
   );
