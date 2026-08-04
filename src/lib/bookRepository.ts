@@ -61,7 +61,8 @@ function canUseLocalSchemaFallback() {
 }
 
 function canFallbackToLocal(error: unknown) {
-  return canUseLocalSchemaFallback() && isSchemaCacheMissingError(error);
+  if (isSchemaCacheMissingError(error)) return true;
+  return canUseLocalSchemaFallback();
 }
 
 function now() {
