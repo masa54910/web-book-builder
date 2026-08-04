@@ -16,6 +16,11 @@ export type PromotionAsset = {
   noteBody: string;
 };
 
+export function publicBookBaseUrl(origin?: string) {
+  const base = origin || process.env.NEXT_PUBLIC_SITE_URL || "https://webbookmaker.com";
+  return `${base.replace(/\/$/, "")}/books/`;
+}
+
 function hashtagsFor(config: BookConfig, locale: SupportedLocale) {
   const base = locale === "ja" ? ["Web小説", "創作小説", "WebBookMaker"] : ["WebBook", "Writing", "WebBookMaker"];
   if (config.theme === "research") return [...base, locale === "ja" ? "研究" : "Research"];
@@ -24,8 +29,7 @@ function hashtagsFor(config: BookConfig, locale: SupportedLocale) {
 }
 
 export function publicBookUrl(slug: string, origin?: string) {
-  const base = origin || process.env.NEXT_PUBLIC_SITE_URL || "";
-  return `${base.replace(/\/$/, "")}/books/${slug}`;
+  return `${publicBookBaseUrl(origin)}${slug}`;
 }
 
 export function buildPromotionAsset({

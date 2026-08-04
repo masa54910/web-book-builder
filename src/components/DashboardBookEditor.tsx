@@ -5,6 +5,7 @@ import { useParams, usePathname, useRouter, useSearchParams } from "next/navigat
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BETA_LIMITS } from "@/lib/limits";
+import { publicBookBaseUrl } from "@/lib/promotion";
 import {
   buildBookProject,
   contentBlocksFromLegacy,
@@ -26,7 +27,7 @@ import {
   savePreviewReturnState,
 } from "@/lib/browserBookStorage";
 import { uploadBookProjectAssets } from "@/lib/bookAssetStorage";
-import { createSlugCandidate, validateSlug } from "@/lib/slug";
+import { createSlugCandidate, normalizeSlugInput, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
 import { normalizeHandle, safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
 import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
@@ -36,6 +37,8 @@ import { validateRequiredBookFields } from "@/lib/editorValidation";
 import CharacterAssistant from "@/components/CharacterAssistant";
 import InlineManuscriptEditor from "@/components/InlineManuscriptEditor";
 import HomeBackLink from "@/components/HomeBackLink";
+import Button from "@/components/ui/Button";
+import FormField from "@/components/ui/FormField";
 
 type EditorState = {
   title: string;
@@ -83,6 +86,11 @@ type DraftSeed = {
   contentBlocks: BookContentBlock[];
   restored: boolean;
 };
+
+const SAVE_SUCCESS_MESSAGE = "保存しました。";
+const SAVE_FAILURE_MESSAGE = "保存できませんでした。";
+const SLUG_UNAVAILABLE_MESSAGE = "このURLは使用できません。";
+const SLUG_AVAILABLE_MESSAGE = "このURLは使用できます。";
 
 const INITIAL_EDITOR: EditorState = {
   title: "",
@@ -369,7 +377,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   );
   const [isLoading, setIsLoading] = useState(mode === "edit");
   const [isSaving, setIsSaving] = useState(false);
-  const [saveFlash, setSaveFlash] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [dirty, setDirty] = useState(false);
   const [autosaveAt, setAutosaveAt] = useState<string | null>(null);
   const [requiredErrorMessage, setRequiredErrorMessage] = useState("");
@@ -377,12 +384,16 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [hasRestoredDraft, setHasRestoredDraft] = useState(!previewDraftId || draftSeed.restored);
   const [didRestorePreviewDraft, setDidRestorePreviewDraft] = useState(false);
   const [pendingScrollRestore, setPendingScrollRestore] = useState<number | null>(null);
-  const saveFlashTimeoutRef = useRef<number | null>(null);
+  const [slugAvailabilityMessage, setSlugAvailabilityMessage] = useState("");
+  const isMountedRef = useRef(true);
+  const statusMessageTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      if (saveFlashTimeoutRef.current !== null) {
-        window.clearTimeout(saveFlashTimeoutRef.current);
+      isMountedRef.current = false;
+      if (statusMessageTimeoutRef.current !== null) {
+        window.clearTimeout(statusMessageTimeoutRef.current);
       }
     };
   }, []);
@@ -482,8 +493,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   );
   const slugFormatError = useMemo(() => {
     if (!state.slug.trim()) return "";
-    return validateSlug(createSlugCandidate(state.slug));
+    return validateSlug(state.slug);
   }, [state.slug]);
+  const publicBooksBaseUrl = useMemo(() => publicBookBaseUrl(typeof window === "undefined" ? undefined : window.location.origin), []);
 
   const estimatedPages = useMemo(() => {
     const charsPerPage = Math.max(180, Number(state.charactersPerPage) || 380);
@@ -598,7 +610,23 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         setRequiredErrorMessage("");
       }
     }
+    if (key === "slug") {
+      setSlugAvailabilityMessage("");
+    }
     setDirty(true);
+  };
+
+  const showTemporaryStatusMessage = (message: string, durationMs = 2000) => {
+    if (statusMessageTimeoutRef.current !== null) {
+      window.clearTimeout(statusMessageTimeoutRef.current);
+      statusMessageTimeoutRef.current = null;
+    }
+    setStatusMessage(message);
+    statusMessageTimeoutRef.current = window.setTimeout(() => {
+      if (!isMountedRef.current) return;
+      setStatusMessage((current) => (current === message ? "" : current));
+      statusMessageTimeoutRef.current = null;
+    }, durationMs);
   };
 
   const updateColor = (key: "textColor" | "accentColor", value: string) => {
@@ -642,7 +670,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     if (!user) return;
     if (!state.slug.trim()) return;
 
-    const normalizedSlug = createSlugCandidate(state.slug || "");
+    const normalizedSlug = normalizeSlugInput(state.slug || "");
     const formatError = validateSlug(normalizedSlug);
     if (formatError) return;
 
@@ -652,11 +680,12 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         .then((books) => {
           if (!active) return;
           const conflict = books.some((book) => book.slug === normalizedSlug && book.id !== bookId);
+          setSlugAvailabilityMessage(conflict ? "" : SLUG_AVAILABLE_MESSAGE);
           setErrors((current) => {
             const next = { ...current };
             if (conflict) {
-              next.slug = "このURLは使用できません";
-            } else if (next.slug === "このURLは使用できません" || next.slug === formatError) {
+              next.slug = SLUG_UNAVAILABLE_MESSAGE;
+            } else if (next.slug === SLUG_UNAVAILABLE_MESSAGE || next.slug === formatError) {
               delete next.slug;
             }
             return next;
@@ -741,8 +770,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       setErrors(result.errors);
       return null;
     }
-    if (errors.slug === "このURLは使用できません") {
-      setErrors((current) => ({ ...current, slug: "このURLは使用できません" }));
+    if (errors.slug === SLUG_UNAVAILABLE_MESSAGE) {
+      setErrors((current) => ({ ...current, slug: SLUG_UNAVAILABLE_MESSAGE }));
       return null;
     }
     if (state.slug && validateSlug(state.slug)) {
@@ -792,44 +821,35 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const save = async () => {
-    if (!user) return null;
+    if (!user || isSaving) return null;
     if (pendingImageCount > 0) {
       setStatusMessage("画像の読み込みが完了するまで保存できません。");
       return null;
     }
     const project = buildProject();
     if (!project) return null;
-    if (saveFlashTimeoutRef.current !== null) {
-      window.clearTimeout(saveFlashTimeoutRef.current);
-      saveFlashTimeoutRef.current = null;
-    }
     setIsSaving(true);
-    setSaveFlash("saving");
     try {
       const projectWithAssets = await uploadBookProjectAssets(project, user.id);
       const record = await saveBook(projectWithAssets, user.id, bookId, state.slug || undefined);
+      if (!isMountedRef.current) return record;
       setBookId(record.id);
       setState((current) => ({ ...current, slug: record.slug, status: record.status, visibility: record.visibility }));
       setDirty(false);
-      setSaveFlash("success");
-      saveFlashTimeoutRef.current = window.setTimeout(() => {
-        setSaveFlash("idle");
-        saveFlashTimeoutRef.current = null;
-      }, 2000);
-      setStatusMessage("保存しました。");
+      setSlugAvailabilityMessage(record.slug ? SLUG_AVAILABLE_MESSAGE : "");
+      showTemporaryStatusMessage(SAVE_SUCCESS_MESSAGE);
       trackEvent("book_saved", { bookId: record.id });
       if (mode === "new") router.replace(`/dashboard/books/${record.id}/edit`);
       return record;
     } catch {
-      setSaveFlash("error");
-      saveFlashTimeoutRef.current = window.setTimeout(() => {
-        setSaveFlash("idle");
-        saveFlashTimeoutRef.current = null;
-      }, 2000);
-      setStatusMessage("保存できませんでした");
+      if (isMountedRef.current) {
+        setStatusMessage(SAVE_FAILURE_MESSAGE);
+      }
       return null;
     } finally {
-      setIsSaving(false);
+      if (isMountedRef.current) {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -905,9 +925,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           <p>ベータ制限：最大5作品、本文20万文字、画像30枚、画像10MBまで。</p>
         </div>
         <div className="maker-actions">
-          <button className="maker-primary-button" type="button" disabled={isSaving} onClick={() => void save()}>
+          <Button variant="primary" type="button" disabled={isSaving} onClick={() => void save()}>
             {isSaving ? "保存中…" : "保存"}
-          </button>
+          </Button>
           <button className="maker-secondary-button" type="button" onClick={() => void publish()}>
             公開
           </button>
@@ -950,14 +970,21 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               <span>サブタイトル</span>
               <input value={state.subtitle} onChange={(event) => update("subtitle", event.target.value)} />
             </label>
-            <label>
-              <span>公開URL</span>
+            <FormField id="editor-slug" label="公開URL" error={errors.slug || slugFormatError}>
               <div className="slug-input-wrap">
-                <span className="slug-prefix">https://webbookmaker.com/books/</span>
-                <input value={state.slug} onChange={(event) => update("slug", createSlugCandidate(event.target.value))} />
+                <span className="slug-prefix">{publicBooksBaseUrl}</span>
+                <input
+                  id="editor-slug"
+                  value={state.slug}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(event) => update("slug", normalizeSlugInput(event.target.value))}
+                />
               </div>
-              {errors.slug ? <small className="form-error">{errors.slug}</small> : slugFormatError ? <small className="form-error">{slugFormatError}</small> : null}
-            </label>
+              {!errors.slug && !slugFormatError && slugAvailabilityMessage ? <small className="maker-note">{slugAvailabilityMessage}</small> : null}
+            </FormField>
           </div>
           <label className="maker-full">
             <span>説明文</span>
@@ -1243,9 +1270,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       {statusMessage ? <p className="maker-status" aria-live="polite">{statusMessage}</p> : null}
 
       <div className="maker-actions sticky-actions">
-        <button className="maker-primary-button" type="button" disabled={isSaving} onClick={() => void save()}>
-          {saveFlash === "saving" ? "保存中..." : saveFlash === "success" ? "保存しました。" : saveFlash === "error" ? "保存できませんでした" : "保存"}
-        </button>
+        <Button variant="primary" type="button" disabled={isSaving} onClick={() => void save()}>
+          {isSaving ? "保存中…" : "保存"}
+        </Button>
         <button className="maker-secondary-button" type="button" onClick={() => void preview()}>
           プレビュー
         </button>

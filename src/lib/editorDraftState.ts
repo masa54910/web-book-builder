@@ -118,6 +118,14 @@ export function seedFromDraftFields(input: {
   const draftBlocks = Array.isArray(fields.contentBlocks)
     ? (fields.contentBlocks as BookContentBlock[])
     : contentBlocksFromLegacy(rawText, draftImages);
+  const hasAnyDraftContent = Boolean(
+    asString(fields.title, input.initialState.title).trim() ||
+      asString(fields.author, input.initialState.author).trim() ||
+      rawText.trim() ||
+      draftImages.length ||
+      draftBlocks.length > 1 ||
+      asString(fields.coverImage).trim(),
+  );
 
   const restoredState: EditorDraftState = {
     ...input.initialState,
@@ -148,7 +156,7 @@ export function seedFromDraftFields(input: {
     tableOfContentsItemsPerPage: asNumber(fields.tableOfContentsItemsPerPage, input.initialState.tableOfContentsItemsPerPage),
     visibility: asString(fields.visibility, input.initialState.visibility) as EditorDraftState["visibility"],
     status: asString(fields.status, input.initialState.status) as EditorDraftState["status"],
-    slug: asString(fields.slug, input.initialState.slug),
+    slug: hasAnyDraftContent ? asString(fields.slug, input.initialState.slug) : "",
     authorHandle: asString(fields.authorHandle, input.initialState.authorHandle),
     authorBio: asString(fields.authorBio, input.initialState.authorBio),
     authorWebsiteUrl: asString(fields.authorWebsiteUrl, input.initialState.authorWebsiteUrl),
@@ -159,15 +167,6 @@ export function seedFromDraftFields(input: {
     externalSalesUrl: asString(fields.externalSalesUrl, input.initialState.externalSalesUrl),
     externalSalesLabel: asString(fields.externalSalesLabel, input.initialState.externalSalesLabel),
   };
-
-  const hasAnyDraftContent = Boolean(
-    restoredState.title.trim() ||
-      restoredState.author.trim() ||
-      restoredState.rawText.trim() ||
-      draftImages.length ||
-      draftBlocks.length > 1 ||
-      restoredState.coverImage,
-  );
 
   return {
     state: restoredState,

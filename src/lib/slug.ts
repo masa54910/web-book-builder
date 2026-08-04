@@ -1,13 +1,17 @@
 import { BETA_LIMITS } from "./limits";
 
-export function createSlugCandidate(value: string) {
-  const normalized = value
+export function normalizeSlugInput(value: string) {
+  return value
     .normalize("NFKC")
     .toLowerCase()
     .replace(/['’]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
+}
+
+export function createSlugCandidate(value: string) {
+  const normalized = normalizeSlugInput(value);
   return normalized || "book";
 }
 
@@ -18,8 +22,9 @@ export function isValidSlug(slug: string) {
 }
 
 export function validateSlug(slug: string) {
-  const normalized = createSlugCandidate(slug);
-  if (!isValidSlug(normalized)) return "URLスラッグは英数字・日本語・ハイフンで入力してください。";
+  const normalized = normalizeSlugInput(slug);
+  if (!normalized) return "";
+  if (!isValidSlug(normalized)) return "公開URLは半角英小文字・半角数字・ハイフンで入力してください。";
   if (BETA_LIMITS.reservedSlugs.includes(normalized as never)) {
     return "このURLはシステムで予約されています。別のURLを指定してください。";
   }
