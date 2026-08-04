@@ -115,7 +115,7 @@ export default function ShareButtons({
     <div className={[styles.shareWrap, className].filter(Boolean).join(" ")} aria-label="共有ボタン">
       {showLabel ? <span className={styles.shareLabel}>SNSで共有</span> : null}
       {renderShareLink("x", createXUrl(url, title, description, hashtags), "Xで共有", <ShareXIcon />, styles.shareButtonX)}
-      {renderShareLink("note", "https://note.com/", "noteで共有", <ShareNoteIcon />, styles.shareButtonNote)}
+      {renderShareLink("note", "https://note.com/notes/new", "noteで共有", <ShareNoteIcon />, styles.shareButtonNote)}
       {renderShareLink("facebook", createFacebookUrl(url), "Facebookで共有", <ShareFacebookIcon />, styles.shareButtonFacebook)}
       {renderShareLink("line", createLineUrl(url), "LINEで共有", <ShareLineIcon />, styles.shareButtonLine)}
       {platforms.includes("copy") ? (
