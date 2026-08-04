@@ -847,7 +847,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       setSlugAvailabilityMessage(record.slug ? SLUG_AVAILABLE_MESSAGE : "");
       showTemporaryStatusMessage(SAVE_SUCCESS_MESSAGE);
       trackEvent("book_saved", { bookId: record.id });
-      if (mode === "new") router.replace(`/dashboard/books/${record.id}/edit`);
+      if (mode === "new" || record.id !== (bookId || params.id)) {
+        router.replace(`/dashboard/books/${record.id}/edit`);
+      }
       return record;
     } catch (error) {
       logSupabaseIssue({

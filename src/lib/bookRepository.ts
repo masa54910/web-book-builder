@@ -74,6 +74,10 @@ function browserId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function looksLikeUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 function readLocalBooks(): CloudBookRecord[] {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(LOCAL_BOOKS_KEY) ?? "[]");
@@ -289,6 +293,9 @@ export async function getBook(id: string, ownerId?: string) {
   const supabase = getSupabaseClient();
   if (!supabase) {
     assertLocalFallbackAllowed();
+    return readLocalBooks().find((book) => book.id === id && !book.deletedAt && (!ownerId || book.ownerId === ownerId)) ?? null;
+  }
+  if (!looksLikeUuid(id)) {
     return readLocalBooks().find((book) => book.id === id && !book.deletedAt && (!ownerId || book.ownerId === ownerId)) ?? null;
   }
   try {
