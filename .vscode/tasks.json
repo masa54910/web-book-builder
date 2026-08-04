@@ -1,0 +1,662 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "git-status-short",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"status",
+				"--short"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "recovery-stage-all",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"add",
+				"-A"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "recovery-commit",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"commit",
+				"-m",
+				"Restore editor draft state after interrupted Gate5-6 work"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "git-add-gate6",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"add",
+				"scripts/verify-beta.ts",
+				"src/app/globals.css",
+				"src/components/BookReader.tsx",
+				"src/components/ColophonPage.tsx",
+				"src/components/CoverPage.tsx",
+				"src/components/DynamicReaderPage.tsx",
+				"src/components/ImagePage.tsx",
+				"src/components/InlineManuscriptEditor.tsx",
+				"src/lib/inlineContentBlocks.ts",
+				"src/lib/returnTo.ts"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "git-commit-gate6",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"commit",
+				"-m",
+				"Gate6 UX: floating image insert, preview return, reader polish"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "git-push-gate6",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"push"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "git-status-post-push",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"status",
+				"--short"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6b-git-status",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"status"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6b-git-diff-check",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"diff",
+				"--check"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6b-lint",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6b-test",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"test"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6b-build",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6b-stage-commit-push",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"add",
+				"src/components/InlineManuscriptEditor.tsx",
+				"src/app/globals.css",
+				"src/components/CoverPage.tsx",
+				"src/components/ImagePage.tsx",
+				"src/components/BookReader.tsx"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6b-status-staged",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"status",
+				"--short"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6b-diff-staged",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"diff",
+				"--cached",
+				"--stat"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6b-commit",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"commit",
+				"-m",
+				"Refine inline image popover and reader image alignment"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6b-push",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"push",
+				"origin",
+				"main"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-git-status",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"status"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-git-diff-check",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"diff",
+				"--check"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-lint",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-test",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"test"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-build",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-lint-rerun",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-test-rerun",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"test"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-build-rerun",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-stage-commit1",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"add",
+				"src/components/DashboardBookEditor.tsx",
+				"src/lib/editorDraftState.ts",
+				"src/lib/editorValidation.ts"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-commit1",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"commit",
+				"-m",
+				"Preserve editor draft across preview navigation"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-push1",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"push",
+				"origin",
+				"main"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-stage-commit2",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"add",
+				"src/components/InlineManuscriptEditor.tsx",
+				"src/app/globals.css",
+				"src/lib/inlineImagePopover.ts",
+				"scripts/verify-beta.ts"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-commit2",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"commit",
+				"-m",
+				"Fix image insertion popover and required field validation"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-push2",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"push",
+				"origin",
+				"main"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-final-status",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"status",
+				"--short"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-show-commit1",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"show",
+				"--name-only",
+				"--pretty=format:%H%n%s",
+				"38f82e3"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6c-show-commit2",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"show",
+				"--name-only",
+				"--pretty=format:%H%n%s",
+				"b32fb9b"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6d-lint",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6d-test",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"test"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6d-build",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6d-lint-r2",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6d-test-r2",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"test"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6d-build-r2",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6d-status",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"status",
+				"--short"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6d-probe-supabase",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"scripts/probe-supabase-save.mjs"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6e-lint",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6e-build",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6f-lint",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate6f-build",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate-v2-lint",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate-v2-lint-rerun",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate-v2-lint-final",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate-v2-test-final",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"test"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate-v2-build-final",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate-v2-lint-clean",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate-v2-test-clean",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"test"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "gate-v2-build-clean",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "lint",
+			"type": "shell",
+			"command": "npm run lint",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "lint-cmd",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "lint-cmd",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "test-cmd",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"test"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "test-cmd",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"test"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "show-editor-draft-head",
+			"type": "shell",
+			"command": "git.cmd",
+			"args": [
+				"show",
+				"HEAD:src/lib/editorDraftState.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "show-editor-draft-head",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"show",
+				"HEAD:src/lib/editorDraftState.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

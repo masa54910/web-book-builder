@@ -15,7 +15,7 @@ export function createPendingImageBlock(id: string, fileName: string, mimeType: 
     caption: "",
     altText: fileName,
     fitMode: "contain",
-    pageMode: "full-page",
+    pageMode: "inline",
     uploadState: "pending",
   };
 }

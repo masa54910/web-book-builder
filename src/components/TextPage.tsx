@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import type { SyntheticEvent } from "react";
 
+import { INLINE_IMAGE_TOKEN_PREFIX } from "@/lib/paginateText";
 import ReferenceBlock, { extractUrls } from "./ReferenceBlock";
 
 const PREVIOUS_GUIDE_PATTERN =
@@ -13,6 +14,29 @@ function isPreviousGuide(text: string) {
 
 function stopPageFlip(event: SyntheticEvent) {
   event.stopPropagation();
+}
+
+function parseInlineImageToken(paragraph: string) {
+  if (!paragraph.startsWith(INLINE_IMAGE_TOKEN_PREFIX) || !paragraph.endsWith("]]")) {
+    return null;
+  }
+  const encoded = paragraph.slice(INLINE_IMAGE_TOKEN_PREFIX.length, -2);
+  try {
+    const decoded = JSON.parse(decodeURIComponent(encoded)) as {
+      src?: string;
+      alt?: string;
+      caption?: string;
+      missing?: boolean;
+    };
+    return {
+      src: decoded.src,
+      alt: decoded.alt || "inline image",
+      caption: decoded.caption || "",
+      missing: Boolean(decoded.missing),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export default function TextPage({
@@ -36,6 +60,22 @@ export default function TextPage({
       </header>
       {paragraphs.map((paragraph, index) => {
         const key = `${index}-${paragraph.slice(0, 18)}`;
+        const inlineImage = parseInlineImageToken(paragraph);
+        if (inlineImage) {
+          return (
+            <figure className="text-inline-image" key={`${key}-inline-image`}>
+              {inlineImage.src ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={inlineImage.src} alt={inlineImage.alt} loading="lazy" decoding="async" />
+              ) : (
+                <div className="text-inline-image-fallback">IMAGE</div>
+              )}
+              {inlineImage.caption.trim() ? <figcaption>{inlineImage.caption}</figcaption> : null}
+              {inlineImage.missing ? <p className="text-inline-image-missing">画像IDが登録されていません。</p> : null}
+            </figure>
+          );
+        }
+
         if (previousChapterTitle && onJumpToPrevious && isPreviousGuide(paragraph)) {
           return (
             <p className="text-paragraph" key={key}>

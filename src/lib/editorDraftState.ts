@@ -65,13 +65,27 @@ export function buildEditorDraftFields(input: {
   contentBlocks: BookContentBlock[];
   draftId: string;
 }) {
+  const safeImages: UploadedBookImage[] = input.images.map((image) => ({
+    ...image,
+    dataUrl: image.dataUrl.startsWith("data:image/") ? "" : image.dataUrl,
+  }));
+
+  const safeContentBlocks: BookContentBlock[] = input.contentBlocks.map((block) => {
+    if (block.type !== "image") return block;
+    return {
+      ...block,
+      storagePath: block.storagePath.startsWith("data:image/") ? "" : block.storagePath,
+      publicUrl: block.publicUrl?.startsWith("data:image/") ? "" : block.publicUrl,
+    };
+  });
+
   return {
+    ...input.state,
     mode: input.mode,
     draftId: input.draftId,
-    ...input.state,
-    images: input.images,
-    contentBlocks: input.contentBlocks,
-  };
+    images: safeImages,
+    contentBlocks: safeContentBlocks,
+  } satisfies Record<string, unknown>;
 }
 
 export function seedFromDraftFields(input: {

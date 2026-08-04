@@ -63,7 +63,7 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
         caption: child.dataset.caption || undefined,
         altText: child.dataset.altText || undefined,
         fitMode: child.dataset.fitMode === "cover" ? "cover" : "contain",
-        pageMode: "full-page",
+        pageMode: child.dataset.pageMode === "inline" ? "inline" : "full-page",
         uploadState:
           child.dataset.uploadState === "pending" ||
           child.dataset.uploadState === "error" ||
@@ -114,6 +114,7 @@ function createImageElement(block: Extract<BookContentBlock, { type: "image" }>)
   wrapper.dataset.caption = block.caption || "";
   wrapper.dataset.altText = block.altText || "";
   wrapper.dataset.fitMode = block.fitMode;
+  wrapper.dataset.pageMode = block.pageMode;
   wrapper.dataset.uploadState = block.uploadState || "ready";
   if (block.errorMessage) wrapper.dataset.errorMessage = block.errorMessage;
   wrapper.contentEditable = "false";
@@ -337,7 +338,7 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
             caption: "",
             altText: file.name,
             fitMode: "contain",
-            pageMode: "full-page",
+            pageMode: "inline",
             uploadState: "ready",
             errorMessage: undefined,
           });
@@ -505,7 +506,7 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
             />
           </label>
           <label>
-            <span>表示方法</span>
+            <span>画像フィット</span>
             <select
               value={selectedImage.fitMode}
               onChange={(event) =>
@@ -516,6 +517,27 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
               <option value="cover">枠いっぱいに表示</option>
             </select>
           </label>
+          <fieldset className="inline-image-layout-fieldset">
+            <legend>画像レイアウト</legend>
+            <label>
+              <input
+                type="radio"
+                name={`image-layout-${selectedImage.id}`}
+                checked={selectedImage.pageMode === "inline"}
+                onChange={() => updateNode(selectedImage.id, { pageMode: "inline" })}
+              />
+              <span>インライン</span>
+            </label>
+            <label>
+              <input
+                type="radio"
+                name={`image-layout-${selectedImage.id}`}
+                checked={selectedImage.pageMode === "full-page"}
+                onChange={() => updateNode(selectedImage.id, { pageMode: "full-page" })}
+              />
+              <span>1ページ</span>
+            </label>
+          </fieldset>
           <div className="inline-manuscript-popover-actions">
             <button className="maker-secondary-button" type="button" onClick={insertImageFromPicker}>
               差し替え

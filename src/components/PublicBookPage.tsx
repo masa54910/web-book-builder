@@ -57,6 +57,14 @@ export default function PublicBookPage() {
       chapters={book.bookProject.chapters}
       images={book.bookProject.images}
       cloudBookId={book.id}
+      backLink={
+        book.authorHandle
+          ? {
+              href: `/authors/${book.authorHandle}`,
+              label: "← 作者ページへ戻る",
+            }
+          : undefined
+      }
     />
   );
 }

@@ -3726,6 +3726,11 @@
   .heroShowcaseFrame:hover .bookShowcase {
     transform: scale(1.03);
   }
+
+  .heroBook .heroShowcaseFrame,
+  .heroBook .heroShowcaseFrame:hover {
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 640px) {

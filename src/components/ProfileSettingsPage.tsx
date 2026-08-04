@@ -68,8 +68,6 @@ export default function ProfileSettingsPage() {
   useEffect(() => {
     if (!user) return;
     let active = true;
-    setIsProfileLoading(true);
-    setErrorMessage("");
 
     Promise.allSettled([
       getOwnProfile(user.id, { email: user.email, displayName: user.displayName }),

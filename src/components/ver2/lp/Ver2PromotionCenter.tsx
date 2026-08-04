@@ -1,6 +1,9 @@
 import Image from "next/image";
 
-import { SAMPLE_BOOK_PREVIEW_IMAGE, SAMPLE_BOOK_TITLE } from "@/lib/sampleBookConstants";
+import {
+  SAMPLE_BOOK_PREVIEW_IMAGE,
+  SAMPLE_BOOK_TITLE,
+} from "@/lib/sampleBookConstants";
 import styles from "./Ver2Landing.module.css";
 
 export default function Ver2PromotionCenter() {

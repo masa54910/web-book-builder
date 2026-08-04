@@ -48,7 +48,7 @@ export default function CoverPage({
   if (back) {
     return (
       <div className={`back-cover-page book-cover-style-${coverStyle}`} style={{ "--book-accent-color": coverTone } as CSSProperties}>
-        <p>{config.publisherName}</p>
+        <p>WEBBOOKMAKER</p>
       </div>
     );
   }

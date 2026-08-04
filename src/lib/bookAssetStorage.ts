@@ -1,11 +1,16 @@
 "use client";
 
 import type { BookProject } from "@/lib/bookProject";
-import { isDemoModeAllowed } from "@/lib/appEnv";
+import { getAppEnv, isDemoModeAllowed } from "@/lib/appEnv";
 import { BETA_LIMITS, STORAGE_BUCKETS } from "@/lib/limits";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 const STORAGE_PREFIX = "storage:";
+const BOOK_ASSET_BUCKET_CANDIDATES = [STORAGE_BUCKETS.bookAssets, "book_assets"] as const;
+
+function canUseLocalAssetFallback() {
+  return process.env.NODE_ENV === "development" && getAppEnv() === "local";
+}
 
 function assertStorageConfigured() {
   const supabase = getSupabaseClient();
@@ -50,6 +55,10 @@ function storageRef(path: string) {
   return `${STORAGE_PREFIX}${STORAGE_BUCKETS.bookAssets}/${path}`;
 }
 
+function storageRefForBucket(bucket: string, path: string) {
+  return `${STORAGE_PREFIX}${bucket}/${path}`;
+}
+
 function parseStorageRef(value: string) {
   if (!value.startsWith(STORAGE_PREFIX)) return null;
   const withoutPrefix = value.slice(STORAGE_PREFIX.length);
@@ -79,14 +88,31 @@ async function uploadDataUrl({
   const blob = await dataUrlToBlob(value);
   const extension = extensionForMime(blob.type);
   const path = `books/${ownerId}/${bookKey}/${kind}/${crypto.randomUUID()}-${safeFilePart(fileName)}.${extension}`;
-  const { error } = await supabase.storage
-    .from(STORAGE_BUCKETS.bookAssets)
-    .upload(path, blob, {
-      contentType: blob.type,
-      cacheControl: "3600",
-      upsert: false,
-    });
-  if (error) throw error;
+
+  let lastError: Error | null = null;
+  for (const bucketName of BOOK_ASSET_BUCKET_CANDIDATES) {
+    const { error } = await supabase.storage
+      .from(bucketName)
+      .upload(path, blob, {
+        contentType: blob.type,
+        cacheControl: "3600",
+        upsert: false,
+      });
+    if (!error) {
+      return storageRefForBucket(bucketName, path);
+    }
+    lastError = error;
+    const lowerMessage = `${error.message || ""} ${error.name || ""}`.toLowerCase();
+    if (!lowerMessage.includes("bucket") || !lowerMessage.includes("not")) {
+      throw error;
+    }
+  }
+
+  if (canUseLocalAssetFallback()) {
+    return value;
+  }
+
+  if (lastError) throw lastError;
   return storageRef(path);
 }
 

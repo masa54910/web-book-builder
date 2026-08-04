@@ -3,7 +3,7 @@
 import type { BookProject } from "@/lib/bookProject";
 import { DEFAULT_PUBLICATION_SETTINGS, type BookStatus, type BookVisibility } from "@/lib/accessControl";
 import { BETA_LIMITS } from "@/lib/limits";
-import { isDemoModeAllowed } from "@/lib/appEnv";
+import { getAppEnv, isDemoModeAllowed } from "@/lib/appEnv";
 import { createSlugCandidate, makeUniqueSlug } from "@/lib/slug";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { parseBookProjectJson } from "@/lib/bookProjectNormalization";
@@ -48,6 +48,20 @@ function assertLocalFallbackAllowed() {
   if (!isDemoModeAllowed()) {
     throw new Error("Supabase接続が必要です。Preview/Productionではローカルデモ保存を使用できません。");
   }
+}
+
+function isSchemaCacheMissingError(error: unknown) {
+  if (typeof error !== "object" || error === null) return false;
+  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  return code === "PGRST205";
+}
+
+function canUseLocalSchemaFallback() {
+  return process.env.NODE_ENV === "development" && getAppEnv() === "local";
+}
+
+function canFallbackToLocal(error: unknown) {
+  return canUseLocalSchemaFallback() && isSchemaCacheMissingError(error);
 }
 
 function now() {
@@ -242,15 +256,19 @@ export async function listBooks(ownerId: string) {
     assertLocalFallbackAllowed();
     return readLocalBooks().filter((book) => book.ownerId === ownerId && !book.deletedAt);
   }
-
-  const { data, error } = await supabase
-    .from("books")
-    .select("*")
-    .eq("owner_id", ownerId)
-    .is("deleted_at", null)
-    .order("updated_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map((row) => mapSupabaseBook(row)).filter((book): book is CloudBookRecord => Boolean(book));
+  try {
+    const { data, error } = await supabase
+      .from("books")
+      .select("*")
+      .eq("owner_id", ownerId)
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map((row) => mapSupabaseBook(row)).filter((book): book is CloudBookRecord => Boolean(book));
+  } catch (error) {
+    if (!canFallbackToLocal(error)) throw error;
+    return readLocalBooks().filter((book) => book.ownerId === ownerId && !book.deletedAt);
+  }
 }
 
 export async function getBook(id: string, ownerId?: string) {
@@ -259,11 +277,16 @@ export async function getBook(id: string, ownerId?: string) {
     assertLocalFallbackAllowed();
     return readLocalBooks().find((book) => book.id === id && !book.deletedAt && (!ownerId || book.ownerId === ownerId)) ?? null;
   }
-  let query = supabase.from("books").select("*").eq("id", id).is("deleted_at", null).limit(1);
-  if (ownerId) query = query.eq("owner_id", ownerId);
-  const { data, error } = await query.maybeSingle();
-  if (error) throw error;
-  return data ? mapSupabaseBook(data) : null;
+  try {
+    let query = supabase.from("books").select("*").eq("id", id).is("deleted_at", null).limit(1);
+    if (ownerId) query = query.eq("owner_id", ownerId);
+    const { data, error } = await query.maybeSingle();
+    if (error) throw error;
+    return data ? mapSupabaseBook(data) : null;
+  } catch (error) {
+    if (!canFallbackToLocal(error)) throw error;
+    return readLocalBooks().find((book) => book.id === id && !book.deletedAt && (!ownerId || book.ownerId === ownerId)) ?? null;
+  }
 }
 
 export async function getPublishedBookBySlug(slug: string) {
@@ -280,16 +303,29 @@ export async function getPublishedBookBySlug(slug: string) {
       ) ?? null
     );
   }
-  const { data, error } = await supabase
-    .from("books")
-    .select("*")
-    .eq("slug", slug)
-    .eq("status", "published")
-    .in("visibility", ["public", "unlisted"])
-    .is("deleted_at", null)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? mapSupabaseBook(data) : null;
+  try {
+    const { data, error } = await supabase
+      .from("books")
+      .select("*")
+      .eq("slug", slug)
+      .eq("status", "published")
+      .in("visibility", ["public", "unlisted"])
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? mapSupabaseBook(data) : null;
+  } catch (error) {
+    if (!canFallbackToLocal(error)) throw error;
+    return (
+      readLocalBooks().find(
+        (book) =>
+          book.slug === slug &&
+          book.status === "published" &&
+          (book.visibility === "public" || book.visibility === "unlisted") &&
+          !book.deletedAt,
+      ) ?? null
+    );
+  }
 }
 
 export async function listPublishedBooksByAuthorHandle(handle: string) {
@@ -307,16 +343,29 @@ export async function listPublishedBooksByAuthorHandle(handle: string) {
       )
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   }
-  const { data, error } = await supabase
-    .from("books")
-    .select("*")
-    .eq("author_handle", normalized)
-    .eq("status", "published")
-    .in("visibility", ["public", "unlisted"])
-    .is("deleted_at", null)
-    .order("updated_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map((row) => mapSupabaseBook(row)).filter((book): book is CloudBookRecord => Boolean(book));
+  try {
+    const { data, error } = await supabase
+      .from("books")
+      .select("*")
+      .eq("author_handle", normalized)
+      .eq("status", "published")
+      .in("visibility", ["public", "unlisted"])
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map((row) => mapSupabaseBook(row)).filter((book): book is CloudBookRecord => Boolean(book));
+  } catch (error) {
+    if (!canFallbackToLocal(error)) throw error;
+    return readLocalBooks()
+      .filter(
+        (book) =>
+          book.authorHandle === normalized &&
+          book.status === "published" &&
+          (book.visibility === "public" || book.visibility === "unlisted") &&
+          !book.deletedAt,
+      )
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  }
 }
 
 export async function saveBook(
@@ -347,52 +396,64 @@ export async function saveBook(
     return record;
   }
 
-  if (!existing) {
-    const { count, error: countError } = await supabase
-      .from("books")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_id", ownerId)
-      .is("deleted_at", null);
-    if (countError) throw countError;
-    if ((count ?? 0) >= BETA_LIMITS.maxBooksPerUser) {
+  try {
+    if (!existing) {
+      const { count, error: countError } = await supabase
+        .from("books")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_id", ownerId)
+        .is("deleted_at", null);
+      if (countError) throw countError;
+      if ((count ?? 0) >= BETA_LIMITS.maxBooksPerUser) {
+        throw new Error(`ベータ版では1ユーザー最大${BETA_LIMITS.maxBooksPerUser}作品まで作成できます。`);
+      }
+    }
+
+    const payload = {
+      id: record.id.startsWith("book-") ? undefined : record.id,
+      owner_id: ownerId,
+      title: record.title,
+      subtitle: record.subtitle,
+      author_name: record.authorName,
+      author_handle: record.authorHandle,
+      description: record.description,
+      publisher: record.publisher,
+      published_at: record.publishedAt,
+      copyright: record.copyright,
+      slug: record.slug,
+      status: record.status,
+      visibility: record.visibility,
+      binding_direction: record.bindingDirection,
+      theme: record.theme,
+      characters_per_page: record.charactersPerPage,
+      toc_items_per_page: record.tocItemsPerPage,
+      cover_path: record.coverPath,
+      raw_text: record.rawText,
+      book_project_json: record.bookProject,
+      version: record.version,
+      monetization_enabled: record.monetizationEnabled,
+      price_amount: record.priceAmount,
+      currency: record.currency,
+      preview_mode: record.previewMode,
+      preview_value: record.previewValue,
+      updated_at: record.updatedAt,
+    };
+    const { data, error } = await supabase.from("books").upsert(payload).select("*").single();
+    if (error) throw error;
+    const saved = mapSupabaseBook(data) ?? record;
+    await syncBookSideTables(saved);
+    return saved;
+  } catch (error) {
+    if (!canFallbackToLocal(error)) throw error;
+    const books = readLocalBooks().filter((book) => book.ownerId === ownerId && !book.deletedAt);
+    if (!existing && books.length >= BETA_LIMITS.maxBooksPerUser) {
       throw new Error(`ベータ版では1ユーザー最大${BETA_LIMITS.maxBooksPerUser}作品まで作成できます。`);
     }
+    const next = readLocalBooks().filter((book) => book.id !== record.id);
+    next.push(record);
+    writeLocalBooks(next);
+    return record;
   }
-
-  const payload = {
-    id: record.id.startsWith("book-") ? undefined : record.id,
-    owner_id: ownerId,
-    title: record.title,
-    subtitle: record.subtitle,
-    author_name: record.authorName,
-    author_handle: record.authorHandle,
-    description: record.description,
-    publisher: record.publisher,
-    published_at: record.publishedAt,
-    copyright: record.copyright,
-    slug: record.slug,
-    status: record.status,
-    visibility: record.visibility,
-    binding_direction: record.bindingDirection,
-    theme: record.theme,
-    characters_per_page: record.charactersPerPage,
-    toc_items_per_page: record.tocItemsPerPage,
-    cover_path: record.coverPath,
-    raw_text: record.rawText,
-    book_project_json: record.bookProject,
-    version: record.version,
-    monetization_enabled: record.monetizationEnabled,
-    price_amount: record.priceAmount,
-    currency: record.currency,
-    preview_mode: record.previewMode,
-    preview_value: record.previewValue,
-    updated_at: record.updatedAt,
-  };
-  const { data, error } = await supabase.from("books").upsert(payload).select("*").single();
-  if (error) throw error;
-  const saved = mapSupabaseBook(data) ?? record;
-  await syncBookSideTables(saved);
-  return saved;
 }
 
 export async function updatePublication(
@@ -417,22 +478,28 @@ export async function updatePublication(
     writeLocalBooks(readLocalBooks().map((item) => (item.id === next.id ? next : item)));
     return next;
   }
-  const { data, error } = await supabase
-    .from("books")
-    .update({
-      status: next.status,
-      visibility: next.visibility,
-      slug: next.slug,
-      first_published_at: next.firstPublishedAt,
-      last_published_at: next.lastPublishedAt,
-      updated_at: next.updatedAt,
-    })
-    .eq("id", next.id)
-    .eq("owner_id", ownerId)
-    .select("*")
-    .single();
-  if (error) throw error;
-  return mapSupabaseBook(data) ?? next;
+  try {
+    const { data, error } = await supabase
+      .from("books")
+      .update({
+        status: next.status,
+        visibility: next.visibility,
+        slug: next.slug,
+        first_published_at: next.firstPublishedAt,
+        last_published_at: next.lastPublishedAt,
+        updated_at: next.updatedAt,
+      })
+      .eq("id", next.id)
+      .eq("owner_id", ownerId)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return mapSupabaseBook(data) ?? next;
+  } catch (error) {
+    if (!canFallbackToLocal(error)) throw error;
+    writeLocalBooks(readLocalBooks().map((item) => (item.id === next.id ? next : item)));
+    return next;
+  }
 }
 
 export async function duplicateBook(bookId: string, ownerId: string) {
@@ -464,10 +531,21 @@ export async function softDeleteBook(bookId: string, ownerId: string) {
     );
     return;
   }
-  const { error } = await supabase
-    .from("books")
-    .update({ status: "archived", deleted_at: now(), updated_at: now() })
-    .eq("id", bookId)
-    .eq("owner_id", ownerId);
-  if (error) throw error;
+  try {
+    const { error } = await supabase
+      .from("books")
+      .update({ status: "archived", deleted_at: now(), updated_at: now() })
+      .eq("id", bookId)
+      .eq("owner_id", ownerId);
+    if (error) throw error;
+  } catch (error) {
+    if (!canFallbackToLocal(error)) throw error;
+    writeLocalBooks(
+      readLocalBooks().map((book) =>
+        book.id === bookId && book.ownerId === ownerId
+          ? { ...book, status: "archived", deletedAt: now(), updatedAt: now() }
+          : book,
+      ),
+    );
+  }
 }

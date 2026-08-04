@@ -12,6 +12,29 @@ import type { ImageManifestRow, NovelChapter } from "@/lib/types";
 
 export const BOOK_PROJECT_VERSION = 1;
 
+export type BookContentBlock =
+  | {
+      id: string;
+      type: "text";
+      content: string;
+    }
+  | {
+      id: string;
+      type: "image";
+      storagePath: string;
+      publicUrl?: string;
+      fileName: string;
+      mimeType: string;
+      width: number;
+      height: number;
+      caption?: string;
+      altText?: string;
+      fitMode: "contain" | "cover";
+      pageMode: "inline" | "full-page";
+      uploadState?: "pending" | "ready" | "error";
+      errorMessage?: string;
+    };
+
 export type UploadedBookImage = {
   id: string;
   fileName: string;
@@ -28,6 +51,7 @@ export type BookProject = {
   config: BookConfig;
   chapters: NovelChapter[];
   rawText: string;
+  contentBlocks?: BookContentBlock[];
   images: ImageManifestRow[];
   missingImageIds: string[];
   createdAt: string;
@@ -51,6 +75,7 @@ export type BookProjectInput = {
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
   images: UploadedBookImage[];
+  contentBlocks?: BookContentBlock[];
   authorHandle?: string;
   authorBio?: string;
   authorWebsiteUrl?: string;
@@ -67,7 +92,21 @@ export type ProjectBuildResult =
   | { ok: true; project: BookProject }
   | { ok: false; errors: Record<string, string> };
 
-const IMAGE_REFERENCE_PATTERN = /\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]]*))?\]\]/g;
+const IMAGE_REFERENCE_PATTERN = /\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?\]\]/g;
+
+function blockId(prefix: string, index: number) {
+  return `${prefix}-${String(index + 1).padStart(3, "0")}`;
+}
+
+function normalizeBlockId(value: string, fallbackPrefix: string, index: number) {
+  const candidate =
+    value
+      .normalize("NFKD")
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || blockId(fallbackPrefix, index);
+  return candidate;
+}
 
 function slugify(value: string, fallback: string) {
   const slug = value
@@ -98,6 +137,149 @@ function stableBookId(title: string, author: string, previous?: string) {
 
 function normalizeLineBreaks(value: string) {
   return value.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").trim();
+}
+
+function normalizeContentBlocks(blocks: BookContentBlock[]) {
+  const normalized: BookContentBlock[] = [];
+
+  for (const [index, block] of blocks.entries()) {
+    if (block.type === "text") {
+      normalized.push({
+        id: normalizeBlockId(block.id, "text", index),
+        type: "text",
+        content: typeof block.content === "string" ? block.content : "",
+      });
+      continue;
+    }
+
+    const storagePath =
+      typeof block.storagePath === "string" && block.storagePath
+        ? block.storagePath
+        : block.publicUrl || "";
+    if (!storagePath) continue;
+
+    normalized.push({
+      id: normalizeBlockId(block.id, "image", index),
+      type: "image",
+      storagePath,
+      publicUrl: typeof block.publicUrl === "string" && block.publicUrl ? block.publicUrl : undefined,
+      fileName: block.fileName || `image-${index + 1}`,
+      mimeType: block.mimeType || "image/jpeg",
+      width: Number.isFinite(block.width) && block.width > 0 ? block.width : 1200,
+      height: Number.isFinite(block.height) && block.height > 0 ? block.height : 800,
+      caption: block.caption?.trim() || undefined,
+      altText: block.altText?.trim() || undefined,
+      fitMode: block.fitMode === "cover" ? "cover" : "contain",
+      pageMode: block.pageMode === "inline" ? "inline" : "full-page",
+      uploadState: block.uploadState,
+      errorMessage: block.errorMessage?.trim() || undefined,
+    });
+  }
+
+  return normalized;
+}
+
+export function contentBlocksToRawText(blocks: BookContentBlock[]) {
+  const parts = blocks.map((block) => {
+    if (block.type === "text") {
+      return block.content;
+    }
+
+    const caption = block.caption?.trim();
+    const mode = block.pageMode === "inline" ? "inline" : "full-page";
+    if (caption) {
+      return `[[image:${block.id}|${caption}|${mode}]]`;
+    }
+    return `[[image:${block.id}||${mode}]]`;
+  });
+
+  return normalizeLineBreaks(parts.join("\n\n"));
+}
+
+export function contentBlocksFromLegacy(rawText: string, images: UploadedBookImage[]): BookContentBlock[] {
+  const text = normalizeLineBreaks(rawText);
+  const imageById = new Map(images.map((image) => [image.id, image]));
+  const usedImageIds = new Set<string>();
+  const blocks: BookContentBlock[] = [];
+  const pattern = /\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?\]\]/g;
+  let cursor = 0;
+  let match: RegExpExecArray | null = null;
+
+  while ((match = pattern.exec(text))) {
+    const textPart = text.slice(cursor, match.index);
+    if (textPart) {
+      blocks.push({
+        id: blockId("text", blocks.length),
+        type: "text",
+        content: textPart,
+      });
+    }
+
+    const imageId = match[1];
+    const image = imageById.get(imageId);
+    if (image) {
+      usedImageIds.add(image.id);
+      blocks.push({
+        id: image.id,
+        type: "image",
+        storagePath: image.dataUrl,
+        fileName: image.fileName,
+        mimeType: image.mimeType || "image/jpeg",
+        width: 1200,
+        height: 800,
+        caption: image.caption || match[2] || undefined,
+        altText: image.fileName,
+        fitMode: "contain",
+        pageMode: match[3] === "inline" ? "inline" : "full-page",
+        uploadState: "ready",
+      });
+    } else {
+      blocks.push({
+        id: blockId("text", blocks.length),
+        type: "text",
+        content: match[0],
+      });
+    }
+
+    cursor = pattern.lastIndex;
+  }
+
+  const tail = text.slice(cursor);
+  if (tail) {
+    blocks.push({
+      id: blockId("text", blocks.length),
+      type: "text",
+      content: tail,
+    });
+  }
+
+  for (const [index, image] of images.entries()) {
+    if (usedImageIds.has(image.id)) continue;
+    blocks.push({
+      id: image.id || blockId("image", index),
+      type: "image",
+      storagePath: image.dataUrl,
+      fileName: image.fileName,
+      mimeType: image.mimeType || "image/jpeg",
+      width: 1200,
+      height: 800,
+      caption: image.caption || undefined,
+      altText: image.fileName,
+      fitMode: "contain",
+      pageMode: "full-page",
+      uploadState: "ready",
+    });
+  }
+
+  if (!blocks.length) {
+    blocks.push({
+      id: blockId("text", 0),
+      type: "text",
+      content: "",
+    });
+  }
+
+  return normalizeContentBlocks(blocks);
 }
 
 export function extractChaptersFromText(rawText: string, fallbackTitle: string): NovelChapter[] {
@@ -157,15 +339,61 @@ function buildImageRows(images: UploadedBookImage[]): ImageManifestRow[] {
   }));
 }
 
+function imageRowsFromBlocks(blocks: BookContentBlock[], legacyImages: UploadedBookImage[]) {
+  const legacyById = new Map(legacyImages.map((image) => [image.id, image]));
+
+  return blocks
+    .filter((block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image")
+    .map((block) => {
+      const legacy = legacyById.get(block.id);
+      const imageUrl = block.publicUrl || block.storagePath || legacy?.dataUrl || "";
+      const source = block.fileName || legacy?.fileName || block.id;
+      const caption = block.caption || legacy?.caption || "";
+
+      const row: ImageManifestRow = {
+        chapter_order: 1,
+        chapter_title: "1",
+        image_index: block.id,
+        image_id: block.id,
+        image_url: imageUrl,
+        alt: block.altText || source,
+        caption,
+        source_path: source,
+        local_path: "",
+      };
+
+      return row;
+    });
+}
+
 export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
   const errors: Record<string, string> = {};
   const title = input.title.trim();
   const author = input.author.trim();
-  const rawText = normalizeLineBreaks(input.rawText);
+  const legacyRawText = normalizeLineBreaks(input.rawText);
+  const contentBlocks = normalizeContentBlocks(
+    input.contentBlocks?.length ? input.contentBlocks : contentBlocksFromLegacy(legacyRawText, input.images),
+  );
+  const rawText = contentBlocksToRawText(contentBlocks);
 
   if (!title) errors.title = "タイトルを入力してください。";
   if (!author) errors.author = "著者名を入力してください。";
-  if (!rawText) errors.rawText = "本文を入力してください。";
+  if (!rawText && !contentBlocks.some((block) => block.type === "image")) {
+    errors.rawText = "本文を入力してください。";
+  }
+
+  const pendingImage = contentBlocks.find(
+    (block) => block.type === "image" && block.uploadState === "pending",
+  );
+  if (pendingImage) {
+    errors.rawText = "画像の読み込みが完了してから保存してください。";
+  }
+  const failedImage = contentBlocks.find(
+    (block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image" && block.uploadState === "error",
+  );
+  if (failedImage) {
+    errors.rawText = failedImage.errorMessage || "画像の読み込みに失敗しました。";
+  }
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 
@@ -210,7 +438,9 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
       : null,
   ].filter((link): link is ExternalLink => Boolean(link?.url));
   const chapters = extractChaptersFromText(rawText, title);
-  const imageRows = buildImageRows(input.images);
+  const imageRows = input.contentBlocks?.length
+    ? imageRowsFromBlocks(contentBlocks, input.images)
+    : buildImageRows(input.images);
   const availableImageIds = new Set(imageRows.map((image) => image.image_id || image.image_index));
   const missingImageIds = [...new Set(findImageReferenceIds(rawText))].filter(
     (id) => !availableImageIds.has(id),
@@ -276,6 +506,7 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
       },
       chapters,
       rawText,
+      contentBlocks,
       images: imageRows,
       missingImageIds,
       createdAt: input.existingCreatedAt || now,

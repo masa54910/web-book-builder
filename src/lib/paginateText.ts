@@ -1,7 +1,17 @@
 import type { BindingDirection } from "@/config/bookConfig";
 import type { ImageManifestRow, NovelChapter, ReaderPage } from "./types";
 
-const IMAGE_PATTERN = /^\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]]*))?\]\]$/;
+const IMAGE_PATTERN = /^\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?\]\]$/;
+export const INLINE_IMAGE_TOKEN_PREFIX = "[[inline-image:";
+
+export function createInlineImageToken(payload: {
+  src?: string;
+  alt: string;
+  caption: string;
+  missing?: boolean;
+}) {
+  return `${INLINE_IMAGE_TOKEN_PREFIX}${encodeURIComponent(JSON.stringify(payload))}]]`;
+}
 
 function splitLongParagraph(paragraph: string, limit: number) {
   const chunks: string[] = [];
@@ -111,9 +121,27 @@ export function buildReaderPages({
       if (!segment) continue;
       const imageMatch = segment.match(IMAGE_PATTERN);
       if (imageMatch) {
-        flushTextPage();
         const imageId = imageMatch[1];
         const image = imageMap.get(imageId) ?? imageMap.get(`${chapter.order}-${imageId}`);
+        const pageMode = imageMatch[3] === "inline" ? "inline" : "full-page";
+        if (pageMode === "inline") {
+          const inlineImageCost = Math.max(80, Math.floor(charactersPerPage * 0.42));
+          if (paragraphs.length && cost + inlineImageCost > charactersPerPage) {
+            flushTextPage();
+          }
+          paragraphs.push(
+            createInlineImageToken({
+              src: imageSource(image),
+              alt: image?.alt || `${chapter.title} image ${imageId}`,
+              caption: image?.caption || imageMatch[2] || "",
+              missing: !image,
+            }),
+          );
+          cost += inlineImageCost;
+          continue;
+        }
+
+        flushTextPage();
         pages.push({
           id: `${chapter.slug}-image-${imageId}`,
           kind: "image",

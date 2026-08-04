@@ -16,7 +16,7 @@ import {
 } from "@/lib/bookProject";
 import { importManuscriptFile } from "@/lib/fileImport";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { getBook, saveBook, updatePublication, type CloudBookRecord } from "@/lib/bookRepository";
+import { getBook, listBooks, saveBook, updatePublication, type CloudBookRecord } from "@/lib/bookRepository";
 import {
   loadDraft,
   loadPreviewProject,
@@ -30,7 +30,7 @@ import { createSlugCandidate, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
 import { normalizeHandle, safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
 import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
-import { colorPresets, contrastRatio, themePresets, type BookThemeSettings } from "@/lib/themeSystem";
+import { colorPresets, contrastRatio, getThemePreset, themePresets, type BookThemeSettings } from "@/lib/themeSystem";
 import { buildEditorDraftFields, seedFromDraftFields } from "@/lib/editorDraftState";
 import { validateRequiredBookFields } from "@/lib/editorValidation";
 import CharacterAssistant from "@/components/CharacterAssistant";
@@ -185,6 +185,25 @@ function normalizeColorHex(value: string, fallback: string) {
     return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
   }
   return /^#([0-9a-fA-F]{6})$/.test(prefixed) ? prefixed.toLowerCase() : fallback;
+}
+
+const BACKGROUND_HEX_BY_TYPE: Record<BookThemeSettings["background"], string> = {
+  paper: "#fffaf0",
+  ivory: "#f5efe2",
+  cafe: "#f1e1cf",
+  green: "#e8f0ea",
+  night: "#1f2528",
+};
+
+function ensureAaTextColor(textColor: string, background: BookThemeSettings["background"]) {
+  const backgroundHex = BACKGROUND_HEX_BY_TYPE[background] || "#fffaf0";
+  if (contrastRatio(textColor, backgroundHex) >= 4.5) return textColor;
+
+  const dark = "#1f1f1f";
+  const light = "#f5f1e8";
+  const darkRatio = contrastRatio(dark, backgroundHex);
+  const lightRatio = contrastRatio(light, backgroundHex);
+  return darkRatio >= lightRatio ? dark : light;
 }
 
 function fromRecord(record: CloudBookRecord): EditorState {
@@ -350,6 +369,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   );
   const [isLoading, setIsLoading] = useState(mode === "edit");
   const [isSaving, setIsSaving] = useState(false);
+  const [saveFlash, setSaveFlash] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [dirty, setDirty] = useState(false);
   const [autosaveAt, setAutosaveAt] = useState<string | null>(null);
   const [requiredErrorMessage, setRequiredErrorMessage] = useState("");
@@ -357,6 +377,15 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [hasRestoredDraft, setHasRestoredDraft] = useState(!previewDraftId || draftSeed.restored);
   const [didRestorePreviewDraft, setDidRestorePreviewDraft] = useState(false);
   const [pendingScrollRestore, setPendingScrollRestore] = useState<number | null>(null);
+  const saveFlashTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (saveFlashTimeoutRef.current !== null) {
+        window.clearTimeout(saveFlashTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!previewDraftId) return;
@@ -451,6 +480,10 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     () => contrastRatio(state.textColor, state.background === "night" ? "#1f2528" : "#fffaf0"),
     [state.background, state.textColor],
   );
+  const slugFormatError = useMemo(() => {
+    if (!state.slug.trim()) return "";
+    return validateSlug(createSlugCandidate(state.slug));
+  }, [state.slug]);
 
   const estimatedPages = useMemo(() => {
     const charsPerPage = Math.max(180, Number(state.charactersPerPage) || 380);
@@ -537,11 +570,17 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const update = <K extends keyof EditorState>(key: K, value: EditorState[K]) => {
-    setState((current) => ({
-      ...current,
-      [key]: value,
-      slug: key === "title" && !current.slug ? createSlugCandidate(String(value)) : current.slug,
-    }));
+    setState((current) => {
+      const next = {
+        ...current,
+        [key]: value,
+        slug: key === "title" && !current.slug ? createSlugCandidate(String(value)) : current.slug,
+      };
+      if (key === "background") {
+        next.textColor = ensureAaTextColor(next.textColor, next.background);
+      }
+      return next;
+    });
     if (key === "title" || key === "author") {
       setErrors((current) => {
         const next = { ...current };
@@ -563,8 +602,76 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const updateColor = (key: "textColor" | "accentColor", value: string) => {
-    update(key, normalizeColorHex(value, state[key]) as EditorState[typeof key]);
+    if (key === "textColor") {
+      setState((current) => {
+        const normalized = normalizeColorHex(value, current.textColor);
+        return {
+          ...current,
+          textColor: ensureAaTextColor(normalized, current.background),
+        };
+      });
+      setDirty(true);
+      return;
+    }
+    update("accentColor", normalizeColorHex(value, state.accentColor));
   };
+
+  const applyThemePreset = (themeId: ThemeId) => {
+    const preset = getThemePreset(themeId);
+    setState((current) => {
+      const nextTextColor = ensureAaTextColor(preset.settings.textColor, preset.settings.background);
+      return {
+        ...current,
+        theme: themeId,
+        fontFamily: preset.settings.fontFamily,
+        fontScale: preset.settings.fontScale,
+        lineHeight: preset.settings.lineHeight,
+        marginScale: preset.settings.marginScale,
+        pageWidth: preset.settings.pageWidth,
+        background: preset.settings.background,
+        textColor: nextTextColor,
+        accentColor: preset.settings.accentColor,
+        coverStyle: preset.settings.coverStyle,
+        imageLayout: preset.settings.imageLayout,
+      };
+    });
+    setDirty(true);
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    if (!state.slug.trim()) return;
+
+    const normalizedSlug = createSlugCandidate(state.slug || "");
+    const formatError = validateSlug(normalizedSlug);
+    if (formatError) return;
+
+    let active = true;
+    const timeoutId = window.setTimeout(() => {
+      listBooks(user.id)
+        .then((books) => {
+          if (!active) return;
+          const conflict = books.some((book) => book.slug === normalizedSlug && book.id !== bookId);
+          setErrors((current) => {
+            const next = { ...current };
+            if (conflict) {
+              next.slug = "このURLは使用できません";
+            } else if (next.slug === "このURLは使用できません" || next.slug === formatError) {
+              delete next.slug;
+            }
+            return next;
+          });
+        })
+        .catch(() => {
+          // Keep editing available even if availability check fails.
+        });
+    }, 320);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [bookId, state.slug, user]);
 
   const syncContentBlocks = (nextBlocks: BookContentBlock[]) => {
     setContentBlocks(nextBlocks);
@@ -634,6 +741,10 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       setErrors(result.errors);
       return null;
     }
+    if (errors.slug === "このURLは使用できません") {
+      setErrors((current) => ({ ...current, slug: "このURLは使用できません" }));
+      return null;
+    }
     if (state.slug && validateSlug(state.slug)) {
       setErrors({ slug: validateSlug(state.slug) });
       return null;
@@ -688,19 +799,34 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     }
     const project = buildProject();
     if (!project) return null;
+    if (saveFlashTimeoutRef.current !== null) {
+      window.clearTimeout(saveFlashTimeoutRef.current);
+      saveFlashTimeoutRef.current = null;
+    }
     setIsSaving(true);
+    setSaveFlash("saving");
     try {
       const projectWithAssets = await uploadBookProjectAssets(project, user.id);
       const record = await saveBook(projectWithAssets, user.id, bookId, state.slug || undefined);
       setBookId(record.id);
       setState((current) => ({ ...current, slug: record.slug, status: record.status, visibility: record.visibility }));
       setDirty(false);
+      setSaveFlash("success");
+      saveFlashTimeoutRef.current = window.setTimeout(() => {
+        setSaveFlash("idle");
+        saveFlashTimeoutRef.current = null;
+      }, 2000);
       setStatusMessage("保存しました。");
       trackEvent("book_saved", { bookId: record.id });
       if (mode === "new") router.replace(`/dashboard/books/${record.id}/edit`);
       return record;
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "保存に失敗しました。");
+    } catch {
+      setSaveFlash("error");
+      saveFlashTimeoutRef.current = window.setTimeout(() => {
+        setSaveFlash("idle");
+        saveFlashTimeoutRef.current = null;
+      }, 2000);
+      setStatusMessage("保存できませんでした");
       return null;
     } finally {
       setIsSaving(false);
@@ -825,9 +951,12 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               <input value={state.subtitle} onChange={(event) => update("subtitle", event.target.value)} />
             </label>
             <label>
-              <span>公開URL slug</span>
-              <input value={state.slug} onChange={(event) => update("slug", createSlugCandidate(event.target.value))} />
-              {errors.slug ? <small className="form-error">{errors.slug}</small> : null}
+              <span>公開URL</span>
+              <div className="slug-input-wrap">
+                <span className="slug-prefix">https://webbookmaker.com/books/</span>
+                <input value={state.slug} onChange={(event) => update("slug", createSlugCandidate(event.target.value))} />
+              </div>
+              {errors.slug ? <small className="form-error">{errors.slug}</small> : slugFormatError ? <small className="form-error">{slugFormatError}</small> : null}
             </label>
           </div>
           <label className="maker-full">
@@ -960,7 +1089,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             </label>
             <label>
               <span>テーマ</span>
-              <select value={state.theme} onChange={(event) => update("theme", event.target.value as ThemeId)}>
+              <select value={state.theme} onChange={(event) => applyThemePreset(event.target.value as ThemeId)}>
                 {themePresets.map((preset) => (
                   <option key={preset.id} value={preset.id}>
                     {preset.name}{preset.plan === "plus" ? "（Plus）" : ""}
@@ -1067,8 +1196,12 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
                 className="maker-small-button"
                 type="button"
                 onClick={() => {
-                  update("textColor", preset.text);
-                  update("accentColor", preset.accent);
+                  setState((current) => ({
+                    ...current,
+                    textColor: ensureAaTextColor(preset.text, current.background),
+                    accentColor: preset.accent,
+                  }));
+                  setDirty(true);
                 }}
               >
                 {preset.name}
@@ -1111,7 +1244,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
       <div className="maker-actions sticky-actions">
         <button className="maker-primary-button" type="button" disabled={isSaving} onClick={() => void save()}>
-          {isSaving ? "保存中…" : "保存"}
+          {saveFlash === "saving" ? "保存中..." : saveFlash === "success" ? "保存しました。" : saveFlash === "error" ? "保存できませんでした" : "保存"}
         </button>
         <button className="maker-secondary-button" type="button" onClick={() => void preview()}>
           プレビュー

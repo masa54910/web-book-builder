@@ -1204,6 +1204,28 @@ a {
   gap: 8px;
 }
 
+.inline-image-layout-fieldset {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid rgba(79, 67, 48, 0.2);
+  border-radius: 10px;
+}
+
+.inline-image-layout-fieldset legend {
+  padding: 0 6px;
+  color: #4f483c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.inline-image-layout-fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .inline-manuscript-editor.is-drag-over .inline-manuscript-surface {
   border-color: rgba(15, 111, 93, 0.52);
   box-shadow:
@@ -1355,6 +1377,19 @@ a {
   color: #9d2d20;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.slug-input-wrap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.slug-prefix {
+  color: #746450;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .maker-grid input[aria-invalid="true"],
@@ -1938,6 +1973,44 @@ a {
   margin: 0 0 1em;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.text-inline-image {
+  margin: 0 0 1.25em;
+  padding: 0;
+}
+
+.text-inline-image img,
+.text-inline-image-fallback {
+  display: block;
+  width: min(100%, 300px);
+  max-height: 240px;
+  margin: 0 auto;
+  border-radius: 10px;
+  object-fit: contain;
+}
+
+.text-inline-image-fallback {
+  display: grid;
+  min-height: 160px;
+  place-items: center;
+  color: #6e756f;
+  background: #e7e1d5;
+  letter-spacing: 0.14em;
+}
+
+.text-inline-image figcaption {
+  margin-top: 6px;
+  text-align: center;
+  color: #656159;
+  font-size: 11px;
+}
+
+.text-inline-image-missing {
+  margin: 6px 0 0;
+  color: #9d4a2d;
+  font-size: 11px;
+  text-align: center;
 }
 
 .inline-novel-link {

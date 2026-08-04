@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import BrandLogo from "@/components/ui/BrandLogo";
+import Button from "@/components/ui/Button";
+import FormField from "@/components/ui/FormField";
 import HomeBackLink from "@/components/HomeBackLink";
+import PasswordInput from "@/components/ui/PasswordInput";
+import StatusMessage from "@/components/ui/StatusMessage";
+import TextInput from "@/components/ui/TextInput";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 function safeNextPath(value: string | null) {
@@ -116,48 +121,45 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
             現在ログイン機能を利用できません。しばらくしてから再度お試しください。
           </p>
         ) : null}
-        <label>
-          <span>メールアドレス</span>
-          <input
+        <FormField id="auth-email" label="メールアドレス" required>
+          <TextInput
+            id="auth-email"
             type="email"
             autoComplete="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={setEmail}
           />
-        </label>
+        </FormField>
         {mode === "signup" ? (
-          <label>
-            <span>表示名</span>
-            <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
-          </label>
+          <FormField id="auth-display-name" label="表示名">
+            <TextInput id="auth-display-name" value={displayName} onChange={setDisplayName} />
+          </FormField>
         ) : null}
         {mode !== "forgot" ? (
-          <label>
-            <span>パスワード</span>
-            <input
-              type="password"
+          <FormField id="auth-password" label="パスワード" required>
+            <PasswordInput
+              id="auth-password"
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={setPassword}
             />
-          </label>
+          </FormField>
         ) : null}
         {mode === "signup" ? (
-          <label>
-            <span>パスワード（確認）</span>
-            <input
-              type="password"
+          <FormField id="auth-password-confirm" label="パスワード（確認）" required>
+            <PasswordInput
+              id="auth-password-confirm"
               autoComplete="new-password"
               value={passwordConfirm}
-              onChange={(event) => setPasswordConfirm(event.target.value)}
+              onChange={setPasswordConfirm}
             />
-          </label>
+          </FormField>
         ) : null}
-        {error ? <p className="form-error" aria-live="polite">{error}</p> : null}
-        {message ? <p className="maker-status" aria-live="polite">{message}</p> : null}
-        <button className="maker-primary-button" type="button" disabled={isSubmitting || authMode === "blocked"} onClick={submit}>
-          {isSubmitting ? "処理中…" : title}
-        </button>
+        {error ? <StatusMessage variant="error" message={error} ariaLive="assertive" className="form-error" /> : null}
+        {message ? <StatusMessage variant="success" message={message} /> : null}
+        <Button variant="primary" fullWidth loading={isSubmitting} disabled={authMode === "blocked"} onClick={submit}>
+          {title}
+        </Button>
         <div className="auth-links">
           {mode !== "login" ? <Link href="/login">ログインへ</Link> : null}
           {mode !== "signup" ? <Link href="/signup">新規登録へ</Link> : null}

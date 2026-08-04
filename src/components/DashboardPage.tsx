@@ -5,6 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import AppHeader from "@/components/AppHeader";
 import HomeBackLink from "@/components/HomeBackLink";
+import Button from "@/components/ui/Button";
+import EmptyState from "@/components/ui/EmptyState";
+import LoadingState from "@/components/ui/LoadingState";
+import StatusMessage from "@/components/ui/StatusMessage";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
   duplicateBook,
@@ -108,9 +112,7 @@ export default function DashboardPage() {
           <h1>マイライブラリ</h1>
           <p>作成したWeb書籍の保存、編集、公開URL管理を行います。</p>
         </div>
-        <Link className="maker-primary-link" href="/books/new">
-          新しい作品を作る
-        </Link>
+        <Button href="/books/new">新しい作品を作る</Button>
       </div>
 
       <section className="maker-card dashboard-toolbar">
@@ -128,16 +130,16 @@ export default function DashboardPage() {
         </label>
       </section>
 
-      {message ? <p className="maker-status" aria-live="polite">{message}</p> : null}
-      {isLoading ? <div className="reader-loading">作品一覧を読み込んでいます…</div> : null}
+      {message ? <StatusMessage message={message} className="maker-status" /> : null}
+      {isLoading ? <LoadingState label="作品一覧を読み込んでいます…" className="reader-loading" /> : null}
 
       {!isLoading && !visibleBooks.length ? (
         <section className="maker-card empty-library">
-          <h2>作品はまだありません</h2>
-          <p>最初の1冊を作成して、Web書籍のプレビューと公開URLを試しましょう。</p>
-          <Link className="maker-primary-link" href="/books/new">
-            新しい作品を作る
-          </Link>
+          <EmptyState
+            title="作品はまだありません"
+            description="最初の1冊を作成して、Web書籍のプレビューと公開URLを試しましょう。"
+            action={{ label: "新しい作品を作る", href: "/books/new" }}
+          />
         </section>
       ) : null}
 
@@ -180,15 +182,15 @@ export default function DashboardPage() {
                   公開ページ
                 </Link>
               ) : null}
-              <button className="maker-small-button" type="button" onClick={() => void duplicate(book)}>
+              <Button variant="ghost" size="sm" onClick={() => void duplicate(book)}>
                 複製
-              </button>
-              <button className="maker-small-button" type="button" onClick={() => void togglePublished(book)}>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => void togglePublished(book)}>
                 {book.status === "published" ? "公開停止" : "限定公開"}
-              </button>
-              <button className="maker-small-button danger" type="button" onClick={() => void archive(book)}>
+              </Button>
+              <Button variant="danger" size="sm" onClick={() => void archive(book)}>
                 削除
-              </button>
+              </Button>
             </div>
           </article>
         ))}

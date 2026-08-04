@@ -6,6 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import AppHeader from "@/components/AppHeader";
 import HomeBackLink from "@/components/HomeBackLink";
+import Button from "@/components/ui/Button";
+import LoadingState from "@/components/ui/LoadingState";
+import StatusMessage from "@/components/ui/StatusMessage";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getBook, type CloudBookRecord } from "@/lib/bookRepository";
 import {
@@ -94,23 +97,23 @@ export default function AnalyticsDetailPage() {
         </div>
         <div className="maker-actions">
           {periods.map((item) => (
-            <button
+            <Button
               key={item.key}
-              className={item.key === period ? "maker-primary-button" : "maker-secondary-button"}
-              type="button"
+              variant={item.key === period ? "primary" : "secondary"}
+              size="sm"
               onClick={() => {
                 setIsLoading(true);
                 setPeriod(item.key);
               }}
             >
               {item.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
-      {message ? <p className="maker-status" aria-live="polite">{message}</p> : null}
-      {isLoading ? <div className="reader-loading">分析データを読み込んでいます…</div> : null}
+      {message ? <StatusMessage message={message} className="maker-status" /> : null}
+      {isLoading ? <LoadingState label="分析データを読み込んでいます…" className="reader-loading" /> : null}
 
       {!isLoading && details ? (
         <>
