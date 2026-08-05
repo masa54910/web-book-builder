@@ -66,8 +66,35 @@ if (projectResult.ok) {
 }
 
 assert.equal(createSlugCandidate(" Hello  Web Book! "), "hello-web-book");
+assert.equal(createSlugCandidate("A"), "book", "Short slugs must use the production-safe fallback");
+assert.equal(createSlugCandidate("AB"), "book", "Two-character slugs must use the production-safe fallback");
+assert.equal(validateSlug("ab").length > 0, true, "Two-character slugs must be rejected");
 assert.equal(validateSlug("dashboard").includes("予約"), true, "Reserved slug must be rejected");
 assert.equal(validateSlug("safe-book-01"), "", "Safe slug should pass");
+
+const japaneseAuthorProject = buildBookProject({
+  title: "日本語タイトル",
+  subtitle: "",
+  author: "山田太郎",
+  description: "",
+  publisherName: "",
+  publishedAt: "",
+  copyrightText: "",
+  rawText: "日本語だけの作者名でも保存できる本文です。",
+  bindingDirection: "rtl",
+  theme: "classic",
+  charactersPerPage: 380,
+  tableOfContentsItemsPerPage: 6,
+  images: [],
+});
+assert.equal(japaneseAuthorProject.ok, true, "Japanese-only author names should build");
+if (japaneseAuthorProject.ok) {
+  assert.match(
+    japaneseAuthorProject.project.config.authorProfile?.handle || "",
+    /^[a-z0-9][a-z0-9_-]{1,39}$/,
+    "Internal author handle must satisfy production constraint",
+  );
+}
 
 assert.equal(validateZipPath("manuscript/book.txt"), "");
 assert.ok(validateZipPath("../secret.txt"), "Zip slip path should be rejected");

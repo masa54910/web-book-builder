@@ -12,11 +12,13 @@ export function normalizeSlugInput(value: string) {
 
 export function createSlugCandidate(value: string) {
   const normalized = normalizeSlugInput(value);
-  return normalized || "book";
+  // Production's books_slug_check requires at least three characters.
+  return normalized.length >= 3 ? normalized : "book";
 }
 
 export function isValidSlug(slug: string) {
-  return /^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/.test(
+  // Keep client validation aligned with the production constraint.
+  return /^[a-z0-9][a-z0-9-]{1,78}[a-z0-9]$/.test(
     slug,
   );
 }

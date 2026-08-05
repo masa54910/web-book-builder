@@ -8,6 +8,7 @@ import {
   safeExternalUrl,
   type ExternalLink,
 } from "@/lib/productTypes";
+import { createSlugCandidate } from "@/lib/slug";
 import type { ImageManifestRow, NovelChapter } from "@/lib/types";
 
 export const BOOK_PROJECT_VERSION = 1;
@@ -127,6 +128,12 @@ function uniqueSlug(title: string, order: number, used: Set<string>) {
   }
   used.add(slug);
   return slug;
+}
+
+function normalizeAuthorHandle(value: string, author: string) {
+  const fallback = createSlugCandidate(author);
+  const candidate = normalizeHandle(value, fallback);
+  return /^[a-z0-9][a-z0-9_-]{1,39}$/.test(candidate) ? candidate : fallback;
 }
 
 function stableBookId(title: string, author: string, previous?: string) {
@@ -399,7 +406,9 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
 
   const now = new Date().toISOString();
   const bookId = stableBookId(title, author, input.existingBookId);
-  const authorHandle = normalizeHandle(input.authorHandle || author, slugify(author, "author"));
+  // Keep the visible author name unchanged while ensuring the internal handle
+  // satisfies Supabase's ASCII 2–40 character constraint.
+  const authorHandle = normalizeAuthorHandle(input.authorHandle || author, author);
   const snsLinks: ExternalLink[] = [
     input.authorWebsiteUrl
       ? {

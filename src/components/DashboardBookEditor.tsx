@@ -856,6 +856,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         processingName: "save",
         target: "books / book_images / book_external_links / book-assets",
         error,
+        context: { mode, bookId: bookId || params.id || null },
       });
       if (isMountedRef.current) {
         setStatusMessage(SAVE_FAILURE_MESSAGE);
