@@ -3,7 +3,7 @@
 import type { BookProject } from "@/lib/bookProject";
 import { DEFAULT_PUBLICATION_SETTINGS, type BookStatus, type BookVisibility } from "@/lib/accessControl";
 import { BETA_LIMITS } from "@/lib/limits";
-import { getAppEnv, isDemoModeAllowed } from "@/lib/appEnv";
+import { isDemoModeAllowed } from "@/lib/appEnv";
 import { createSlugCandidate, makeUniqueSlug } from "@/lib/slug";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { parseBookProjectJson } from "@/lib/bookProjectNormalization";
@@ -51,18 +51,11 @@ function assertLocalFallbackAllowed() {
   }
 }
 
-function isSchemaCacheMissingError(error: unknown) {
-  if (typeof error !== "object" || error === null) return false;
-  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
-  return code === "PGRST205";
-}
-
 function canUseLocalSchemaFallback() {
-  return process.env.NODE_ENV === "development" && getAppEnv() === "local";
+  return isDemoModeAllowed();
 }
 
-function canFallbackToLocal(error: unknown) {
-  if (isSchemaCacheMissingError(error)) return true;
+function canFallbackToLocal() {
   return canUseLocalSchemaFallback();
 }
 
@@ -284,7 +277,7 @@ export async function listBooks(ownerId: string) {
     if (error) throw error;
     return (data ?? []).map((row) => mapSupabaseBook(row)).filter((book): book is CloudBookRecord => Boolean(book));
   } catch (error) {
-    if (!canFallbackToLocal(error)) throw error;
+    if (!canFallbackToLocal()) throw error;
     return readLocalBooks().filter((book) => book.ownerId === ownerId && !book.deletedAt);
   }
 }
@@ -296,6 +289,7 @@ export async function getBook(id: string, ownerId?: string) {
     return readLocalBooks().find((book) => book.id === id && !book.deletedAt && (!ownerId || book.ownerId === ownerId)) ?? null;
   }
   if (!looksLikeUuid(id)) {
+    if (!canUseLocalSchemaFallback()) return null;
     return readLocalBooks().find((book) => book.id === id && !book.deletedAt && (!ownerId || book.ownerId === ownerId)) ?? null;
   }
   try {
@@ -305,7 +299,7 @@ export async function getBook(id: string, ownerId?: string) {
     if (error) throw error;
     return data ? mapSupabaseBook(data) : null;
   } catch (error) {
-    if (!canFallbackToLocal(error)) throw error;
+    if (!canFallbackToLocal()) throw error;
     return readLocalBooks().find((book) => book.id === id && !book.deletedAt && (!ownerId || book.ownerId === ownerId)) ?? null;
   }
 }
@@ -336,7 +330,7 @@ export async function getPublishedBookBySlug(slug: string) {
     if (error) throw error;
     return data ? mapSupabaseBook(data) : null;
   } catch (error) {
-    if (!canFallbackToLocal(error)) throw error;
+    if (!canFallbackToLocal()) throw error;
     return (
       readLocalBooks().find(
         (book) =>
@@ -376,7 +370,7 @@ export async function listPublishedBooksByAuthorHandle(handle: string) {
     if (error) throw error;
     return (data ?? []).map((row) => mapSupabaseBook(row)).filter((book): book is CloudBookRecord => Boolean(book));
   } catch (error) {
-    if (!canFallbackToLocal(error)) throw error;
+    if (!canFallbackToLocal()) throw error;
     return readLocalBooks()
       .filter(
         (book) =>
@@ -472,7 +466,7 @@ export async function saveBook(
     return saved;
   } catch (error) {
     logSupabaseIssue({ processingName: "saveBook", target: "books.catch", error });
-    if (!canFallbackToLocal(error)) throw error;
+    if (!canFallbackToLocal()) throw error;
     const books = readLocalBooks().filter((book) => book.ownerId === ownerId && !book.deletedAt);
     if (!existing && books.length >= BETA_LIMITS.maxBooksPerUser) {
       throw new Error(`ベータ版では1ユーザー最大${BETA_LIMITS.maxBooksPerUser}作品まで作成できます。`);
@@ -528,7 +522,7 @@ export async function updatePublication(
     return mapSupabaseBook(data) ?? next;
   } catch (error) {
     logSupabaseIssue({ processingName: "updatePublication", target: "books.catch", error });
-    if (!canFallbackToLocal(error)) throw error;
+    if (!canFallbackToLocal()) throw error;
     writeLocalBooks(readLocalBooks().map((item) => (item.id === next.id ? next : item)));
     return next;
   }
@@ -571,7 +565,7 @@ export async function softDeleteBook(bookId: string, ownerId: string) {
       .eq("owner_id", ownerId);
     if (error) throw error;
   } catch (error) {
-    if (!canFallbackToLocal(error)) throw error;
+    if (!canFallbackToLocal()) throw error;
     writeLocalBooks(
       readLocalBooks().map((book) =>
         book.id === bookId && book.ownerId === ownerId
