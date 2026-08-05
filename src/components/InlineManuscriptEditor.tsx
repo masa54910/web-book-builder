@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { BookContentBlock } from "@/lib/bookProject";
+import { isDisplayableImageUrl } from "@/lib/bookAssetStorage";
 import { createPendingImageBlock, insertImageBlocksAtCursor } from "@/lib/inlineContentBlocks";
 
 function fileToDataUrl(file: File) {
@@ -129,9 +130,10 @@ function createImageElement(block: Extract<BookContentBlock, { type: "image" }>)
 
   const imageShell = document.createElement("div");
   imageShell.className = "inline-editor-image-shell";
-  if (block.storagePath) {
+  const displaySource = block.publicUrl || (isDisplayableImageUrl(block.storagePath) ? block.storagePath : "");
+  if (displaySource) {
     const image = document.createElement("img");
-    image.src = block.storagePath;
+    image.src = displaySource;
     image.alt = block.altText || block.fileName;
     image.loading = "lazy";
     image.decoding = "async";

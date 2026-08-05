@@ -1,6 +1,6 @@
 "use client";
 
-import type { BookProject } from "@/lib/bookProject";
+import type { BookContentBlock, BookProject } from "@/lib/bookProject";
 import { getAppEnv, isDemoModeAllowed } from "@/lib/appEnv";
 import { BETA_LIMITS, STORAGE_BUCKETS } from "@/lib/limits";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -60,13 +60,30 @@ function storageRefForBucket(bucket: string, path: string) {
   return `${STORAGE_PREFIX}${bucket}/${path}`;
 }
 
+export function isStorageReference(value: string | undefined | null) {
+  return typeof value === "string" && value.startsWith(STORAGE_PREFIX);
+}
+
+export function isDisplayableImageUrl(value: string | undefined | null) {
+  return typeof value === "string" && /^(?:https?:\/\/|data:image\/|blob:|\/)/i.test(value);
+}
+
 function parseStorageRef(value: string) {
-  if (!value.startsWith(STORAGE_PREFIX)) return null;
-  const withoutPrefix = value.slice(STORAGE_PREFIX.length);
-  const [bucket, ...pathParts] = withoutPrefix.split("/");
-  const path = pathParts.join("/");
-  if (!bucket || !path) return null;
-  return { bucket, path };
+  if (value.startsWith(STORAGE_PREFIX)) {
+    const withoutPrefix = value.slice(STORAGE_PREFIX.length);
+    const [bucket, ...pathParts] = withoutPrefix.split("/");
+    const path = pathParts.join("/");
+    if (!bucket || !path) return null;
+    return { bucket, path };
+  }
+
+  // Some older rows stored the bucket-relative path without the custom
+  // `storage:` marker. Treat those as book-assets paths, but never interpret
+  // an already displayable URL as a Storage path.
+  if (!isDisplayableImageUrl(value) && value.includes("/")) {
+    return { bucket: STORAGE_BUCKETS.bookAssets, path: value };
+  }
+  return null;
 }
 
 async function uploadDataUrl({
@@ -180,28 +197,54 @@ export async function uploadBookProjectAssets(project: BookProject, ownerId: str
 }
 
 export async function resolveStorageUrl(value: string) {
+  if (!value) return "";
+  if (isDisplayableImageUrl(value)) return value;
   const ref = parseStorageRef(value);
-  if (!ref) return value;
+  if (!ref) return "";
   const supabase = getSupabaseClient();
   if (!supabase) return "";
   const { data, error } = await supabase.storage.from(ref.bucket).createSignedUrl(ref.path, 60 * 60);
-  if (error) return "";
-  return data.signedUrl;
+  if (!error && data?.signedUrl) return data.signedUrl;
+
+  // Public buckets do not need a signed URL. Keep this fallback so the same
+  // materializer works for either private signed assets or public assets.
+  const publicUrl = supabase.storage.from(ref.bucket).getPublicUrl(ref.path).data.publicUrl;
+  if (publicUrl) return publicUrl;
+  return "";
 }
 
 export async function materializeBookProjectAssets(project: BookProject): Promise<BookProject> {
-  const coverImage = project.config.coverImage
-    ? await resolveStorageUrl(project.config.coverImage)
-    : project.config.coverImage;
+  const coverImage = project.config.coverImage || "";
+  const coverImageUrl = coverImage ? await resolveStorageUrl(coverImage) : "";
   const images = await Promise.all(
-    project.images.map(async (image) => ({
-      ...image,
-      image_url: await resolveStorageUrl(image.image_url),
-    })),
+    project.images.map(async (image) => {
+      const storagePath = image.storage_path || image.image_url;
+      const publicUrl = await resolveStorageUrl(storagePath || image.public_url || "");
+      return {
+        ...image,
+        image_url: storagePath,
+        storage_path: storagePath || undefined,
+        public_url: publicUrl || undefined,
+      };
+    }),
+  );
+  const contentBlocks = await Promise.all(
+    (project.contentBlocks || []).map(async (block): Promise<BookContentBlock> => {
+      if (block.type !== "image") return block;
+      const publicUrl = await resolveStorageUrl(block.storagePath || block.publicUrl || "");
+      return {
+        ...block,
+        publicUrl: publicUrl || undefined,
+      };
+    }),
   );
   return {
     ...project,
-    config: { ...project.config, coverImage },
+    config: {
+      ...project.config,
+      coverImageUrl: coverImageUrl || (isDisplayableImageUrl(coverImage) ? coverImage : undefined),
+    },
     images,
+    contentBlocks,
   };
 }

@@ -14,6 +14,10 @@ export type ImageManifestRow = {
   image_index: string;
   image_id?: string;
   image_url: string;
+  /** Canonical persisted Storage reference/path. */
+  storage_path?: string;
+  /** Runtime-only HTTP URL. Never persist signed URLs. */
+  public_url?: string;
   alt: string;
   caption: string;
   source_path: string;

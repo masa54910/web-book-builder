@@ -40,6 +40,10 @@ export type UploadedBookImage = {
   id: string;
   fileName: string;
   dataUrl: string;
+  /** Canonical persisted Storage reference/path, kept separate from displayUrl. */
+  storagePath?: string;
+  /** Runtime-only display URL (data/blob/http). Never persist signed URLs. */
+  displayUrl?: string;
   mimeType: string;
   size: number;
   caption: string;
@@ -203,6 +207,29 @@ export function contentBlocksToRawText(blocks: BookContentBlock[]) {
   return normalizeLineBreaks(parts.join("\n\n"));
 }
 
+/**
+ * Remove runtime-only display URLs before a project is written to storage.
+ * The canonical storage references remain in storagePath/storage_path/image_url.
+ */
+export function stripRuntimeAssetUrls(project: BookProject): BookProject {
+  return {
+    ...project,
+    config: {
+      ...project.config,
+      coverImageUrl: undefined,
+    },
+    images: project.images.map((image) => ({
+      ...image,
+      public_url: undefined,
+    })),
+    contentBlocks: project.contentBlocks?.map((block) =>
+      block.type === "image"
+        ? { ...block, publicUrl: undefined }
+        : block,
+    ),
+  };
+}
+
 export function contentBlocksFromLegacy(rawText: string, images: UploadedBookImage[]): BookContentBlock[] {
   const text = normalizeLineBreaks(rawText);
   const imageById = new Map(images.map((image) => [image.id, image]));
@@ -229,7 +256,8 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
       blocks.push({
         id: image.id,
         type: "image",
-        storagePath: image.dataUrl,
+        storagePath: image.storagePath || image.dataUrl,
+        publicUrl: image.displayUrl,
         fileName: image.fileName,
         mimeType: image.mimeType || "image/jpeg",
         width: 1200,
@@ -265,7 +293,8 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
     blocks.push({
       id: image.id || blockId("image", index),
       type: "image",
-      storagePath: image.dataUrl,
+      storagePath: image.storagePath || image.dataUrl,
+      publicUrl: image.displayUrl,
       fileName: image.fileName,
       mimeType: image.mimeType || "image/jpeg",
       width: 1200,
@@ -338,7 +367,8 @@ function buildImageRows(images: UploadedBookImage[]): ImageManifestRow[] {
     chapter_title: image.insertChapter,
     image_index: image.id || `image-${index + 1}`,
     image_id: image.id || `image-${index + 1}`,
-    image_url: image.dataUrl,
+    image_url: image.storagePath || image.dataUrl,
+    storage_path: image.storagePath || image.dataUrl,
     alt: image.fileName,
     caption: image.caption,
     source_path: image.fileName,
@@ -353,7 +383,7 @@ function imageRowsFromBlocks(blocks: BookContentBlock[], legacyImages: UploadedB
     .filter((block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image")
     .map((block) => {
       const legacy = legacyById.get(block.id);
-      const imageUrl = block.publicUrl || block.storagePath || legacy?.dataUrl || "";
+      const imageUrl = block.storagePath || legacy?.storagePath || legacy?.dataUrl || "";
       const source = block.fileName || legacy?.fileName || block.id;
       const caption = block.caption || legacy?.caption || "";
 
@@ -363,6 +393,7 @@ function imageRowsFromBlocks(blocks: BookContentBlock[], legacyImages: UploadedB
         image_index: block.id,
         image_id: block.id,
         image_url: imageUrl,
+        storage_path: imageUrl,
         alt: block.altText || source,
         caption,
         source_path: source,

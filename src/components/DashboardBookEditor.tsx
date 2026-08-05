@@ -37,7 +37,12 @@ import {
   savePreviewProject,
   savePreviewReturnState,
 } from "@/lib/browserBookStorage";
-import { uploadBookProjectAssets } from "@/lib/bookAssetStorage";
+import {
+  isDisplayableImageUrl,
+  isStorageReference,
+  materializeBookProjectAssets,
+  uploadBookProjectAssets,
+} from "@/lib/bookAssetStorage";
 import { createSlugCandidate, normalizeSlugInput, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
 import { normalizeHandle, safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
@@ -62,6 +67,7 @@ type EditorState = {
   copyrightText: string;
   rawText: string;
   coverImage?: string;
+  coverImageStoragePath?: string;
   coverFileName?: string;
   bindingDirection: "rtl" | "ltr";
   theme: ThemeId;
@@ -193,6 +199,8 @@ function uploadedImagesFromBlocks(blocks: BookContentBlock[]): UploadedBookImage
       id: block.id,
       fileName: block.fileName,
       dataUrl: block.publicUrl || block.storagePath,
+      storagePath: block.storagePath,
+      displayUrl: block.publicUrl,
       mimeType: block.mimeType,
       size: 0,
       caption: block.caption || "",
@@ -235,6 +243,7 @@ function ensureAaTextColor(textColor: string, background: BookThemeSettings["bac
 }
 
 function fromRecord(record: CloudBookRecord): EditorState {
+  const coverStoragePath = record.bookProject.config.coverImage;
   return {
     title: record.title,
     subtitle: record.subtitle,
@@ -244,7 +253,10 @@ function fromRecord(record: CloudBookRecord): EditorState {
     publishedAt: record.publishedAt,
     copyrightText: record.copyright,
     rawText: record.rawText,
-    coverImage: record.bookProject.config.coverImage,
+    coverImage:
+      record.bookProject.config.coverImageUrl ||
+      (isDisplayableImageUrl(coverStoragePath) ? coverStoragePath : undefined),
+    coverImageStoragePath: isStorageReference(coverStoragePath) ? coverStoragePath : undefined,
     coverFileName: record.coverPath ? "保存済み表紙" : undefined,
     bindingDirection: record.bindingDirection,
     theme: record.theme,
@@ -280,10 +292,12 @@ function imagesFromRecord(record: CloudBookRecord): UploadedBookImage[] {
   return record.bookProject.images.map((image, index) => ({
     id: image.image_id || image.image_index || `image-${index + 1}`,
     fileName: image.alt || image.source_path || `image-${index + 1}`,
-    dataUrl: image.image_url,
-    mimeType: image.image_url.startsWith("data:image/png")
+    dataUrl: image.public_url || image.image_url,
+    storagePath: image.storage_path || image.image_url,
+    displayUrl: image.public_url,
+    mimeType: (image.public_url || image.image_url).startsWith("data:image/png")
       ? "image/png"
-      : image.image_url.startsWith("data:image/webp")
+      : (image.public_url || image.image_url).startsWith("data:image/webp")
         ? "image/webp"
         : "image/jpeg",
     size: 0,
@@ -302,6 +316,7 @@ function contentBlocksFromRecord(record: CloudBookRecord) {
 }
 
 function stateFromPreviewProject(project: BookProject): EditorState {
+  const coverStoragePath = project.config.coverImage;
   return {
     ...INITIAL_EDITOR,
     title: project.config.title,
@@ -312,7 +327,10 @@ function stateFromPreviewProject(project: BookProject): EditorState {
     publishedAt: project.config.publishedAt,
     copyrightText: project.config.copyrightText,
     rawText: project.rawText,
-    coverImage: project.config.coverImage,
+    coverImage:
+      project.config.coverImageUrl ||
+      (isDisplayableImageUrl(coverStoragePath) ? coverStoragePath : undefined),
+    coverImageStoragePath: isStorageReference(coverStoragePath) ? coverStoragePath : undefined,
     bindingDirection: project.config.bindingDirection,
     theme: project.config.theme,
     language: project.config.language,
@@ -345,10 +363,12 @@ function imagesFromPreviewProject(project: BookProject): UploadedBookImage[] {
   return project.images.map((image, index) => ({
     id: image.image_id || image.image_index || `image-${index + 1}`,
     fileName: image.alt || image.source_path || `image-${index + 1}`,
-    dataUrl: image.image_url,
-    mimeType: image.image_url.startsWith("data:image/png")
+    dataUrl: image.public_url || image.image_url,
+    storagePath: image.storage_path || image.image_url,
+    displayUrl: image.public_url,
+    mimeType: (image.public_url || image.image_url).startsWith("data:image/png")
       ? "image/png"
-      : image.image_url.startsWith("data:image/webp")
+      : (image.public_url || image.image_url).startsWith("data:image/webp")
         ? "image/webp"
         : "image/jpeg",
     size: 0,
@@ -384,6 +404,7 @@ function projectWithoutAssets(project: BookProject): BookProject {
     config: {
       ...project.config,
       coverImage: undefined,
+      coverImageUrl: undefined,
     },
     images: [],
     contentBlocks: project.contentBlocks?.map((block) =>
@@ -480,10 +501,11 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         return;
       }
 
-      setState(stateFromPreviewProject(project));
-      setBookId(project.config.bookId);
-      setImages(imagesFromPreviewProject(project));
-      setContentBlocks(contentBlocksFromPreviewProject(project));
+      const materializedProject = await materializeBookProjectAssets(project);
+      setState(stateFromPreviewProject(materializedProject));
+      setBookId(materializedProject.config.bookId);
+      setImages(imagesFromPreviewProject(materializedProject));
+      setContentBlocks(contentBlocksFromPreviewProject(materializedProject));
       setEditorRevision((current) => current + 1);
       setDidRestorePreviewDraft(true);
       setPendingScrollRestore(returnState.scrollY);
@@ -532,17 +554,20 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     if (previewDraftId && didRestorePreviewDraft) return;
     let active = true;
     getBook(params.id, user.id)
-      .then((book) => {
+      .then(async (book) => {
         if (!active) return;
         if (!book) {
           setStatusMessage("作品が見つからないか、アクセス権がありません。");
           setIsLoading(false);
           return;
         }
-        setState(fromRecord(book));
-        setBookId(book.id);
-        setImages(imagesFromRecord(book));
-        setContentBlocks(contentBlocksFromRecord(book));
+        const materializedProject = await materializeBookProjectAssets(book.bookProject);
+        const materializedBook = { ...book, bookProject: materializedProject };
+        if (!active) return;
+        setState(fromRecord(materializedBook));
+        setBookId(materializedBook.id);
+        setImages(imagesFromRecord(materializedBook));
+        setContentBlocks(contentBlocksFromRecord(materializedBook));
         setEditorRevision((current) => current + 1);
         setStatusMessage("作品を読み込みました。");
       })
@@ -821,7 +846,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     publishedAt: state.publishedAt,
     copyrightText: state.copyrightText,
     rawText: state.rawText,
-    coverImage: state.coverImage,
+    coverImage: state.coverImageStoragePath || state.coverImage,
     bindingDirection: state.bindingDirection,
     theme: state.theme,
     language: state.language,
@@ -914,6 +939,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       return;
     }
     update("coverImage", await fileToDataUrl(file));
+    update("coverImageStoragePath", undefined);
     update("coverFileName", file.name);
     if (coverInputRef.current) coverInputRef.current.value = "";
   };
@@ -1242,6 +1268,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               {state.coverFileName ? <p className="maker-note">選択中：{state.coverFileName}</p> : null}
               <button className="maker-small-button" type="button" onClick={() => {
                 update("coverImage", undefined);
+                update("coverImageStoragePath", undefined);
                 update("coverFileName", undefined);
               }}>
                 表紙を解除

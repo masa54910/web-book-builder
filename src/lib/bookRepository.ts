@@ -7,6 +7,7 @@ import { isDemoModeAllowed } from "@/lib/appEnv";
 import { createSlugCandidate, makeUniqueSlug } from "@/lib/slug";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { parseBookProjectJson } from "@/lib/bookProjectNormalization";
+import { stripRuntimeAssetUrls } from "@/lib/bookProject";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
 
 export type CloudBookRecord = {
@@ -102,6 +103,7 @@ function toRecord(
   existing?: CloudBookRecord,
   desiredSlug?: string,
 ): CloudBookRecord {
+  const persistedProject = stripRuntimeAssetUrls(project);
   const timestamp = now();
   const usedSlugs = new Set(
     isDemoModeAllowed()
@@ -122,25 +124,25 @@ function toRecord(
   return {
     id: existing?.id || `book-${browserId()}`,
     ownerId,
-    title: project.config.title,
-    subtitle: project.config.subtitle,
-    authorName: project.config.author,
-    authorHandle: project.config.authorProfile?.handle || createSlugCandidate(project.config.author),
-    description: project.config.description,
-    publisher: project.config.publisherName,
-    publishedAt: project.config.publishedAt,
-    copyright: project.config.copyrightText,
+    title: persistedProject.config.title,
+    subtitle: persistedProject.config.subtitle,
+    authorName: persistedProject.config.author,
+    authorHandle: persistedProject.config.authorProfile?.handle || createSlugCandidate(persistedProject.config.author),
+    description: persistedProject.config.description,
+    publisher: persistedProject.config.publisherName,
+    publishedAt: persistedProject.config.publishedAt,
+    copyright: persistedProject.config.copyrightText,
     slug,
     status: existing?.status || "draft",
     visibility: existing?.visibility || "private",
-    bindingDirection: project.config.bindingDirection,
-    theme: project.config.theme,
-    charactersPerPage: project.config.charactersPerPage,
-    tocItemsPerPage: project.config.tableOfContentsItemsPerPage,
-    coverPath: project.config.coverImage || "",
-    rawText: project.rawText,
-    bookProject: project,
-    version: project.version,
+    bindingDirection: persistedProject.config.bindingDirection,
+    theme: persistedProject.config.theme,
+    charactersPerPage: persistedProject.config.charactersPerPage,
+    tocItemsPerPage: persistedProject.config.tableOfContentsItemsPerPage,
+    coverPath: persistedProject.config.coverImage || "",
+    rawText: persistedProject.rawText,
+    bookProject: persistedProject,
+    version: persistedProject.version,
     monetizationEnabled: existing?.monetizationEnabled ?? DEFAULT_PUBLICATION_SETTINGS.monetizationEnabled,
     priceAmount: existing?.priceAmount ?? DEFAULT_PUBLICATION_SETTINGS.priceAmount,
     currency: existing?.currency ?? DEFAULT_PUBLICATION_SETTINGS.currency,

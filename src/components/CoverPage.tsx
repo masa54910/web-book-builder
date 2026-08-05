@@ -2,6 +2,7 @@
 import Image from "next/image";
 import type { CSSProperties } from "react";
 import type { BookConfig } from "@/config/bookConfig";
+import { isDisplayableImageUrl } from "@/lib/bookAssetStorage";
 
 function CoverImage({
   src,
@@ -12,7 +13,7 @@ function CoverImage({
   alt: string;
   contain?: boolean;
 }) {
-  if (src.startsWith("data:") || src.startsWith("blob:")) {
+  if (src.startsWith("data:") || src.startsWith("blob:") || /^https?:\/\//i.test(src)) {
     return (
       <img
         className="cover-uploaded-image"
@@ -45,6 +46,7 @@ export default function CoverPage({
   const coverStyle = config.themeSettings?.coverStyle || "overlay";
   const coverTone = config.themeSettings?.accentColor || "#6bb9ad";
   const displayTitleLines = config.displayTitleLines?.filter((line) => line.trim().length > 0);
+  const coverSrc = config.coverImageUrl || (isDisplayableImageUrl(config.coverImage) ? config.coverImage : "");
   if (back) {
     return (
       <div className={`back-cover-page book-cover-style-${coverStyle}`} style={{ "--book-accent-color": coverTone } as CSSProperties}>
@@ -68,10 +70,10 @@ export default function CoverPage({
         )}
         <p>{config.subtitle}</p>
       </div>
-      {config.coverImage ? (
+      {coverSrc ? (
         <div className="cover-image-slot" aria-hidden="true">
           <CoverImage
-            src={config.coverImage}
+            src={coverSrc}
             alt={`${config.title} 表紙`}
             contain
           />

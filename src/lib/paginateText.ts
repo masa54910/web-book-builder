@@ -42,10 +42,11 @@ function textCost(paragraph: string) {
 
 function imageSource(image?: ImageManifestRow) {
   if (!image) return undefined;
-  if (image.image_url.startsWith("data:") || image.image_url.startsWith("blob:")) {
-    return image.image_url;
+  const displayUrl = image.public_url || image.image_url || image.storage_path || "";
+  if (displayUrl.startsWith("data:") || displayUrl.startsWith("blob:")) {
+    return displayUrl;
   }
-  if (image.image_url.startsWith("/")) return image.image_url;
+  if (displayUrl.startsWith("/") || /^https?:\/\//i.test(displayUrl)) return displayUrl;
   if (image.local_path) return `/${image.local_path.replaceAll("\\", "/")}`;
   return undefined;
 }

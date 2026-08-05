@@ -23,6 +23,8 @@ export type BookConfig = {
   description: string;
   language: SupportedLocale;
   coverImage?: string;
+  /** Runtime-only HTTP URL for the cover. Never persist signed URLs. */
+  coverImageUrl?: string;
   bindingDirection: BindingDirection;
   theme: BookTheme;
   themeSettings?: Partial<BookThemeSettings>;
