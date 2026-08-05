@@ -344,7 +344,9 @@ export function extractChaptersFromText(rawText: string, fallbackTitle: string):
     const title = heading[1].trim() || `第${order}章`;
     const bodyStart = (heading.index ?? 0) + heading[0].length;
     const bodyEnd = headings[index + 1]?.index ?? text.length;
-    const body = text.slice(bodyStart, bodyEnd).trim();
+    const prefix = index === 0 ? text.slice(0, heading.index ?? 0).trim() : "";
+    const sectionBody = text.slice(bodyStart, bodyEnd).trim();
+    const body = [prefix, sectionBody].filter(Boolean).join("\n\n");
     const slug = uniqueSlug(title, order, usedSlugs);
     return {
       id: slug,
