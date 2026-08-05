@@ -7,22 +7,29 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BETA_LIMITS } from "@/lib/limits";
 import { publicBookBaseUrl } from "@/lib/promotion";
 import {
-  buildBookProject,
   contentBlocksFromLegacy,
   contentBlocksToRawText,
   type BookContentBlock,
   type BookProject,
   type UploadedBookImage,
-  type BookProjectInput,
 } from "@/lib/bookProject";
+import {
+  buildCanonicalBookPayload,
+  canonicalAssetsToUploadedImages,
+  canonicalContentBlocksToEditorBlocks,
+  type CanonicalBookPayload,
+} from "@/lib/canonicalBook";
+import {
+  CanonicalBookCommandError,
+  previewCanonicalBookCommand,
+  publishCanonicalBookCommand,
+  saveCanonicalBookCommand,
+} from "@/lib/commands/canonicalBookCommands";
 import { importManuscriptFile } from "@/lib/fileImport";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
-  assertBookCreationAvailable,
   getBook,
-  isPersistedBookId,
   listBooks,
-  saveBook,
   updatePublication,
   type CloudBookRecord,
 } from "@/lib/bookRepository";
@@ -34,14 +41,12 @@ import {
   loadPreviewProject,
   loadPreviewReturnState,
   saveDraft,
-  savePreviewProject,
   savePreviewReturnState,
 } from "@/lib/browserBookStorage";
 import {
   isDisplayableImageUrl,
   isStorageReference,
   materializeBookProjectAssets,
-  uploadBookProjectAssets,
 } from "@/lib/bookAssetStorage";
 import { createSlugCandidate, normalizeSlugInput, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
@@ -396,28 +401,6 @@ function removeDraftQuery(path: string) {
   params.delete("draftId");
   const serialized = params.toString();
   return `${pathname}${serialized ? `?${serialized}` : ""}`;
-}
-
-function projectWithoutAssets(project: BookProject): BookProject {
-  return {
-    ...project,
-    config: {
-      ...project.config,
-      coverImage: undefined,
-      coverImageUrl: undefined,
-    },
-    images: [],
-    contentBlocks: project.contentBlocks?.map((block) =>
-      block.type === "image"
-        ? {
-            ...block,
-            storagePath: "",
-            publicUrl: undefined,
-            uploadState: "ready",
-          }
-        : block,
-    ),
-  };
 }
 
 export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) {
@@ -837,58 +820,25 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     setEditorRevision((current) => current + 1);
   };
 
-  const buildInput = (): BookProjectInput => ({
-    title: state.title,
-    subtitle: state.subtitle,
-    author: state.author,
-    description: state.description,
-    publisherName: state.publisherName,
-    publishedAt: state.publishedAt,
-    copyrightText: state.copyrightText,
-    rawText: state.rawText,
-    coverImage: state.coverImageStoragePath || state.coverImage,
-    bindingDirection: state.bindingDirection,
-    theme: state.theme,
-    language: state.language,
-    themeSettings: {
-      fontFamily: state.fontFamily,
-      fontScale: state.fontScale,
-      lineHeight: state.lineHeight,
-      marginScale: state.marginScale,
-      pageWidth: state.pageWidth,
-      background: state.background,
-      textColor: state.textColor,
-      accentColor: state.accentColor,
-      coverStyle: state.coverStyle,
-      imageLayout: state.imageLayout,
-    },
-    charactersPerPage: state.charactersPerPage,
-    tableOfContentsItemsPerPage: state.tableOfContentsItemsPerPage,
-    contentBlocks,
-    images,
-    authorHandle: state.authorHandle,
-    authorBio: state.authorBio,
-    authorWebsiteUrl: state.authorWebsiteUrl,
-    authorXUrl: state.authorXUrl,
-    authorNoteUrl: state.authorNoteUrl,
-    externalLinks:
-      state.externalLinkUrl && safeExternalUrl(state.externalLinkUrl)
-        ? ([
-            {
-              id: "creator-link-1",
-              type: "other",
-              label: state.externalLinkLabel || "外部リンク",
-              url: safeExternalUrl(state.externalLinkUrl),
-            },
-          ] satisfies ExternalLink[])
-        : [],
-    externalSalesUrl: state.externalSalesUrl,
-    externalSalesLabel: state.externalSalesLabel,
-    existingBookId: bookId,
-  });
-
-  const buildProject = () => {
-    const result = buildBookProject(buildInput());
+  const buildCanonicalPayload = (): CanonicalBookPayload | null => {
+    const externalUrl = safeExternalUrl(state.externalLinkUrl);
+    const externalLinks = externalUrl
+      ? ([
+          {
+            id: "creator-link-1",
+            type: "other",
+            label: state.externalLinkLabel || "外部リンク",
+            url: externalUrl,
+          },
+        ] satisfies ExternalLink[])
+      : [];
+    const result = buildCanonicalBookPayload({
+      state,
+      contentBlocks,
+      images,
+      bookId,
+      externalLinks,
+    });
     if (!result.ok) {
       setErrors(result.errors);
       return null;
@@ -897,12 +847,63 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       setErrors((current) => ({ ...current, slug: SLUG_UNAVAILABLE_MESSAGE }));
       return null;
     }
-    if (state.slug && validateSlug(state.slug)) {
-      setErrors({ slug: validateSlug(state.slug) });
+    const slugError = state.slug ? validateSlug(state.slug) : "";
+    if (slugError) {
+      setErrors({ slug: slugError });
       return null;
     }
     setErrors({});
-    return result.project;
+    return result.payload;
+  };
+
+  const replaceEditorStateFromCanonicalPayload = (payload: CanonicalBookPayload) => {
+    const nextBlocks = canonicalContentBlocksToEditorBlocks(payload);
+    const nextImages = canonicalAssetsToUploadedImages(payload);
+    setState((current) => ({
+      ...current,
+      title: payload.title,
+      subtitle: payload.subtitle,
+      author: payload.authorName,
+      description: payload.description,
+      publisherName: payload.publisherName,
+      publishedAt: payload.publishedAt,
+      copyrightText: payload.copyrightText,
+      rawText: contentBlocksToRawText(nextBlocks),
+      coverImage: payload.coverAsset?.localPreviewUrl || payload.coverAsset?.storagePath,
+      coverImageStoragePath: payload.coverAsset?.storagePath,
+      coverFileName: payload.coverAsset?.fileName,
+      bindingDirection: payload.bindingDirection,
+      theme: payload.theme,
+      language: payload.language,
+      fontFamily: payload.themeSettings.fontFamily || current.fontFamily,
+      fontScale: payload.themeSettings.fontScale || current.fontScale,
+      lineHeight: payload.themeSettings.lineHeight || current.lineHeight,
+      marginScale: payload.themeSettings.marginScale || current.marginScale,
+      pageWidth: payload.themeSettings.pageWidth || current.pageWidth,
+      background: payload.themeSettings.background || current.background,
+      textColor: payload.themeSettings.textColor || current.textColor,
+      accentColor: payload.themeSettings.accentColor || current.accentColor,
+      coverStyle: payload.themeSettings.coverStyle || current.coverStyle,
+      imageLayout: payload.themeSettings.imageLayout || current.imageLayout,
+      charactersPerPage: payload.charactersPerPage,
+      tableOfContentsItemsPerPage: payload.tableOfContentsItemsPerPage,
+      visibility: payload.publication.visibility,
+      status: payload.publication.status,
+      slug: payload.slug,
+      authorHandle: payload.authorHandle,
+      authorBio: payload.authorBio,
+      authorWebsiteUrl: payload.authorWebsiteUrl,
+      authorXUrl: payload.authorXUrl,
+      authorNoteUrl: payload.authorNoteUrl,
+      externalLinkLabel: payload.externalLinks[0]?.label || current.externalLinkLabel,
+      externalLinkUrl: payload.externalLinks[0]?.url || current.externalLinkUrl,
+      externalSalesUrl: payload.externalSalesUrl,
+      externalSalesLabel: payload.externalSalesLabel,
+    }));
+    setImages(nextImages);
+    setContentBlocks(nextBlocks);
+    setBookId(payload.bookId);
+    setEditorRevision((current) => current + 1);
   };
 
   const handleImport = async (file?: File) => {
@@ -944,145 +945,126 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     if (coverInputRef.current) coverInputRef.current.value = "";
   };
 
-  const save = async () => {
+  const handleCanonicalSave = async () => {
     if (!user || isSaving) return null;
     if (pendingImageCount > 0) {
       setStatusMessage("画像の読み込みが完了するまで保存できません。");
       return null;
     }
-    const project = buildProject();
-    if (!project) return null;
+    const payload = buildCanonicalPayload();
+    if (!payload) return null;
+
     setIsSaving(true);
-    let createdRecordId: string | null = null;
     try {
-      // A preview ID is not a persisted record. For a new work, reserve the
-      // slot and create the books row before touching Storage or side tables.
-      const existingId =
-        (mode === "edit" && bookId ? bookId : undefined) ||
-        (isPersistedBookId(bookId) ? bookId : undefined);
-      let record: CloudBookRecord;
-      if (!existingId) {
-        await assertBookCreationAvailable(user.id);
-        const baseRecord = await saveBook(
-          projectWithoutAssets(project),
-          user.id,
-          undefined,
-          state.slug || undefined,
-          { skipSideTables: true },
-        );
-        createdRecordId = baseRecord.id;
-        setBookId(baseRecord.id);
-        const projectForUpload: BookProject = {
-          ...project,
-          config: { ...project.config, bookId: baseRecord.id },
-        };
-        const projectWithAssets = await uploadBookProjectAssets(projectForUpload, user.id);
-        record = await saveBook(
-          projectWithAssets,
-          user.id,
-          baseRecord.id,
-          state.slug || baseRecord.slug,
-        );
-      } else {
-        const projectForUpload: BookProject = {
-          ...project,
-          config: { ...project.config, bookId: existingId },
-        };
-        const projectWithAssets = await uploadBookProjectAssets(projectForUpload, user.id);
-        record = await saveBook(projectWithAssets, user.id, existingId, state.slug || undefined);
-      }
-      if (!isMountedRef.current) return record;
-      setBookId(record.id);
-      setState((current) => ({ ...current, slug: record.slug, status: record.status, visibility: record.visibility }));
+      const saved = await saveCanonicalBookCommand(payload, user.id);
+      if (!isMountedRef.current) return saved;
+      replaceEditorStateFromCanonicalPayload(saved.project);
       setDirty(false);
-      setSlugAvailabilityMessage(record.slug ? SLUG_AVAILABLE_MESSAGE : "");
+      setSlugAvailabilityMessage(saved.project.slug ? SLUG_AVAILABLE_MESSAGE : "");
       showTemporaryStatusMessage(SAVE_SUCCESS_MESSAGE);
-      trackEvent("book_saved", { bookId: record.id });
-      if (mode === "new" || didRestorePreviewDraft) {
-        deleteDraft();
-      }
+      trackEvent("book_saved", { bookId: saved.bookId });
+      if (mode === "new" || didRestorePreviewDraft) deleteDraft();
       if (didRestorePreviewDraft || previewDraftId) {
         deletePreviewReturnState(previewDraftId || undefined);
         await deletePreviewProject();
       }
-      if (mode === "new" || record.id !== (bookId || params.id)) {
-        router.replace(`/dashboard/books/${record.id}/edit`);
+      if (mode === "new" || saved.bookId !== (bookId || params.id)) {
+        router.replace(`/dashboard/books/${saved.bookId}/edit`);
       }
-      return record;
+      return saved;
     } catch (error) {
+      if (error instanceof CanonicalBookCommandError && error.fieldErrors) {
+        setErrors(error.fieldErrors);
+      }
       logSupabaseIssue({
-        processingName: "save",
+        processingName: "saveCanonicalBookCommand",
         target: "books / book_images / book_external_links / book-assets",
         error,
         context: { mode, bookId: bookId || params.id || null },
       });
       if (isMountedRef.current) {
-        if (createdRecordId) setBookId(createdRecordId);
-        setStatusMessage(SAVE_FAILURE_MESSAGE);
+        setStatusMessage(
+          error instanceof CanonicalBookCommandError && error.message
+            ? error.message
+            : SAVE_FAILURE_MESSAGE,
+        );
       }
       return null;
     } finally {
-      if (isMountedRef.current) {
-        setIsSaving(false);
-      }
+      if (isMountedRef.current) setIsSaving(false);
     }
   };
 
-  const preview = async () => {
+  const handleCanonicalPreview = async () => {
     if (!validateRequiredBeforeAction()) return;
     if (pendingImageCount > 0) {
       setStatusMessage("画像の読み込みが完了するまでプレビューできません。");
       return;
     }
-    const project = buildProject();
-    if (!project) return;
-    const saved = saveDraft({
-      ...autosaveDraftFields,
-      draftId: project.config.bookId,
-    });
-    if (saved) {
-      setAutosaveAt(saved.savedAt);
-    }
+    const payload = buildCanonicalPayload();
+    if (!payload) return;
     try {
-      await savePreviewProject(project);
-    } catch {
-      setStatusMessage("下書きを保存できませんでした。通信状態を確認して、もう一度お試しください。");
-      return;
+      const previewed = await previewCanonicalBookCommand(payload);
+      const returnTo = buildPreviewReturnPath(pathname, previewed.previewId, mode, bookId || params.id);
+      savePreviewReturnState({
+        draftId: previewed.previewId,
+        returnTo,
+        scrollY: window.scrollY,
+      });
+      router.push(
+        `/reader?mode=preview&from=dashboard&draftId=${encodeURIComponent(previewed.previewId)}&returnTo=${encodeURIComponent(returnTo)}`,
+      );
+    } catch (error) {
+      if (error instanceof CanonicalBookCommandError && error.fieldErrors) setErrors(error.fieldErrors);
+      logSupabaseIssue({
+        processingName: "previewCanonicalBookCommand",
+        target: "preview",
+        error,
+        context: { mode, bookId: bookId || params.id || null },
+      });
+      setStatusMessage("プレビューを作成できませんでした。");
     }
-    const returnTo = buildPreviewReturnPath(pathname, project.config.bookId, mode, bookId || params.id);
-    savePreviewReturnState({
-      draftId: project.config.bookId,
-      returnTo,
-      scrollY: window.scrollY,
-    });
-    router.push(
-      `/reader?mode=preview&from=dashboard&draftId=${encodeURIComponent(project.config.bookId)}&returnTo=${encodeURIComponent(returnTo)}`,
-    );
   };
 
-  const publish = async () => {
-    if (!user) return;
+  const handleCanonicalPublish = async () => {
+    if (!user || isSaving) return;
     if (!validateRequiredBeforeAction()) return;
-    const saved = await save();
-    const id = saved?.id ?? bookId;
-    if (!id) return;
-    const nextVisibility = state.visibility === "private" ? "unlisted" : state.visibility;
+    if (pendingImageCount > 0) {
+      setStatusMessage("画像の読み込みが完了するまで公開できません。");
+      return;
+    }
+    const payload = buildCanonicalPayload();
+    if (!payload) return;
+
+    setIsSaving(true);
     try {
-      const record = await updatePublication(id, user.id, {
-        status: "published",
-        visibility: nextVisibility,
-        slug: state.slug || createSlugCandidate(state.title),
-      });
-      setState((current) => ({ ...current, status: record.status, visibility: record.visibility, slug: record.slug }));
-      setStatusMessage(`公開しました: /books/${record.slug}`);
-      trackEvent("book_published", { bookId: record.id });
+      const published = await publishCanonicalBookCommand(payload, user.id);
+      if (!isMountedRef.current) return;
+      replaceEditorStateFromCanonicalPayload(published.project);
+      setDirty(false);
+      if (mode === "new" || didRestorePreviewDraft) deleteDraft();
+      if (didRestorePreviewDraft || previewDraftId) {
+        deletePreviewReturnState(previewDraftId || undefined);
+        await deletePreviewProject();
+      }
+      setStatusMessage(`公開しました: ${published.publicUrl}`);
+      trackEvent("book_published", { bookId: published.bookId });
+      router.push(published.publicUrl);
     } catch (error) {
+      if (error instanceof CanonicalBookCommandError && error.fieldErrors) setErrors(error.fieldErrors);
       logSupabaseIssue({
-        processingName: "publish",
-        target: "books",
+        processingName: "publishCanonicalBookCommand",
+        target: "books / book_images / book_external_links / book-assets",
         error,
+        context: { mode, bookId: bookId || params.id || null },
       });
-      setStatusMessage(error instanceof Error ? error.message : "公開に失敗しました。");
+      setStatusMessage(
+        error instanceof CanonicalBookCommandError && error.message
+          ? error.message
+          : "保存に失敗したため公開できませんでした。",
+      );
+    } finally {
+      if (isMountedRef.current) setIsSaving(false);
     }
   };
 
@@ -1105,10 +1087,10 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           <p>ベータ制限：最大5作品、本文20万文字、画像30枚、画像10MBまで。</p>
         </div>
         <div className="maker-actions">
-          <Button variant="primary" type="button" disabled={isSaving} onClick={() => void save()}>
+          <Button variant="primary" type="button" disabled={isSaving} onClick={() => void handleCanonicalSave()}>
             {isSaving ? "保存中…" : "保存"}
           </Button>
-          <button className="maker-secondary-button" type="button" onClick={() => void publish()}>
+          <button className="maker-secondary-button" type="button" onClick={() => void handleCanonicalPublish()}>
             公開
           </button>
           <Link className="maker-secondary-link" href="/dashboard">
@@ -1451,13 +1433,13 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       {statusMessage ? <p className="maker-status" aria-live="polite">{statusMessage}</p> : null}
 
       <div className="maker-actions sticky-actions">
-        <Button variant="primary" type="button" disabled={isSaving} onClick={() => void save()}>
+        <Button variant="primary" type="button" disabled={isSaving} onClick={() => void handleCanonicalSave()}>
           {isSaving ? "保存中…" : "保存"}
         </Button>
-        <button className="maker-secondary-button" type="button" onClick={() => void preview()}>
+        <button className="maker-secondary-button" type="button" onClick={() => void handleCanonicalPreview()}>
           プレビュー
         </button>
-        <button className="maker-secondary-button" type="button" onClick={() => void publish()}>
+        <button className="maker-secondary-button" type="button" onClick={() => void handleCanonicalPublish()}>
           公開する
         </button>
         {state.status === "published" ? (

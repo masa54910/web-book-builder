@@ -6,15 +6,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { BindingDirection, BookTheme } from "@/config/bookConfig";
 import {
-  buildBookProject,
-  type BookProjectInput,
+  contentBlocksFromLegacy,
   type UploadedBookImage,
 } from "@/lib/bookProject";
+import {
+  buildCanonicalBookPayload,
+  type CanonicalEditorState,
+} from "@/lib/canonicalBook";
+import { previewCanonicalBookCommand } from "@/lib/commands/canonicalBookCommands";
 import {
   deleteDraft,
   loadDraft,
   saveDraft,
-  savePreviewProject,
   type MakerDraft,
 } from "@/lib/browserBookStorage";
 
@@ -331,7 +334,7 @@ export default function BookMakerForm() {
     setStatus("サンプル本文を入力しました。");
   };
 
-  const buildInput = (): BookProjectInput => ({
+  const buildCanonicalState = (): CanonicalEditorState => ({
     title: form.title,
     subtitle: form.subtitle,
     author: form.author,
@@ -339,21 +342,47 @@ export default function BookMakerForm() {
     publisherName: form.publisherName,
     publishedAt: form.publishedAt,
     copyrightText: form.copyrightText,
-    rawText: form.rawText,
     coverImage: form.coverImage,
+    coverFileName: form.coverFileName,
     bindingDirection: form.bindingDirection,
     theme: form.theme,
+    language: "ja",
+    fontFamily: "mincho",
+    fontScale: "medium",
+    lineHeight: "normal",
+    marginScale: "standard",
+    pageWidth: "standard",
+    background: "paper",
+    textColor: "#2f251d",
+    accentColor: "#6bb9ad",
+    coverStyle: "overlay",
+    imageLayout: "framed",
     charactersPerPage: charactersPerPageFor(form),
     tableOfContentsItemsPerPage: form.tableOfContentsItemsPerPage,
-    images: bodyImages,
-    existingBookId: form.existingBookId,
-    existingCreatedAt: form.existingCreatedAt,
+    visibility: "private",
+    status: "draft",
+    slug: "",
+    authorHandle: "",
+    authorBio: "",
+    authorWebsiteUrl: "",
+    authorXUrl: "",
+    authorNoteUrl: "",
+    externalLinkLabel: "",
+    externalLinkUrl: "",
+    externalSalesUrl: "",
+    externalSalesLabel: "",
   });
 
   const createPreview = async () => {
     setIsGenerating(true);
     setStatus("");
-    const result = buildBookProject(buildInput());
+    const result = buildCanonicalBookPayload({
+      state: buildCanonicalState(),
+      contentBlocks: contentBlocksFromLegacy(form.rawText, bodyImages),
+      images: bodyImages,
+      bookId: form.existingBookId,
+      existingCreatedAt: form.existingCreatedAt,
+    });
     if (!result.ok) {
       setErrors(result.errors);
       setIsGenerating(false);
@@ -361,9 +390,9 @@ export default function BookMakerForm() {
     }
 
     try {
-      await savePreviewProject(result.project);
+      await previewCanonicalBookCommand(result.payload);
       saveDraft({
-        ...toDraftFields({ ...form, existingBookId: result.project.config.bookId, existingCreatedAt: result.project.createdAt }, bodyImages),
+        ...toDraftFields({ ...form, existingBookId: result.payload.bookId, existingCreatedAt: result.payload.createdAt }, bodyImages),
       });
       router.push("/reader");
     } catch {
