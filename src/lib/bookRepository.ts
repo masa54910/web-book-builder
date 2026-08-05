@@ -44,6 +44,14 @@ export type CloudBookRecord = {
   deletedAt: string | null;
 };
 
+type BookImageProjectionRow = {
+  image_key: string | null;
+  storage_path: string | null;
+  caption: string | null;
+  chapter_id: string | null;
+  sort_order: number | null;
+};
+
 const LOCAL_BOOKS_KEY = "webBookMaker:demo:books";
 
 function assertLocalFallbackAllowed() {
@@ -209,6 +217,110 @@ function mapSupabaseBook(row: Record<string, unknown>): CloudBookRecord | null {
   };
 }
 
+/**
+ * Enrich a BookProject with the queryable image projection when available.
+ *
+ * BookProject remains the source of truth. Projection rows only fill missing
+ * asset references (or restore an image row that is absent from an older
+ * project JSON) so Storage URL materialization can resolve every asset on
+ * editor/public-reader entry.
+ */
+function mergeBookImageProjection(record: CloudBookRecord, rows: BookImageProjectionRow[]) {
+  if (!rows.length) return record;
+
+  const projectImages = Array.isArray(record.bookProject.images) ? record.bookProject.images : [];
+  const imageByKey = new Map(
+    projectImages.map((image, index) => [image.image_id || image.image_index || `image-${index + 1}`, image]),
+  );
+  const usedKeys = new Set<string>();
+  const normalizedRows = rows
+    .map((row, index) => {
+      const key = row.image_key?.trim() || `image-${index + 1}`;
+      const storagePath = row.storage_path?.trim() || "";
+      return { ...row, key, storagePath };
+    })
+    .filter((row) => row.storagePath);
+  const rowByKey = new Map(normalizedRows.map((row) => [row.key, row]));
+
+  const mergedImages = projectImages.map((image, index) => {
+    const key = image.image_id || image.image_index || `image-${index + 1}`;
+    const row = rowByKey.get(key) || normalizedRows.find((candidate) => candidate.storagePath === image.storage_path || candidate.storagePath === image.image_url);
+    if (!row) return image;
+    usedKeys.add(row.key);
+    return {
+      ...image,
+      image_id: image.image_id || row.key,
+      image_index: image.image_index || row.key,
+      image_url: row.storagePath,
+      storage_path: row.storagePath,
+      caption: image.caption || row.caption || "",
+      chapter_order: image.chapter_order || Number(row.chapter_id || 0) || 0,
+      chapter_title: image.chapter_title || row.chapter_id || "",
+    };
+  });
+
+  for (const row of normalizedRows) {
+    if (usedKeys.has(row.key) || imageByKey.has(row.key)) continue;
+    mergedImages.push({
+      chapter_order: Number(row.chapter_id || 0) || 0,
+      chapter_title: row.chapter_id || "",
+      image_index: row.key,
+      image_id: row.key,
+      image_url: row.storagePath,
+      storage_path: row.storagePath,
+      alt: row.key,
+      caption: row.caption || "",
+      source_path: row.key,
+      local_path: "",
+    });
+  }
+
+  const mergedBlocks = record.bookProject.contentBlocks?.map((block) => {
+    if (block.type !== "image") return block;
+    const row = rowByKey.get(block.id) || normalizedRows.find((candidate) => candidate.storagePath === block.storagePath);
+    if (!row) return block;
+    usedKeys.add(row.key);
+    return {
+      ...block,
+      storagePath: block.storagePath || row.storagePath,
+      caption: block.caption || row.caption || undefined,
+    };
+  });
+
+  return {
+    ...record,
+    bookProject: {
+      ...record.bookProject,
+      images: mergedImages,
+      contentBlocks: mergedBlocks,
+    },
+  };
+}
+
+async function hydrateBookImageProjection(record: CloudBookRecord, ownerId?: string) {
+  const supabase = getSupabaseClient();
+  if (!supabase) return record;
+
+  try {
+    let query = supabase
+      .from("book_images")
+      .select("image_key,storage_path,caption,chapter_id,sort_order")
+      .eq("book_id", record.id)
+      .order("sort_order", { ascending: true });
+    if (ownerId) query = query.eq("owner_id", ownerId);
+    const { data, error } = await query;
+    if (error) {
+      logSupabaseIssue({ processingName: "loadBookImageProjection", target: "book_images.select", error });
+      return record;
+    }
+    return mergeBookImageProjection(record, (data ?? []) as BookImageProjectionRow[]);
+  } catch (error) {
+    // Projection recovery must never hide a valid canonical BookProject.
+    logSupabaseIssue({ processingName: "loadBookImageProjection", target: "book_images.select", error });
+    return record;
+  }
+}
+
 async function syncBookSideTables(book: CloudBookRecord) {
   const supabase = getSupabaseClient();
   if (!supabase) return;
@@ -353,7 +465,8 @@ export async function getBook(id: string, ownerId?: string) {
     if (ownerId) query = query.eq("owner_id", ownerId);
     const { data, error } = await query.maybeSingle();
     if (error) throw error;
-    return data ? mapSupabaseBook(data) : null;
+    const record = data ? mapSupabaseBook(data) : null;
+    return record ? await hydrateBookImageProjection(record, ownerId) : null;
   } catch (error) {
     if (!canFallbackToLocal()) throw error;
     return readLocalBooks().find((book) => book.id === id && !book.deletedAt && (!ownerId || book.ownerId === ownerId)) ?? null;
@@ -384,7 +497,8 @@ export async function getPublishedBookBySlug(slug: string) {
       .is("deleted_at", null)
       .maybeSingle();
     if (error) throw error;
-    return data ? mapSupabaseBook(data) : null;
+    const record = data ? mapSupabaseBook(data) : null;
+    return record ? await hydrateBookImageProjection(record) : null;
   } catch (error) {
     if (!canFallbackToLocal()) throw error;
     return (

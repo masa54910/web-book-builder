@@ -12,7 +12,7 @@ const diagnosticFetch: typeof fetch = async (input, init) => {
     url.includes("/rest/v1/books") ||
     url.includes("/rest/v1/book_images") ||
     url.includes("/rest/v1/book_external_links") ||
-    url.includes("/storage/v1/object/book-assets");
+    url.includes("/storage/v1/object/");
   if (tracked) {
     const diagnostic: Record<string, unknown> = {
       method: init?.method || "GET",
