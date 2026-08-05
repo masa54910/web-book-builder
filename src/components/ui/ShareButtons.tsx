@@ -52,12 +52,20 @@ function createXUrl(url: string, title: string, description?: string, hashtags?:
   return `https://twitter.com/intent/tweet?${query.toString()}`;
 }
 
-function createLineUrl(url: string) {
-  return `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`;
+function createFacebookUrl(url: string, title: string, description?: string) {
+  const quote = [title, description, url].filter(Boolean).join("\n\n");
+  const query = new URLSearchParams({ u: url, quote });
+  return `https://www.facebook.com/sharer/sharer.php?${query.toString()}`;
 }
 
-function createFacebookUrl(url: string) {
-  return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+function createLineUrl(url: string, title: string, description?: string) {
+  const text = [title, description].filter(Boolean).join("\n\n");
+  const query = new URLSearchParams({ url, text });
+  return `https://social-plugins.line.me/lineit/share?${query.toString()}`;
+}
+
+function createShareTemplate(title: string, description: string | undefined, url: string) {
+  return `【${title}】\n\n${description || "WebBookMakerで公開中のWebブックです。"}\n\nWebブックはこちらから読めます。\n${url}\n\n#WebBookMaker`;
 }
 
 export default function ShareButtons({
@@ -89,6 +97,27 @@ export default function ShareButtons({
     window.setTimeout(() => setMessage(""), 1600);
   };
 
+  const copyAndOpenTemplate = async (
+    platform: "note" | "facebook",
+    href: string,
+    successText: string,
+  ) => {
+    const template = createShareTemplate(title, description, url);
+    // Start both operations synchronously in the click handler so browsers keep
+    // the clipboard permission and popup attached to the user's gesture.
+    const copyPromise = navigator.clipboard.writeText(template);
+    window.open(href, "_blank", "noopener,noreferrer");
+    try {
+      await copyPromise;
+      setMessage(successText);
+      onShared?.(platform);
+    } catch {
+      setMessage("テンプレートをコピーできませんでした。手動でコピーしてください。");
+      window.prompt("コピーしてください", template);
+    }
+    window.setTimeout(() => setMessage(""), 2600);
+  };
+
   const renderShareLink = (
     platform: Exclude<Platform, "copy">,
     href: string,
@@ -115,9 +144,31 @@ export default function ShareButtons({
     <div className={[styles.shareWrap, className].filter(Boolean).join(" ")} aria-label="共有ボタン">
       {showLabel ? <span className={styles.shareLabel}>SNSで共有</span> : null}
       {renderShareLink("x", createXUrl(url, title, description, hashtags), "Xで共有", <ShareXIcon />, styles.shareButtonX)}
-      {renderShareLink("note", "https://note.com/notes/new", "noteで共有", <ShareNoteIcon />, styles.shareButtonNote)}
-      {renderShareLink("facebook", createFacebookUrl(url), "Facebookで共有", <ShareFacebookIcon />, styles.shareButtonFacebook)}
-      {renderShareLink("line", createLineUrl(url), "LINEで共有", <ShareLineIcon />, styles.shareButtonLine)}
+      {platforms.includes("note") ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          className={styles.shareButtonNote}
+          icon={<ShareNoteIcon />}
+          disabled={disabled}
+          onClick={() => void copyAndOpenTemplate("note", "https://note.com/notes/new", "note用の文章をコピーしました。開いたnoteの記事画面に貼り付けてください。")}
+        >
+          noteで共有
+        </Button>
+      ) : null}
+      {platforms.includes("facebook") ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          className={styles.shareButtonFacebook}
+          icon={<ShareFacebookIcon />}
+          disabled={disabled}
+          onClick={() => void copyAndOpenTemplate("facebook", createFacebookUrl(url, title, description), "Facebook投稿文をコピーしました。開いた投稿画面に貼り付けてください。")}
+        >
+          Facebookで共有
+        </Button>
+      ) : null}
+      {renderShareLink("line", createLineUrl(url, title, description), "LINEで共有", <ShareLineIcon />, styles.shareButtonLine)}
       {platforms.includes("copy") ? (
         <Button variant="tertiary" size="sm" disabled={disabled} icon={<ShareCopyIcon />} onClick={() => void copy(url, "コピーしました", url)}>
           URLをコピー

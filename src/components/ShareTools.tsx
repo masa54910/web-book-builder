@@ -25,6 +25,7 @@ export default function ShareTools({
       url={shareUrl || ""}
       title={title}
       description={description}
+      hashtags={["WebBookMaker"]}
       platforms={["x", "note", "facebook", "line", "copy"]}
       className="share-tools"
       disabled={!shareUrl}
