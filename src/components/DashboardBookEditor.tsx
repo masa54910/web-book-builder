@@ -17,8 +17,19 @@ import {
 } from "@/lib/bookProject";
 import { importManuscriptFile } from "@/lib/fileImport";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { getBook, listBooks, saveBook, updatePublication, type CloudBookRecord } from "@/lib/bookRepository";
 import {
+  assertBookCreationAvailable,
+  getBook,
+  isPersistedBookId,
+  listBooks,
+  saveBook,
+  updatePublication,
+  type CloudBookRecord,
+} from "@/lib/bookRepository";
+import {
+  deleteDraft,
+  deletePreviewProject,
+  deletePreviewReturnState,
   loadDraft,
   loadPreviewProject,
   loadPreviewReturnState,
@@ -359,6 +370,35 @@ function buildPreviewReturnPath(pathname: string | null, draftId: string, mode: 
   return `${basePath}?draftId=${encodeURIComponent(draftId)}`;
 }
 
+function removeDraftQuery(path: string) {
+  const [pathname, query = ""] = path.split("?", 2);
+  const params = new URLSearchParams(query);
+  params.delete("draftId");
+  const serialized = params.toString();
+  return `${pathname}${serialized ? `?${serialized}` : ""}`;
+}
+
+function projectWithoutAssets(project: BookProject): BookProject {
+  return {
+    ...project,
+    config: {
+      ...project.config,
+      coverImage: undefined,
+    },
+    images: [],
+    contentBlocks: project.contentBlocks?.map((block) =>
+      block.type === "image"
+        ? {
+            ...block,
+            storagePath: "",
+            publicUrl: undefined,
+            uploadState: "ready",
+          }
+        : block,
+    ),
+  };
+}
+
 export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) {
   const [draftSeed] = useState(() => initialStateFromDraft(mode));
   const router = useRouter();
@@ -395,6 +435,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [pendingScrollRestore, setPendingScrollRestore] = useState<number | null>(null);
   const [slugAvailabilityMessage, setSlugAvailabilityMessage] = useState("");
   const isMountedRef = useRef(true);
+  const consumedPreviewDraftIdRef = useRef<string | null>(null);
   const statusMessageTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -409,22 +450,67 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
   useEffect(() => {
     if (!previewDraftId) return;
+    if (consumedPreviewDraftIdRef.current === previewDraftId) return;
+    if (dirty) return;
     let active = true;
-    loadPreviewProject()
-      .then((project) => {
-        if (!active || !project) return;
-        if (project.config.bookId !== previewDraftId) return;
-        if (dirty) return;
-        const returnState = loadPreviewReturnState(previewDraftId);
-        setState(stateFromPreviewProject(project));
-        setBookId(project.config.bookId);
-        setImages(imagesFromPreviewProject(project));
-        setContentBlocks(contentBlocksFromPreviewProject(project));
-        setEditorRevision((current) => current + 1);
-        setDidRestorePreviewDraft(true);
-        setPendingScrollRestore(returnState?.scrollY ?? null);
-        setStatusMessage("プレビュー前の編集内容を復元しました。");
-        setIsLoading(false);
+    consumedPreviewDraftIdRef.current = previewDraftId;
+    const consumePreviewRestore = async () => {
+      const returnState = loadPreviewReturnState(previewDraftId);
+      const cleanCurrentPath = removeDraftQuery(
+        pathname || (mode === "edit" && params.id ? `/dashboard/books/${params.id}/edit` : "/books/new"),
+      );
+      if (!returnState) {
+        await deletePreviewProject();
+        if (active) {
+          setHasRestoredDraft(true);
+          setIsHydrated(true);
+          if (cleanCurrentPath !== pathname) router.replace(cleanCurrentPath, { scroll: false });
+        }
+        return;
+      }
+
+      const project = await loadPreviewProject();
+      if (!project || project.config.bookId !== previewDraftId) {
+        await deletePreviewProject();
+        if (active) {
+          setHasRestoredDraft(true);
+          setIsHydrated(true);
+          if (cleanCurrentPath !== pathname) router.replace(cleanCurrentPath, { scroll: false });
+        }
+        return;
+      }
+
+      setState(stateFromPreviewProject(project));
+      setBookId(project.config.bookId);
+      setImages(imagesFromPreviewProject(project));
+      setContentBlocks(contentBlocksFromPreviewProject(project));
+      setEditorRevision((current) => current + 1);
+      setDidRestorePreviewDraft(true);
+      setPendingScrollRestore(returnState.scrollY);
+      setStatusMessage("プレビュー前の編集内容を復元しました。");
+      setIsLoading(false);
+
+      // Consume the explicit preview return exactly once. The URL is cleaned
+      // at the same time so a refresh cannot reapply the old project.
+      deletePreviewReturnState(previewDraftId);
+      await deletePreviewProject();
+      if (active) {
+        setHasRestoredDraft(true);
+        setIsHydrated(true);
+        const returnTo = removeDraftQuery(returnState.returnTo);
+        if (returnTo !== pathname) router.replace(returnTo, { scroll: false });
+      }
+    };
+
+    void consumePreviewRestore()
+      .catch(() => {
+        if (active) {
+          setHasRestoredDraft(true);
+          setIsHydrated(true);
+          setIsLoading(false);
+          const cleanPath = removeDraftQuery(pathname || "/books/new");
+          if (cleanPath !== pathname) router.replace(cleanPath, { scroll: false });
+        }
       })
       .finally(() => {
         if (!active) return;
@@ -434,7 +520,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     return () => {
       active = false;
     };
-  }, [dirty, mode, previewDraftId]);
+  }, [dirty, mode, params.id, pathname, previewDraftId, router]);
 
   useEffect(() => {
     if (mode !== "edit" || !params.id || !user) return;
@@ -837,9 +923,44 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     const project = buildProject();
     if (!project) return null;
     setIsSaving(true);
+    let createdRecordId: string | null = null;
     try {
-      const projectWithAssets = await uploadBookProjectAssets(project, user.id);
-      const record = await saveBook(projectWithAssets, user.id, bookId, state.slug || undefined);
+      // A preview ID is not a persisted record. For a new work, reserve the
+      // slot and create the books row before touching Storage or side tables.
+      const existingId =
+        (mode === "edit" && bookId ? bookId : undefined) ||
+        (isPersistedBookId(bookId) ? bookId : undefined);
+      let record: CloudBookRecord;
+      if (!existingId) {
+        await assertBookCreationAvailable(user.id);
+        const baseRecord = await saveBook(
+          projectWithoutAssets(project),
+          user.id,
+          undefined,
+          state.slug || undefined,
+          { skipSideTables: true },
+        );
+        createdRecordId = baseRecord.id;
+        setBookId(baseRecord.id);
+        const projectForUpload: BookProject = {
+          ...project,
+          config: { ...project.config, bookId: baseRecord.id },
+        };
+        const projectWithAssets = await uploadBookProjectAssets(projectForUpload, user.id);
+        record = await saveBook(
+          projectWithAssets,
+          user.id,
+          baseRecord.id,
+          state.slug || baseRecord.slug,
+        );
+      } else {
+        const projectForUpload: BookProject = {
+          ...project,
+          config: { ...project.config, bookId: existingId },
+        };
+        const projectWithAssets = await uploadBookProjectAssets(projectForUpload, user.id);
+        record = await saveBook(projectWithAssets, user.id, existingId, state.slug || undefined);
+      }
       if (!isMountedRef.current) return record;
       setBookId(record.id);
       setState((current) => ({ ...current, slug: record.slug, status: record.status, visibility: record.visibility }));
@@ -847,6 +968,13 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       setSlugAvailabilityMessage(record.slug ? SLUG_AVAILABLE_MESSAGE : "");
       showTemporaryStatusMessage(SAVE_SUCCESS_MESSAGE);
       trackEvent("book_saved", { bookId: record.id });
+      if (mode === "new" || didRestorePreviewDraft) {
+        deleteDraft();
+      }
+      if (didRestorePreviewDraft || previewDraftId) {
+        deletePreviewReturnState(previewDraftId || undefined);
+        await deletePreviewProject();
+      }
       if (mode === "new" || record.id !== (bookId || params.id)) {
         router.replace(`/dashboard/books/${record.id}/edit`);
       }
@@ -859,6 +987,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         context: { mode, bookId: bookId || params.id || null },
       });
       if (isMountedRef.current) {
+        if (createdRecordId) setBookId(createdRecordId);
         setStatusMessage(SAVE_FAILURE_MESSAGE);
       }
       return null;

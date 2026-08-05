@@ -71,6 +71,10 @@ function looksLikeUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+export function isPersistedBookId(value: string | undefined | null): value is string {
+  return typeof value === "string" && looksLikeUuid(value);
+}
+
 function readLocalBooks(): CloudBookRecord[] {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(LOCAL_BOOKS_KEY) ?? "[]");
@@ -265,6 +269,52 @@ async function syncBookSideTables(book: CloudBookRecord) {
   }
 }
 
+const BOOK_LIMIT_ERROR = `ベータ版では1ユーザー最大${BETA_LIMITS.maxBooksPerUser}作品まで作成できます。`;
+
+/**
+ * Check the active-book limit before any book, side-table, or asset write.
+ * Archived and soft-deleted records are intentionally excluded from the count.
+ */
+export async function assertBookCreationAvailable(ownerId: string) {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    assertLocalFallbackAllowed();
+    const activeBooks = readLocalBooks().filter(
+      (book) => book.ownerId === ownerId && !book.deletedAt && book.status !== "archived",
+    );
+    if (activeBooks.length >= BETA_LIMITS.maxBooksPerUser) {
+      throw new Error(BOOK_LIMIT_ERROR);
+    }
+    return;
+  }
+
+  try {
+    const { count, error } = await supabase
+      .from("books")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", ownerId)
+      .is("deleted_at", null)
+      .neq("status", "archived");
+    if (error) {
+      logSupabaseIssue({ processingName: "saveBook", target: "books.count", error });
+      throw error;
+    }
+    if ((count ?? 0) >= BETA_LIMITS.maxBooksPerUser) {
+      throw new Error(BOOK_LIMIT_ERROR);
+    }
+  } catch (error) {
+    // A capacity check must never silently switch to localStorage in review or
+    // production. Demo mode may still use the local repository intentionally.
+    if (!canFallbackToLocal()) throw error;
+    const activeBooks = readLocalBooks().filter(
+      (book) => book.ownerId === ownerId && !book.deletedAt && book.status !== "archived",
+    );
+    if (activeBooks.length >= BETA_LIMITS.maxBooksPerUser) {
+      throw new Error(BOOK_LIMIT_ERROR);
+    }
+  }
+}
+
 export async function listBooks(ownerId: string) {
   const supabase = getSupabaseClient();
   if (!supabase) {
@@ -392,8 +442,14 @@ export async function saveBook(
   ownerId: string,
   existingId?: string,
   desiredSlug?: string,
+  options: { skipSideTables?: boolean } = {},
 ) {
   const existing = existingId ? await getBook(existingId, ownerId) : null;
+  if (!existing) {
+    // This is deliberately outside the write try/catch. If the limit is
+    // reached, no books, side tables, or Storage assets may be written.
+    await assertBookCreationAvailable(ownerId);
+  }
   if (project.rawText.length > BETA_LIMITS.maxCharactersPerBook) {
     throw new Error(`本文は最大${BETA_LIMITS.maxCharactersPerBook.toLocaleString("ja-JP")}文字までです。`);
   }
@@ -405,10 +461,6 @@ export async function saveBook(
   const supabase = getSupabaseClient();
   if (!supabase) {
     assertLocalFallbackAllowed();
-    const books = readLocalBooks().filter((book) => book.ownerId === ownerId && !book.deletedAt);
-    if (!existing && books.length >= BETA_LIMITS.maxBooksPerUser) {
-      throw new Error(`ベータ版では1ユーザー最大${BETA_LIMITS.maxBooksPerUser}作品まで作成できます。`);
-    }
     const next = readLocalBooks().filter((book) => book.id !== record.id);
     next.push(record);
     writeLocalBooks(next);
@@ -416,21 +468,6 @@ export async function saveBook(
   }
 
   try {
-    if (!existing) {
-      const { count, error: countError } = await supabase
-        .from("books")
-        .select("id", { count: "exact", head: true })
-        .eq("owner_id", ownerId)
-        .is("deleted_at", null);
-        if (countError) {
-          logSupabaseIssue({ processingName: "saveBook", target: "books.count", error: countError });
-          throw countError;
-        }
-      if ((count ?? 0) >= BETA_LIMITS.maxBooksPerUser) {
-        throw new Error(`ベータ版では1ユーザー最大${BETA_LIMITS.maxBooksPerUser}作品まで作成できます。`);
-      }
-    }
-
     const payload = {
       id: record.id.startsWith("book-") ? undefined : record.id,
       owner_id: ownerId,
@@ -466,15 +503,13 @@ export async function saveBook(
       throw error;
     }
     const saved = mapSupabaseBook(data) ?? record;
-    await syncBookSideTables(saved);
+    if (!options.skipSideTables) {
+      await syncBookSideTables(saved);
+    }
     return saved;
   } catch (error) {
     logSupabaseIssue({ processingName: "saveBook", target: "books.catch", error });
     if (!canFallbackToLocal()) throw error;
-    const books = readLocalBooks().filter((book) => book.ownerId === ownerId && !book.deletedAt);
-    if (!existing && books.length >= BETA_LIMITS.maxBooksPerUser) {
-      throw new Error(`ベータ版では1ユーザー最大${BETA_LIMITS.maxBooksPerUser}作品まで作成できます。`);
-    }
     const next = readLocalBooks().filter((book) => book.id !== record.id);
     next.push(record);
     writeLocalBooks(next);

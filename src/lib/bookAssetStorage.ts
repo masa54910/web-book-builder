@@ -152,6 +152,21 @@ export async function uploadBookProjectAssets(project: BookProject, ownerId: str
     });
   }
 
+  const uploadedById = new Map(
+    images.map((image) => [image.image_id || image.image_index, image.image_url]),
+  );
+  const contentBlocks = project.contentBlocks?.map((block) => {
+    if (block.type !== "image") return block;
+    const uploadedPath = uploadedById.get(block.id);
+    if (!uploadedPath) return block;
+    return {
+      ...block,
+      storagePath: uploadedPath,
+      publicUrl: undefined,
+      uploadState: "ready" as const,
+    };
+  });
+
   return {
     ...project,
     config: {
@@ -159,6 +174,7 @@ export async function uploadBookProjectAssets(project: BookProject, ownerId: str
       coverImage,
     },
     images,
+    contentBlocks,
     updatedAt: new Date().toISOString(),
   };
 }
