@@ -123,7 +123,11 @@ async function uploadDataUrl({
 }
 
 export async function uploadBookProjectAssets(project: BookProject, ownerId: string): Promise<BookProject> {
-  const bookKey = project.config.bookId;
+  // Storage object keys must remain ASCII-safe. Preview IDs can be derived from
+  // a title and author, so they may contain Japanese or other Unicode letters;
+  // keep the public/internal book ID unchanged and sanitize only this path
+  // segment. The UUID in each filename still guarantees asset uniqueness.
+  const bookKey = safeFilePart(project.config.bookId);
   const coverImage = project.config.coverImage
     ? await uploadDataUrl({
         value: project.config.coverImage,
