@@ -524,6 +524,10 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
   useEffect(() => {
     if (mode !== "edit" || !params.id || !user) return;
+    // A valid preview return has already hydrated the editor state. Once the
+    // query is cleaned, avoid refetching the same record and overwriting the
+    // one-time restore notice with the generic load message.
+    if (didRestorePreviewDraft && !previewDraftId) return;
     if (previewDraftId && !hasRestoredDraft) return;
     if (previewDraftId && didRestorePreviewDraft) return;
     let active = true;
