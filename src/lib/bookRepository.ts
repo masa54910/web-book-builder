@@ -106,10 +106,14 @@ function toRecord(
           .map((book) => book.slug)
       : [],
   );
-  const slug = makeUniqueSlug(
-    desiredSlug || existing?.slug || createSlugCandidate(project.config.title),
-    usedSlugs,
-  );
+  const requestedSlug = desiredSlug || existing?.slug || createSlugCandidate(project.config.title);
+  // A title without ASCII letters (for example a Japanese-only title) maps to
+  // the production-safe fallback "book". New books still need a globally
+  // unique slug, so add a short client-generated suffix for that fallback.
+  // Existing books keep their current slug, and explicit non-fallback slugs
+  // continue through the normal uniqueness/validation path.
+  const slugBase = !existing && requestedSlug === "book" ? `book-${browserId()}` : requestedSlug;
+  const slug = makeUniqueSlug(slugBase, usedSlugs);
 
   return {
     id: existing?.id || `book-${browserId()}`,
