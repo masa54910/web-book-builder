@@ -464,7 +464,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         if (active) {
           setHasRestoredDraft(true);
           setIsHydrated(true);
-          if (cleanCurrentPath !== pathname) router.replace(cleanCurrentPath, { scroll: false });
+          router.replace(cleanCurrentPath, { scroll: false });
         }
         return;
       }
@@ -475,7 +475,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         if (active) {
           setHasRestoredDraft(true);
           setIsHydrated(true);
-          if (cleanCurrentPath !== pathname) router.replace(cleanCurrentPath, { scroll: false });
+          router.replace(cleanCurrentPath, { scroll: false });
         }
         return;
       }
@@ -498,7 +498,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         setHasRestoredDraft(true);
         setIsHydrated(true);
         const returnTo = removeDraftQuery(returnState.returnTo);
-        if (returnTo !== pathname) router.replace(returnTo, { scroll: false });
+        router.replace(returnTo, { scroll: false });
       }
     };
 
