@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import AppHeader from "@/components/AppHeader";
 import HomeBackLink from "@/components/HomeBackLink";
+import LogoutButton from "@/components/LogoutButton";
 import Button from "@/components/ui/Button";
 import LoadingState from "@/components/ui/LoadingState";
 import StatusMessage from "@/components/ui/StatusMessage";
@@ -41,7 +42,7 @@ function buildSocialLinks(xUrl: string, noteUrl: string, otherUrl: string) {
 }
 
 export default function ProfileSettingsPage() {
-  const { user, signOut, changePassword, deleteAccount } = useAuth();
+  const { user, changePassword, deleteAccount } = useAuth();
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [preferences, setPreferences] = useState<ProfilePreferences>({
@@ -269,9 +270,7 @@ export default function ProfileSettingsPage() {
                 <Button loading={isSaving} onClick={() => void save()}>
                   登録情報を保存
                 </Button>
-                <Button variant="secondary" disabled={isSaving} onClick={() => void signOut()}>
-                  ログアウト
-                </Button>
+                <LogoutButton />
               </div>
               <p className="maker-note">メールアドレス変更は現在未対応です。必要な場合はお問い合わせからご連絡ください。</p>
             </>

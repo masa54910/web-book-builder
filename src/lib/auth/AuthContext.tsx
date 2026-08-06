@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js";
 
 import { getRuntimeConfigurationError, isDemoModeAllowed, shouldUseSupabase } from "@/lib/appEnv";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { clearTransientSessionData } from "@/lib/auth/sessionCleanup";
 
 type DemoUser = {
   id: string;
@@ -176,12 +177,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       signOut: async () => {
         const supabase = getSupabaseClient();
-        if (supabase) await supabase.auth.signOut();
+        if (supabase) {
+          const { error } = await supabase.auth.signOut();
+          if (error) throw error;
+        }
         try {
           localStorage.removeItem(DEMO_USER_KEY);
         } catch {
           // Ignore local cleanup failures.
         }
+        await clearTransientSessionData();
         setUser(null);
       },
       resetPassword: async (email) => {

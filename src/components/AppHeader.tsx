@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import LogoutButton from "@/components/LogoutButton";
 import BrandLogo from "@/components/ui/BrandLogo";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getAppEnv } from "@/lib/appEnv";
@@ -37,6 +38,7 @@ export default function AppHeader() {
               <Link href="/dashboard">作品一覧</Link>
               <Link href="/analytics">分析</Link>
               <Link href="/settings">設定</Link>
+              <LogoutButton />
             </>
           ) : (
             <>

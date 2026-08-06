@@ -124,6 +124,13 @@ a {
   text-decoration: none;
 }
 
+.app-header nav .logout-error {
+  color: #9d2d20;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
 .app-header nav .nav-cta {
   color: #fffaf0;
   background: #174a48;
