@@ -1,20 +1,33 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import HomeBackLink from "@/components/HomeBackLink";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading, authMode, configurationError } = useAuth();
+  const router = useRouter();
   const nextValue = typeof window === "undefined"
     ? "/books/new"
     : `${window.location.pathname || "/books/new"}${window.location.search || ""}`;
+
+  useEffect(() => {
+    if (isLoading || user || authMode === "blocked") return;
+    router.replace(`/login?next=${encodeURIComponent(nextValue)}`);
+    router.refresh();
+  }, [authMode, isLoading, nextValue, router, user]);
 
   if (isLoading) {
     return <div className="reader-loading">アカウント情報を確認しています…</div>;
   }
 
   if (!user) {
+    if (authMode !== "blocked") {
+      return <div className="reader-loading">ログイン画面へ移動しています…</div>;
+    }
+
     return (
       <main className="empty-reader-page">
         <section>
