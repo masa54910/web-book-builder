@@ -42,7 +42,7 @@ export default function BookReaderShell({
       editHref={editHref}
       cloudBookId={cloudBookId}
       shareUrl={shareUrl}
-      shareDescription={shareDescription}
+      shareDescription={shareDescription ?? config.description}
       shareDisabledReason={shareDisabledReason}
       backLink={backLink}
     />

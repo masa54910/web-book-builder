@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { buildFacebookShareUrl, buildLineShareUrl, buildShareTemplate, NOTE_NEW_POST_URL } from "@/lib/shareTemplates";
+import { buildFacebookShareUrl, buildLineShareUrl, buildShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "@/lib/shareTemplates";
 import { copyTextToClipboard } from "@/lib/shareClipboard";
 
 import Button from "./Button";
@@ -46,20 +46,6 @@ function ShareCopyIcon() {
   return <span className={styles.shareIcon} aria-hidden="true">◎</span>;
 }
 
-function createXUrl(url: string, title: string, description?: string, hashtags?: string[]) {
-  const text = [title, description].filter(Boolean).join(" ");
-  const query = new URLSearchParams({
-    url,
-    text,
-  });
-  if (hashtags?.length) query.set("hashtags", hashtags.join(","));
-  return `https://twitter.com/intent/tweet?${query.toString()}`;
-}
-
-function isMobileDevice() {
-  return typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-
 export default function ShareButtons({
   url,
   title,
@@ -98,27 +84,6 @@ export default function ShareButtons({
     window.setTimeout(() => setMessage(""), 2600);
   };
 
-  const shareLine = async () => {
-    const lineTemplate = buildShareTemplate({ platform: "line", title, description, url });
-    const lineUrl = buildLineShareUrl({ title, description, url });
-    if (isMobileDevice() && typeof navigator.share === "function") {
-      try {
-        await navigator.share({ title, text: lineTemplate, url });
-        onShared?.("line");
-        return;
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-      }
-    }
-    if (isMobileDevice()) {
-      window.location.assign(lineUrl);
-      onShared?.("line");
-      return;
-    }
-    setMessage("PCブラウザではLINE共有画面を直接開けない場合があります。共有文をコピーしてください。");
-    window.setTimeout(() => setMessage(""), 2600);
-  };
-
   const renderShareLink = (
     platform: Exclude<Platform, "copy">,
     href: string,
@@ -144,7 +109,7 @@ export default function ShareButtons({
   return (
     <div className={[styles.shareWrap, className].filter(Boolean).join(" ")} aria-label="共有ボタン">
       {showLabel ? <span className={styles.shareLabel}>SNSで共有</span> : null}
-      {renderShareLink("x", createXUrl(url, title, description, hashtags), "Xで共有", <ShareXIcon />, styles.shareButtonX)}
+      {renderShareLink("x", buildXShareUrl({ title, description, url, hashtags }), "Xで共有", <ShareXIcon />, styles.shareButtonX)}
       {platforms.includes("note") ? (
         <>
           <Button
@@ -190,16 +155,7 @@ export default function ShareButtons({
       ) : null}
       {platforms.includes("line") ? (
         <>
-          <Button
-            variant="secondary"
-            size="sm"
-            className={styles.shareButtonLine}
-            icon={<ShareLineIcon />}
-            disabled={disabled}
-            onClick={() => void shareLine()}
-          >
-            LINEで共有
-          </Button>
+          {renderShareLink("line", buildLineShareUrl({ title, description, url }), "LINEで共有", <ShareLineIcon />, styles.shareButtonLine)}
           <Button
             variant="tertiary"
             size="sm"

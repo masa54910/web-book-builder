@@ -9,8 +9,44 @@ export type ShareTemplateInput = {
   url: string;
 };
 
+export type XShareTemplateInput = Omit<ShareTemplateInput, "platform"> & {
+  hashtags?: string[];
+};
+
 function clean(value: string | undefined) {
   return value?.trim() || "";
+}
+
+function cleanHashtags(hashtags: string[] | undefined) {
+  return (hashtags || [])
+    .map((tag) => tag.trim().replace(/^#+/, ""))
+    .filter(Boolean)
+    .map((tag) => `#${tag}`);
+}
+
+/**
+ * Build the canonical X post text used by both the reader and Promotion Center.
+ * Keep the title and public URL while omitting the old publication boilerplate.
+ */
+export function buildXShareTemplate({ title, description, url, hashtags }: XShareTemplateInput) {
+  const safeTitle = clean(title) || "WebBookMaker";
+  const safeDescription = clean(description);
+  const safeUrl = clean(url);
+  const lines = [`【${safeTitle}】`];
+
+  if (safeDescription) lines.push("", safeDescription);
+
+  lines.push("", "WebBookMakerで読む");
+  if (safeUrl) lines.push(safeUrl);
+
+  const hashtagLines = cleanHashtags(hashtags);
+  if (hashtagLines.length) lines.push("", hashtagLines.join(" "));
+
+  return lines.join("\n");
+}
+
+export function buildXShareUrl(input: XShareTemplateInput) {
+  return `https://twitter.com/intent/tweet?text=${encodeURIComponent(buildXShareTemplate(input))}`;
 }
 
 /**

@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { BookProject } from "@/lib/bookProject";
 import { trackEvent } from "@/lib/analytics";
-import { buildPromotionAsset, xIntentUrl } from "@/lib/promotion";
-import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildShareTemplate, NOTE_NEW_POST_URL } from "@/lib/shareTemplates";
+import { buildPromotionAsset } from "@/lib/promotion";
+import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "@/lib/shareTemplates";
 import { copyTextToClipboard } from "@/lib/shareClipboard";
 import { renderBookTrailer, preferredVideoMimeType } from "@/lib/videoRenderer";
 import type { SupportedLocale } from "@/lib/localization";
@@ -129,28 +129,12 @@ export default function PromotionCenter({
     );
   };
 
-  const openLine = async () => {
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isMobile && typeof navigator.share === "function") {
-      try {
-        await navigator.share({ title: project.config.title, text: lineTemplate, url: promotion.shareUrl });
-        trackPromotion("line");
-        return;
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-      }
-    }
-
-    if (isMobile) {
-      window.location.assign(lineUrl);
-      trackPromotion("line");
-      return;
-    }
-
-    setStatus("PCブラウザではLINE共有画面を直接開けない場合があります。共有文をコピーしてください。");
-  };
-
-  const xShareUrl = xIntentUrl(promotion.xPost);
+  const xShareUrl = buildXShareUrl({
+    title: project.config.title,
+    description: project.config.description,
+    url: promotion.shareUrl,
+    hashtags: promotion.hashtags,
+  });
 
   return (
     <section className="promotion-center maker-card" aria-labelledby="promotion-center-title">
@@ -184,7 +168,7 @@ export default function PromotionCenter({
             <strong>X</strong>
           </div>
           <h3>Xに投稿する</h3>
-          <p>投稿文、ハッシュタグ、共有URLをコピーしてX投稿画面を開きます。動画は保存済みファイルを添付してください。</p>
+          <p>投稿文・ハッシュタグ・公開URLを含むX投稿画面を開きます。動画は保存済みファイルを添付してください。</p>
           <p className="promotion-preview">Xカード画像: {promotion.ogImageUrl}</p>
           <textarea readOnly value={promotion.xPost} rows={6} />
           <a className="maker-secondary-button" href={xShareUrl} target="_blank" rel="noopener noreferrer" aria-label="Xで作品を共有" onClick={() => trackPromotion("x")}>
@@ -237,13 +221,13 @@ export default function PromotionCenter({
             <strong>LINE</strong>
           </div>
           <h3>LINEで共有する</h3>
-          <p>スマートフォンではLINE共有または端末の共有画面を開きます。PCでは共有文をコピーしてください。</p>
+          <p>LINE共有URLを開きます。PCではLINEのログインやQR案内が表示される場合があります。必要に応じて共有文をコピーしてください。</p>
           <textarea readOnly value={lineTemplate} rows={8} aria-label="LINE共有テンプレート" />
           <div className="promotion-card-actions">
-            <button className="maker-secondary-button" type="button" aria-label="LINEで作品を共有" onClick={() => void openLine()}>
+            <a className="maker-secondary-button" href={lineUrl} target="_blank" rel="noopener noreferrer" aria-label="LINEで作品を共有" onClick={() => trackPromotion("line")}>
               <ServiceIcon service="line" className="promotion-action-icon promotion-action-icon-line" />
               <span>LINEで共有</span>
-            </button>
+            </a>
             <button className="maker-small-button" type="button" onClick={copyLineTemplate}>
               <span>共有文をコピー</span>
             </button>

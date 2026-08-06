@@ -1,6 +1,6 @@
 import type { BookConfig } from "@/config/bookConfig";
 import type { SupportedLocale } from "@/lib/localization";
-import { buildShareTemplate } from "@/lib/shareTemplates";
+import { buildShareTemplate, buildXShareTemplate } from "@/lib/shareTemplates";
 
 export type PromotionChannel = "x" | "note" | "instagram" | "threads" | "facebook" | "bluesky" | "tiktok" | "youtube" | "copy";
 
@@ -49,12 +49,15 @@ export function buildPromotionAsset({
   const shareUrl = publicBookUrl(slug, origin);
   const ogImageUrl = `${(origin || process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "")}/api/og/book/${encodeURIComponent(slug)}?v=${shareVersion}`;
   const hashtags = hashtagsFor(config, locale);
-  const description = config.description || `${config.author} のWebブックを公開しました。`;
+  const shareDescription = config.description?.trim() || "";
+  const description = shareDescription || `${config.author} のWebブックを公開しました。`;
   const hashtagText = hashtags.map((tag) => `#${tag}`).join(" ");
-  const xPost =
-    locale === "ja"
-      ? `『${config.title}』を公開しました。\n\n${description}\n\nWebでページをめくりながら読めます。\n${shareUrl}\n\n${hashtagText}`
-      : `I published “${config.title}”.\n\n${description}\n\nRead it as a page-turning web book.\n${shareUrl}\n\n${hashtagText}`;
+  const xPost = buildXShareTemplate({
+    title: config.title,
+    description: shareDescription,
+    url: shareUrl,
+    hashtags,
+  });
 
   const noteTitle = locale === "ja" ? `『${config.title}』を公開しました` : `I published “${config.title}”`;
   const noteBody =
