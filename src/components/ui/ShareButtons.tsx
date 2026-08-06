@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import { buildFacebookShareUrl, buildLineShareUrl, buildShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "@/lib/shareTemplates";
+import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
+import { buildFacebookShareUrl, buildLineShareUrl, buildLineWebShareUrl, buildShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "@/lib/shareTemplates";
 import { copyTextToClipboard } from "@/lib/shareClipboard";
 
 import Button from "./Button";
@@ -61,6 +62,10 @@ export default function ShareButtons({
 }: Props) {
   const [message, setMessage] = useState<string>("");
   const [noteReady, setNoteReady] = useState(false);
+  const lineUrl = buildLineShareUrl({ title, description, url });
+  const lineWebUrl = buildLineWebShareUrl({ title, description, url });
+  const isMobileDevice = useIsMobileDevice();
+  const lineShareHref = isMobileDevice ? lineUrl : lineWebUrl;
 
   const copy = async (text: string, successText: string, fallbackText?: string) => {
     const copied = await copyTextToClipboard(text);
@@ -155,7 +160,7 @@ export default function ShareButtons({
       ) : null}
       {platforms.includes("line") ? (
         <>
-          {renderShareLink("line", buildLineShareUrl({ title, description, url }), "LINEで共有", <ShareLineIcon />, styles.shareButtonLine)}
+          {renderShareLink("line", lineShareHref, "LINEで共有", <ShareLineIcon />, styles.shareButtonLine)}
           <Button
             variant="tertiary"
             size="sm"

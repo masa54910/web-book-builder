@@ -5,11 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import type { BookProject } from "@/lib/bookProject";
 import { trackEvent } from "@/lib/analytics";
 import { buildPromotionAsset } from "@/lib/promotion";
-import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "@/lib/shareTemplates";
+import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildLineWebShareUrl, buildShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "@/lib/shareTemplates";
 import { copyTextToClipboard } from "@/lib/shareClipboard";
 import { renderBookTrailer, preferredVideoMimeType } from "@/lib/videoRenderer";
 import type { SupportedLocale } from "@/lib/localization";
 import CharacterAssistant from "@/components/CharacterAssistant";
+import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
 import ServiceIcon from "@/components/ui/ServiceIcons";
 
 function downloadBlob(blob: Blob, fileName: string) {
@@ -67,6 +68,12 @@ export default function PromotionCenter({
     () => buildLineShareUrl({ title: project.config.title, description: project.config.description, url: promotion.shareUrl }),
     [project.config.description, project.config.title, promotion.shareUrl],
   );
+  const lineWebUrl = useMemo(
+    () => buildLineWebShareUrl({ title: project.config.title, description: project.config.description, url: promotion.shareUrl }),
+    [project.config.description, project.config.title, promotion.shareUrl],
+  );
+  const isMobileDevice = useIsMobileDevice();
+  const lineShareHref = isMobileDevice ? lineUrl : lineWebUrl;
 
   useEffect(() => {
     trackEvent("promotion_center_opened", { bookId: cloudBookId || project.config.bookId });
@@ -224,7 +231,7 @@ export default function PromotionCenter({
           <p>LINE共有URLを開きます。PCではLINEのログインやQR案内が表示される場合があります。必要に応じて共有文をコピーしてください。</p>
           <textarea readOnly value={lineTemplate} rows={8} aria-label="LINE共有テンプレート" />
           <div className="promotion-card-actions">
-            <a className="maker-secondary-button" href={lineUrl} target="_blank" rel="noopener noreferrer" aria-label="LINEで作品を共有" onClick={() => trackPromotion("line")}>
+            <a className="maker-secondary-button" href={lineShareHref} target="_blank" rel="noopener noreferrer" aria-label="LINEで作品を共有" onClick={() => trackPromotion("line")}>
               <ServiceIcon service="line" className="promotion-action-icon promotion-action-icon-line" />
               <span>LINEで共有</span>
             </a>

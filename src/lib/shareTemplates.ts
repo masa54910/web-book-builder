@@ -78,6 +78,15 @@ export function buildLineShareUrl(input: Omit<ShareTemplateInput, "platform">) {
   return `https://line.me/R/share?text=${encodeURIComponent(buildLineShareTemplate(input))}`;
 }
 
+/**
+ * LINE's desktop web share endpoint. The mobile deep-link endpoint redirects
+ * desktop browsers to line.me's company top page, so desktop uses LINE's web
+ * share/login flow while retaining the same public URL and share text.
+ */
+export function buildLineWebShareUrl(input: Omit<ShareTemplateInput, "platform">) {
+  return `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(clean(input.url))}&text=${encodeURIComponent(buildLineShareTemplate(input))}`;
+}
+
 export function buildFacebookShareUrl(input: Omit<ShareTemplateInput, "platform">) {
   const url = clean(input.url);
   const quote = buildShareTemplate({ ...input, platform: "facebook" });

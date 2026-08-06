@@ -20,7 +20,7 @@ import { resolveSafeInternalReturnPath } from "../src/lib/returnTo";
 import { validateRequiredBookFields } from "../src/lib/editorValidation";
 import { computeInlineImagePopoverLayout } from "../src/lib/inlineImagePopover";
 import { buildEditorDraftFields, seedFromDraftFields, type EditorDraftState } from "../src/lib/editorDraftState";
-import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildShareTemplate, buildXShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "../src/lib/shareTemplates";
+import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildLineWebShareUrl, buildShareTemplate, buildXShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "../src/lib/shareTemplates";
 import { xIntentUrl } from "../src/lib/promotion";
 
 function blockSignature(blocks: BookContentBlock[]) {
@@ -368,6 +368,13 @@ const lineShareUrl = buildLineShareUrl({
 });
 assert.match(lineShareUrl, /^https:\/\/line\.me\/R\/share\?text=/, "LINE share URL should use the official share endpoint");
 assert.ok(lineShareUrl.includes(encodeURIComponent(lineTemplate)), "LINE share URL should encode the complete template");
+const lineWebShareUrl = buildLineWebShareUrl({
+  title: "作品タイトル",
+  description: "紹介",
+  url: "https://example.com/books/a",
+});
+assert.match(lineWebShareUrl, /^https:\/\/social-plugins\.line\.me\/lineit\/share\?url=/, "Desktop LINE share should use the LINE web share endpoint");
+assert.ok(lineWebShareUrl.includes(encodeURIComponent(lineTemplate)), "Desktop LINE share should preserve the complete template");
 
 // The editor uses this result as the save/publish gate: an invalid payload
 // must return before either canonical command can be called.
