@@ -37,7 +37,6 @@ export default function PromotionCenter({
   const [isRendering, setIsRendering] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
   const [copied, setCopied] = useState("");
-  const [noteReady, setNoteReady] = useState(false);
   const promotion = useMemo(
     () =>
       buildPromotionAsset({
@@ -118,13 +117,12 @@ export default function PromotionCenter({
   };
 
   const copyNoteTemplate = async () => {
-    const copiedOk = await copyText(
+    await copyText(
       "noteテンプレート",
       noteTemplate,
       "投稿テンプレートをコピーしました。noteの記事本文へ貼り付けてください。",
       "テンプレートをコピーできませんでした。ブラウザのクリップボード許可を確認してください。",
     );
-    setNoteReady(copiedOk);
   };
 
   const copyLineTemplate = () => {
@@ -189,19 +187,17 @@ export default function PromotionCenter({
             <strong>note</strong>
           </div>
           <h3>note記事を作る</h3>
-          <p>投稿テンプレートをコピーして、noteの新規記事画面を開きます。開いた画面で貼り付けてください。</p>
+          <p>テンプレートをコピーしてnoteへ貼り付けるか、先にnoteの新規記事画面を開けます。</p>
           <textarea readOnly value={noteTemplate} rows={8} aria-label="note投稿テンプレート" />
           <div className="promotion-card-actions">
             <button className="maker-secondary-button" type="button" aria-label="note投稿テンプレートをコピー" onClick={() => void copyNoteTemplate()}>
               <ServiceIcon service="note" className="promotion-action-icon promotion-action-icon-note" />
               <span>テンプレートをコピー</span>
             </button>
-            {noteReady ? (
-              <a className="maker-secondary-button" href={NOTE_NEW_POST_URL} target="_blank" rel="noopener noreferrer" aria-label="noteの新規記事を開く" onClick={() => trackPromotion("note")}>
-                <ServiceIcon service="note" className="promotion-action-icon promotion-action-icon-note" />
-                <span>noteを開く</span>
-              </a>
-            ) : null}
+            <a className="maker-secondary-button" href={NOTE_NEW_POST_URL} target="_blank" rel="noopener noreferrer" aria-label="noteの新規記事を開く" onClick={() => trackPromotion("note")}>
+              <ServiceIcon service="note" className="promotion-action-icon promotion-action-icon-note" />
+              <span>noteを開く</span>
+            </a>
           </div>
         </article>
         <article className="promotion-card">
@@ -231,13 +227,13 @@ export default function PromotionCenter({
           <p>LINE共有URLを開きます。PCではLINEのログインやQR案内が表示される場合があります。必要に応じて共有文をコピーしてください。</p>
           <textarea readOnly value={lineTemplate} rows={8} aria-label="LINE共有テンプレート" />
           <div className="promotion-card-actions">
+            <button className="maker-small-button" type="button" onClick={copyLineTemplate}>
+              <span>共有文をコピー</span>
+            </button>
             <a className="maker-secondary-button" href={lineShareHref} target="_blank" rel="noopener noreferrer" aria-label="LINEで作品を共有" onClick={() => trackPromotion("line")}>
               <ServiceIcon service="line" className="promotion-action-icon promotion-action-icon-line" />
               <span>LINEで共有</span>
             </a>
-            <button className="maker-small-button" type="button" onClick={copyLineTemplate}>
-              <span>共有文をコピー</span>
-            </button>
           </div>
         </article>
         <article className="promotion-card">
@@ -254,11 +250,6 @@ export default function PromotionCenter({
         </article>
       </div>
 
-      <div className="promotion-disabled-channels" aria-label="今後追加予定">
-        {["Instagram", "Threads", "Bluesky", "TikTok", "YouTube", "Preview", "Analytics"].map((label) => (
-          <span key={label}>{label} 準備中</span>
-        ))}
-      </div>
       {copied ? <p className="maker-status" aria-live="polite">{copied}</p> : null}
       {status ? <p className="maker-status">{status}</p> : null}
     </section>
