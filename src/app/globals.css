@@ -2828,7 +2828,7 @@ a {
 }
 
 .promotion-share-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .promotion-card {
@@ -2845,6 +2845,66 @@ a {
 
 .promotion-card h3 {
   margin: 0;
+}
+
+.promotion-service-label {
+  display: flex;
+  min-width: 0;
+  min-height: 26px;
+  align-items: center;
+  gap: 8px;
+}
+
+.promotion-service-label strong {
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.promotion-service-icon,
+.promotion-action-icon {
+  display: block;
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+
+.promotion-action-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.promotion-service-icon-x,
+.promotion-action-icon-x {
+  color: #17201d;
+}
+
+.promotion-service-icon-note,
+.promotion-action-icon-note {
+  color: #2e5b49;
+}
+
+.promotion-service-icon-facebook,
+.promotion-action-icon-facebook {
+  color: #1877f2;
+}
+
+.promotion-service-icon-line,
+.promotion-action-icon-line {
+  color: #06c755;
+}
+
+.promotion-service-icon-copy {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  color: #a6762e;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.promotion-card > .maker-secondary-button {
+  gap: 8px;
 }
 
 .promotion-card textarea {

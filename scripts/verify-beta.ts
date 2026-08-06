@@ -20,7 +20,7 @@ import { resolveSafeInternalReturnPath } from "../src/lib/returnTo";
 import { validateRequiredBookFields } from "../src/lib/editorValidation";
 import { computeInlineImagePopoverLayout } from "../src/lib/inlineImagePopover";
 import { buildEditorDraftFields, seedFromDraftFields, type EditorDraftState } from "../src/lib/editorDraftState";
-import { buildFacebookShareUrl, buildShareTemplate } from "../src/lib/shareTemplates";
+import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildShareTemplate } from "../src/lib/shareTemplates";
 
 function blockSignature(blocks: BookContentBlock[]) {
   return blocks.map((block) =>
@@ -336,6 +336,20 @@ assert.match(
   /^https:\/\/www\.facebook\.com\/sharer\/sharer\.php\?u=/,
   "Facebook share URL should be encoded and include the public URL",
 );
+const lineTemplate = buildLineShareTemplate({
+  title: "作品タイトル",
+  description: "紹介",
+  url: "https://example.com/books/a",
+});
+assert.equal(lineTemplate, "【作品タイトル】\n\n紹介\n\nWebBookMakerで読む\nhttps://example.com/books/a");
+assert.ok(!lineTemplate.includes("#WebBookMaker"), "LINE template should not add the X/note hashtag");
+const lineShareUrl = buildLineShareUrl({
+  title: "作品タイトル",
+  description: "紹介",
+  url: "https://example.com/books/a",
+});
+assert.match(lineShareUrl, /^https:\/\/line\.me\/R\/share\?text=/, "LINE share URL should use the official share endpoint");
+assert.ok(lineShareUrl.includes(encodeURIComponent(lineTemplate)), "LINE share URL should encode the complete template");
 
 // The editor uses this result as the save/publish gate: an invalid payload
 // must return before either canonical command can be called.

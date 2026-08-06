@@ -5,10 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import type { BookProject } from "@/lib/bookProject";
 import { trackEvent } from "@/lib/analytics";
 import { buildPromotionAsset, xIntentUrl } from "@/lib/promotion";
-import { buildFacebookShareUrl, buildShareTemplate } from "@/lib/shareTemplates";
+import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildShareTemplate } from "@/lib/shareTemplates";
+import { copyTextToClipboard } from "@/lib/shareClipboard";
 import { renderBookTrailer, preferredVideoMimeType } from "@/lib/videoRenderer";
 import type { SupportedLocale } from "@/lib/localization";
 import CharacterAssistant from "@/components/CharacterAssistant";
+import ServiceIcon from "@/components/ui/ServiceIcons";
 
 function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
@@ -56,25 +58,57 @@ export default function PromotionCenter({
     () => buildFacebookShareUrl({ title: project.config.title, description: project.config.description, url: promotion.shareUrl }),
     [project.config.description, project.config.title, promotion.shareUrl],
   );
+  const lineTemplate = useMemo(
+    () => buildLineShareTemplate({ title: project.config.title, description: project.config.description, url: promotion.shareUrl }),
+    [project.config.description, project.config.title, promotion.shareUrl],
+  );
+  const lineUrl = useMemo(
+    () => buildLineShareUrl({ title: project.config.title, description: project.config.description, url: promotion.shareUrl }),
+    [project.config.description, project.config.title, promotion.shareUrl],
+  );
 
   useEffect(() => {
     trackEvent("promotion_center_opened", { bookId: cloudBookId || project.config.bookId });
   }, [cloudBookId, project.config.bookId]);
 
-  const copyText = async (label: string, text: string, successMessage?: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
+  const copyText = async (label: string, text: string, successMessage?: string, errorMessage?: string) => {
+    const copied = await copyTextToClipboard(text);
+    if (copied) {
+      setStatus("");
       setCopied(successMessage || `${label}をコピーしました。`);
       window.setTimeout(() => setCopied(""), 2600);
       return true;
-    } catch (error) {
-      console.warn("[promotion-copy] failed", {
-        label,
-        message: error instanceof Error ? error.message : String(error),
-      });
-      setStatus("コピーできませんでした。もう一度お試しください。");
+    }
+
+    setCopied("");
+    setStatus(errorMessage || "テンプレートをコピーできませんでした。ブラウザのクリップボード許可を確認してください。");
+    return false;
+  };
+
+  const copyAndOpenExternal = async ({
+    label,
+    text,
+    href,
+    successMessage,
+  }: {
+    label: string;
+    text: string;
+    href: string;
+    successMessage: string;
+  }) => {
+    const target = window.open("", "_blank", "noopener,noreferrer");
+    const copied = await copyText(label, text, successMessage);
+    if (!copied) {
+      target?.close();
       return false;
     }
+
+    if (target) {
+      target.location.href = href;
+    } else if (!window.open(href, "_blank", "noopener,noreferrer")) {
+      setStatus("共有画面を開けませんでした。ポップアップを許可してください。");
+    }
+    return true;
   };
 
   const createVideo = async () => {
@@ -97,38 +131,46 @@ export default function PromotionCenter({
   };
 
   const openX = async () => {
-    const target = window.open(xIntentUrl(promotion.xPost), "_blank", "noopener,noreferrer");
-    const copiedOk = await copyText("X投稿文", promotion.xPost);
+    const copiedOk = await copyAndOpenExternal({
+      label: "X投稿文",
+      text: promotion.xPost,
+      href: xIntentUrl(promotion.xPost),
+      successMessage: "X投稿文をコピーしました。Xの投稿画面へ貼り付けてください。",
+    });
     if (!copiedOk) return;
     trackEvent("x_clicked", { bookId: cloudBookId || project.config.bookId });
     trackEvent("promotion_completed", { bookId: cloudBookId || project.config.bookId, channel: "x" });
-    if (!target) setStatus("X投稿画面を開けませんでした。ポップアップを許可してください。");
   };
 
   const openNote = async () => {
-    const target = window.open("https://note.com/notes/new", "_blank", "noopener,noreferrer");
-    const copiedOk = await copyText(
-      "note記事",
-      noteTemplate,
-      "投稿用テンプレートをコピーしました。noteの記事画面で貼り付けてください。",
-    );
+    const copiedOk = await copyAndOpenExternal({
+      label: "note記事",
+      text: noteTemplate,
+      href: "https://note.com/notes/new",
+      successMessage: "投稿テンプレートをコピーしました。noteの記事本文へ貼り付けてください。",
+    });
     if (!copiedOk) return;
     trackEvent("note_clicked", { bookId: cloudBookId || project.config.bookId });
     trackEvent("promotion_completed", { bookId: cloudBookId || project.config.bookId, channel: "note" });
-    if (!target) setStatus("noteの記事画面を開けませんでした。ポップアップを許可してください。");
   };
 
   const openFacebook = async () => {
-    const target = window.open(facebookUrl, "_blank", "noopener,noreferrer");
-    const copiedOk = await copyText(
-      "Facebook投稿文",
-      facebookTemplate,
-      "投稿用テンプレートをコピーしました。Facebookの投稿欄へ貼り付けてください。",
-    );
+    const copiedOk = await copyAndOpenExternal({
+      label: "Facebook投稿文",
+      text: facebookTemplate,
+      href: facebookUrl,
+      successMessage: "投稿テンプレートをコピーしました。Facebookの投稿欄へ貼り付けてください。",
+    });
     if (!copiedOk) return;
     trackEvent("facebook_clicked", { bookId: cloudBookId || project.config.bookId });
     trackEvent("promotion_completed", { bookId: cloudBookId || project.config.bookId, channel: "facebook" });
-    if (!target) setStatus("Facebookの共有画面を開けませんでした。ポップアップを許可してください。");
+  };
+
+  const openLine = () => {
+    const target = window.open(lineUrl, "_blank", "noopener,noreferrer");
+    trackEvent("line_clicked", { bookId: cloudBookId || project.config.bookId });
+    trackEvent("promotion_completed", { bookId: cloudBookId || project.config.bookId, channel: "line" });
+    if (!target) setStatus("LINEの共有画面を開けませんでした。ポップアップを許可してください。");
   };
 
   return (
@@ -158,39 +200,68 @@ export default function PromotionCenter({
 
       <div className="promotion-grid promotion-share-grid" aria-label="共有ツール">
         <article className="promotion-card">
-          <strong>X</strong>
+          <div className="promotion-service-label">
+            <ServiceIcon service="x" className="promotion-service-icon promotion-service-icon-x" />
+            <strong>X</strong>
+          </div>
           <h3>Xに投稿する</h3>
           <p>投稿文、ハッシュタグ、共有URLをコピーしてX投稿画面を開きます。動画は保存済みファイルを添付してください。</p>
           <p className="promotion-preview">Xカード画像: {promotion.ogImageUrl}</p>
           <textarea readOnly value={promotion.xPost} rows={6} />
-          <button className="maker-secondary-button" type="button" onClick={() => void openX()}>
-            Xに投稿する
+          <button className="maker-secondary-button" type="button" aria-label="Xで作品を共有" onClick={() => void openX()}>
+            <ServiceIcon service="x" className="promotion-action-icon promotion-action-icon-x" />
+            <span>Xに投稿する</span>
           </button>
         </article>
         <article className="promotion-card">
-          <strong>note</strong>
+          <div className="promotion-service-label">
+            <ServiceIcon service="note" className="promotion-service-icon promotion-service-icon-note" />
+            <strong>note</strong>
+          </div>
           <h3>note記事を作る</h3>
-          <p>新作公開テンプレートを生成します。コピー後、noteで編集して公開できます。</p>
+          <p>投稿テンプレートをコピーして、noteの新規記事画面を開きます。開いた画面で貼り付けてください。</p>
           <textarea readOnly value={noteTemplate} rows={8} aria-label="note投稿テンプレート" />
-          <button className="maker-secondary-button" type="button" onClick={() => void openNote()}>
-            noteを開く
+          <button className="maker-secondary-button" type="button" aria-label="テンプレートをコピーしてnoteを開く" onClick={() => void openNote()}>
+            <ServiceIcon service="note" className="promotion-action-icon promotion-action-icon-note" />
+            <span>テンプレをコピーしてnoteを開く</span>
           </button>
         </article>
         <article className="promotion-card">
-          <strong>Facebook</strong>
+          <div className="promotion-service-label">
+            <ServiceIcon service="facebook" className="promotion-service-icon promotion-service-icon-facebook" />
+            <strong>Facebook</strong>
+          </div>
           <h3>Facebookへ投稿する</h3>
           <p>投稿用テンプレートをコピーして、Facebookの共有画面を開きます。</p>
           <textarea readOnly value={facebookTemplate} rows={8} aria-label="Facebook投稿テンプレート" />
-          <button className="maker-secondary-button" type="button" onClick={() => void openFacebook()}>
-            Facebookへ投稿する
+          <button className="maker-secondary-button" type="button" aria-label="Facebookで作品を共有" onClick={() => void openFacebook()}>
+            <ServiceIcon service="facebook" className="promotion-action-icon promotion-action-icon-facebook" />
+            <span>Facebookへ投稿する</span>
           </button>
         </article>
         <article className="promotion-card">
-          <strong>Copy</strong>
+          <div className="promotion-service-label">
+            <ServiceIcon service="line" className="promotion-service-icon promotion-service-icon-line" />
+            <strong>LINE</strong>
+          </div>
+          <h3>LINEで共有する</h3>
+          <p>作品タイトル・説明文・公開URLをLINEの共有画面へ渡します。</p>
+          <textarea readOnly value={lineTemplate} rows={8} aria-label="LINE共有テンプレート" />
+          <button className="maker-secondary-button" type="button" aria-label="LINEで作品を共有" onClick={openLine}>
+            <ServiceIcon service="line" className="promotion-action-icon promotion-action-icon-line" />
+            <span>LINEで共有する</span>
+          </button>
+        </article>
+        <article className="promotion-card">
+          <div className="promotion-service-label">
+            <span className="promotion-service-icon promotion-service-icon-copy" aria-hidden="true">↗</span>
+            <strong>URLコピー</strong>
+          </div>
           <h3>URLコピー</h3>
           <p className="promotion-url" title={promotion.shareUrl}>{promotion.shareUrl}</p>
-          <button className="maker-secondary-button" type="button" onClick={() => void copyText("URL", promotion.shareUrl)}>
-            URLコピー
+          <button className="maker-secondary-button" type="button" aria-label="公開URLをコピー" onClick={() => void copyText("URL", promotion.shareUrl, undefined, "URLをコピーできませんでした。ブラウザのクリップボード許可を確認してください。")}>
+            <span aria-hidden="true">↗</span>
+            <span>URLコピー</span>
           </button>
         </article>
       </div>

@@ -1,4 +1,4 @@
-export type ShareTemplatePlatform = "note" | "facebook";
+export type ShareTemplatePlatform = "note" | "facebook" | "line";
 
 export type ShareTemplateInput = {
   platform: ShareTemplatePlatform;
@@ -30,6 +30,14 @@ export function buildShareTemplate({ platform, title, description, url }: ShareT
   if (platform === "note" || platform === "facebook") lines.push("", "#WebBookMaker");
 
   return lines.join("\n");
+}
+
+export function buildLineShareTemplate(input: Omit<ShareTemplateInput, "platform">) {
+  return buildShareTemplate({ ...input, platform: "line" });
+}
+
+export function buildLineShareUrl(input: Omit<ShareTemplateInput, "platform">) {
+  return `https://line.me/R/share?text=${encodeURIComponent(buildLineShareTemplate(input))}`;
 }
 
 export function buildFacebookShareUrl(input: Omit<ShareTemplateInput, "platform">) {

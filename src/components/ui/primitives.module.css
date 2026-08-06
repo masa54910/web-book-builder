@@ -300,6 +300,13 @@
   line-height: 1;
 }
 
+.shareServiceIcon {
+  display: block;
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
 .shareButtonX {
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.1);
