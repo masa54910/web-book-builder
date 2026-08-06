@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import Button from "@/components/ui/Button";
@@ -22,7 +22,6 @@ function getLogoutErrorDetails(error: unknown) {
 
 export default function LogoutButton({ className }: { className?: string }) {
   const { signOut } = useAuth();
-  const router = useRouter();
   const pathname = usePathname() || "/";
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -34,8 +33,9 @@ export default function LogoutButton({ className }: { className?: string }) {
     setErrorMessage("");
     try {
       await signOut();
-      router.replace("/login");
-      router.refresh();
+      // A full navigation avoids racing the auth listener and the protected
+      // route's client-side redirect while the Supabase session is clearing.
+      window.location.replace("/login");
     } catch (error) {
       const details = getLogoutErrorDetails(error);
       console.error("[logout] signOut failed", {
@@ -58,6 +58,7 @@ export default function LogoutButton({ className }: { className?: string }) {
         size="sm"
         loading={isSigningOut}
         disabled={isSigningOut}
+        aria-busy={isSigningOut}
         className={className}
         onClick={() => void handleLogout()}
         ariaLabel={isSigningOut ? "ログアウト中" : "ログアウト"}
