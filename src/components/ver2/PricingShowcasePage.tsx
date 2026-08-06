@@ -50,7 +50,7 @@ export default function PricingShowcasePage() {
           <article className={`${styles.card} ${styles.cardPublish}`}>
             <span className={styles.badge}>Publish</span>
             <h2>出版プラン</h2>
-            <p className={styles.price}>¥980 <small>/ 1作品</small></p>
+            <p className={styles.price}>¥4,980 <small>/ 1作品</small></p>
             <p className={styles.planLead}>買い切りで1作品をしっかり仕上げる出版向けプランです。</p>
             <ul className={styles.featureList}>
               <li>作品ごと買い切り</li>
@@ -65,7 +65,7 @@ export default function PricingShowcasePage() {
           <article className={`${styles.card} ${styles.cardWriter}`}>
             <span className={styles.badge}>Writer</span>
             <h2>作家プラン</h2>
-            <p className={styles.price}>¥1,980 <small>/ 月</small></p>
+            <p className={styles.price}>¥9,800 <small>/ 月</small></p>
             <p className={styles.planLead}>連載や複数作品を継続運用する方向けの上位プランです。</p>
             <ul className={styles.featureList}>
               <li>ページ数制限なし</li>
