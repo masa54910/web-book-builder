@@ -3675,6 +3675,25 @@ a {
   --wbm-text-muted: #55708a;
   --wbm-border: rgba(49, 130, 177, .20);
   --wbm-border-strong: rgba(18, 62, 104, .28);
+  --wb-bg-page: #f6fbff;
+  --wb-bg-section: #eef7fc;
+  --wb-bg-card: #ffffff;
+  --wb-bg-card-hover: #f1f9fe;
+  --wb-primary: #168dcc;
+  --wb-primary-light: #2a9fd6;
+  --wb-primary-hover: #0e75b0;
+  --wb-primary-dark: #156b9e;
+  --wb-navy: #123e68;
+  --wb-border-soft: rgba(49, 130, 177, .18);
+  --wb-border-focus: rgba(22, 141, 204, .52);
+  --wb-text: #13202d;
+  --wb-text-secondary: #294b68;
+  --wb-text-muted: #55708a;
+  --wb-shadow-soft: 0 8px 20px rgba(31, 78, 112, .06);
+  --wb-shadow-card: 0 16px 36px rgba(31, 78, 112, .08);
+  --wb-shadow-elevated: 0 24px 58px rgba(31, 78, 112, .12);
+  --wb-focus-ring: 0 0 0 4px rgba(22, 141, 204, .14);
+  --wb-transition-ui: 200ms cubic-bezier(.2, .75, .3, 1);
 }
 
 html {
@@ -3860,4 +3879,150 @@ body {
 .external-links,
 .created-with {
   border-top-color: var(--wbm-border);
+}
+
+/* Final visual layer: hierarchy and feedback only; no layout or behavior changes. */
+.app-header {
+  border-bottom: 1px solid var(--wb-border-soft);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .88), rgba(241, 249, 254, .62));
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .92), var(--wb-shadow-soft);
+}
+
+.app-header nav a:not(.nav-cta):hover,
+.app-header nav button:hover,
+.auth-home-link:hover,
+.auth-links a:hover,
+.maker-secondary-button:hover:not(:disabled),
+.maker-secondary-link:hover,
+.maker-small-button:hover:not(:disabled) {
+  color: var(--wb-primary-dark);
+  background: var(--wb-bg-card-hover);
+  border-color: var(--wb-border-focus);
+  box-shadow: var(--wb-shadow-card);
+}
+
+.app-header nav .nav-cta:hover,
+.maker-primary-button:hover:not(:disabled),
+.maker-primary-link:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .26), transparent 42%),
+    linear-gradient(135deg, var(--wb-primary-light), var(--wb-primary-hover));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .40), 0 18px 38px rgba(31, 78, 112, .22);
+}
+
+.app-header nav a:focus-visible,
+.app-header nav button:focus-visible,
+.auth-home-link:focus-visible,
+.auth-links a:focus-visible,
+.maker-primary-button:focus-visible,
+.maker-secondary-button:focus-visible,
+.maker-small-button:focus-visible,
+.maker-primary-link:focus-visible,
+.maker-secondary-link:focus-visible,
+.reader-edit-link:focus-visible {
+  outline: none;
+  box-shadow: var(--wb-focus-ring), var(--wb-shadow-card);
+}
+
+.dashboard-toolbar,
+.book-list-card,
+.analytics-grid article,
+.author-hero,
+.author-book-card,
+.maker-card,
+.sticky-actions,
+.management-grid > *,
+.editor-workbench > *,
+.promotion-card,
+.reader-share-center {
+  border-color: var(--wb-border-soft);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .94), rgba(241, 249, 254, .72));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .96), var(--wb-shadow-card);
+}
+
+.promotion-card:hover {
+  border-color: rgba(22, 141, 204, .28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .96), var(--wb-shadow-elevated);
+}
+
+.analytics-strip span,
+.status-pill,
+.author-links a {
+  color: var(--wb-primary-dark);
+  border-color: var(--wb-border-soft);
+  background: var(--wb-bg-section);
+}
+
+.status-published {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--wb-primary-light), var(--wb-primary-dark));
+}
+
+.analytics-trend-bar {
+  background: linear-gradient(90deg, var(--wb-primary), var(--wb-primary-light));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), var(--wb-shadow-soft);
+}
+
+.auth-card input:hover,
+.maker-card input:hover,
+.maker-card textarea:hover,
+.maker-card select:hover {
+  border-color: rgba(22, 141, 204, .36);
+}
+
+.auth-card input:focus-visible,
+.maker-card input:focus-visible,
+.maker-card textarea:focus-visible,
+.maker-card select:focus-visible {
+  outline: none;
+  border-color: var(--wb-border-focus);
+  box-shadow: var(--wb-focus-ring), inset 0 1px 0 rgba(255, 255, 255, .96);
+}
+
+.reader-button,
+.page-jump-form,
+.reading-tools .tool-button,
+.continue-reading-button {
+  transition: var(--wb-transition-ui);
+}
+
+.reader-button:hover:not(:disabled),
+.reading-tools .tool-button:hover:not(:disabled),
+.continue-reading-button:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .42), var(--wb-shadow-card);
+}
+
+.reader-button:active:not(:disabled),
+.reading-tools .tool-button:active:not(:disabled),
+.continue-reading-button:active {
+  transform: translateY(1px) scale(.99);
+}
+
+.reader-button:focus-visible,
+.reading-tools .tool-button:focus-visible,
+.continue-reading-button:focus-visible {
+  outline: none;
+  box-shadow: var(--wb-focus-ring), var(--wb-shadow-card);
+}
+
+::selection {
+  color: #ffffff;
+  background: var(--wb-primary-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-header nav a,
+  .app-header nav button,
+  .auth-home-link,
+  .auth-links a,
+  .maker-primary-button,
+  .maker-secondary-button,
+  .maker-small-button,
+  .maker-primary-link,
+  .maker-secondary-link,
+  .reader-button,
+  .reading-tools .tool-button,
+  .continue-reading-button {
+    transform: none !important;
+  }
 }

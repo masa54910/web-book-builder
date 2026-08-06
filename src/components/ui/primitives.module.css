@@ -17,8 +17,8 @@
 }
 
 .buttonBase:focus-visible {
-  outline: 3px solid rgba(22, 141, 204, 0.38);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(22, 141, 204, .14), 0 14px 30px rgba(31, 78, 112, .12);
 }
 
 .buttonBase:disabled,
@@ -35,12 +35,26 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.23), 0 14px 30px rgba(31, 78, 112, 0.24);
 }
 
+.buttonPrimary:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .26), transparent 42%),
+    linear-gradient(135deg, #3aaee0, #0e75b0);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .32), 0 18px 36px rgba(31, 78, 112, .22);
+}
+
 .buttonSecondary {
   color: #123e68;
   border-color: rgba(49, 130, 177, 0.18);
   background: rgba(255, 255, 255, 0.82);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 10px 22px rgba(31, 78, 112, 0.10);
   backdrop-filter: blur(12px);
+}
+
+.buttonSecondary:hover:not(:disabled),
+.buttonTertiary:hover:not(:disabled) {
+  color: #156b9e;
+  border-color: rgba(22, 141, 204, .38);
+  background: linear-gradient(145deg, #ffffff, #eef7fc);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .94), 0 14px 28px rgba(31, 78, 112, .10);
 }
 
 .buttonTertiary {
@@ -63,8 +77,19 @@
   box-shadow: none;
 }
 
+.buttonGhost:hover:not(:disabled) {
+  color: #123e68;
+  background: rgba(234, 245, 252, .72);
+  box-shadow: 0 10px 22px rgba(31, 78, 112, .08);
+}
+
 .buttonBase:hover:not(:disabled) {
   transform: translateY(-1px);
+}
+
+.buttonBase:active:not(:disabled) {
+  transform: translateY(1px) scale(.985);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 6px 14px rgba(31, 78, 112, .10);
 }
 
 .buttonSm {
@@ -218,6 +243,12 @@
 .textareaBase {
   min-height: 120px;
   resize: vertical;
+}
+
+.inputBase:hover,
+.textareaBase:hover,
+.selectBase:hover {
+  border-color: rgba(22, 141, 204, .34);
 }
 
 .inputBase:focus-visible,
