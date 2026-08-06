@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import type { BookProject } from "@/lib/bookProject";
-import { loadPreviewProject } from "@/lib/browserBookStorage";
+import { loadCanonicalPreviewProject } from "@/lib/canonicalPreviewStorage";
 import { resolveSafeInternalReturnPath } from "@/lib/returnTo";
 import BookReaderShell from "./BookReaderShell";
 import HomeBackLink from "./HomeBackLink";
@@ -24,7 +24,7 @@ export default function DynamicReaderPage() {
 
   useEffect(() => {
     let active = true;
-    loadPreviewProject().then((loadedProject) => {
+    loadCanonicalPreviewProject().then((loadedProject) => {
       if (!active) return;
       setProject(loadedProject);
       setIsLoading(false);

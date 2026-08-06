@@ -17,7 +17,7 @@ import {
   type CloudBookRecord,
 } from "@/lib/bookRepository";
 import { uploadBookProjectAssets } from "@/lib/bookAssetStorage";
-import { savePreviewProject } from "@/lib/browserBookStorage";
+import { saveCanonicalPreview } from "@/lib/canonicalPreviewStorage";
 import { createSlugCandidate } from "@/lib/slug";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
 
@@ -166,13 +166,12 @@ export async function saveCanonicalBookCommand(
 }
 
 export async function previewCanonicalBookCommand(payload: CanonicalBookPayload) {
-  const build = buildBookProjectFromCanonicalPayload(payload);
-  if (!build.ok) throw validationError(build.errors);
-  await savePreviewProject(build.project);
+  const preview = await saveCanonicalPreview(payload);
+  if (!preview.ok) throw validationError(preview.errors);
   return {
     project: payload,
-    bookProject: build.project,
-    previewId: build.project.config.bookId,
+    bookProject: preview.project,
+    previewId: preview.previewId,
   };
 }
 

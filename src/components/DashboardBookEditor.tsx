@@ -35,14 +35,16 @@ import {
 } from "@/lib/bookRepository";
 import {
   deleteDraft,
-  deletePreviewProject,
   deletePreviewReturnState,
   loadDraft,
-  loadPreviewProject,
   loadPreviewReturnState,
   saveDraft,
   savePreviewReturnState,
 } from "@/lib/browserBookStorage";
+import {
+  deleteCanonicalPreview,
+  loadCanonicalPreviewProject,
+} from "@/lib/canonicalPreviewStorage";
 import {
   isDisplayableImageUrl,
   isStorageReference,
@@ -464,7 +466,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         pathname || (mode === "edit" && params.id ? `/dashboard/books/${params.id}/edit` : "/books/new"),
       );
       if (!returnState) {
-        await deletePreviewProject();
+        await deleteCanonicalPreview();
         if (active) {
           setHasRestoredDraft(true);
           setIsHydrated(true);
@@ -473,9 +475,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         return;
       }
 
-      const project = await loadPreviewProject();
+      const project = await loadCanonicalPreviewProject();
       if (!project || project.config.bookId !== previewDraftId) {
-        await deletePreviewProject();
+        await deleteCanonicalPreview();
         if (active) {
           setHasRestoredDraft(true);
           setIsHydrated(true);
@@ -498,7 +500,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       // Consume the explicit preview return exactly once. The URL is cleaned
       // at the same time so a refresh cannot reapply the old project.
       deletePreviewReturnState(previewDraftId);
-      await deletePreviewProject();
+      await deleteCanonicalPreview();
       if (active) {
         setHasRestoredDraft(true);
         setIsHydrated(true);
@@ -966,7 +968,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       if (mode === "new" || didRestorePreviewDraft) deleteDraft();
       if (didRestorePreviewDraft || previewDraftId) {
         deletePreviewReturnState(previewDraftId || undefined);
-        await deletePreviewProject();
+        await deleteCanonicalPreview();
       }
       if (mode === "new" || saved.bookId !== (bookId || params.id)) {
         router.replace(`/dashboard/books/${saved.bookId}/edit`);
@@ -1045,7 +1047,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       if (mode === "new" || didRestorePreviewDraft) deleteDraft();
       if (didRestorePreviewDraft || previewDraftId) {
         deletePreviewReturnState(previewDraftId || undefined);
-        await deletePreviewProject();
+        await deleteCanonicalPreview();
       }
       setStatusMessage(`公開しました: ${published.publicUrl}`);
       trackEvent("book_published", { bookId: published.bookId });
