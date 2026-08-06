@@ -209,13 +209,13 @@ export default function PromotionCenter({
           <p>公開URLをFacebookの共有画面へ渡します。投稿文が必要な場合は別途コピーできます。</p>
           <textarea readOnly value={facebookTemplate} rows={8} aria-label="Facebook投稿テンプレート" />
           <div className="promotion-card-actions">
+            <button className="maker-small-button" type="button" onClick={() => void copyText("Facebook投稿文", facebookTemplate, "投稿文をコピーしました。", "投稿文をコピーできませんでした。ブラウザのクリップボード許可を確認してください。")}>
+              <span>投稿文をコピー</span>
+            </button>
             <a className="maker-secondary-button" href={facebookUrl} target="_blank" rel="noopener noreferrer" aria-label="Facebookで作品を共有" onClick={() => trackPromotion("facebook")}>
               <ServiceIcon service="facebook" className="promotion-action-icon promotion-action-icon-facebook" />
               <span>Facebookで共有</span>
             </a>
-            <button className="maker-small-button" type="button" onClick={() => void copyText("Facebook投稿文", facebookTemplate, "投稿文をコピーしました。", "投稿文をコピーできませんでした。ブラウザのクリップボード許可を確認してください。")}>
-              <span>投稿文をコピー</span>
-            </button>
           </div>
         </article>
         <article className="promotion-card">
