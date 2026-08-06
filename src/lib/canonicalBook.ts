@@ -361,6 +361,9 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
 
   return {
     title: payload.title,
+    slug: payload.slug,
+    publicationStatus: payload.publication.status,
+    publicationVisibility: payload.publication.visibility,
     subtitle: payload.subtitle,
     author: payload.authorName,
     description: payload.description,

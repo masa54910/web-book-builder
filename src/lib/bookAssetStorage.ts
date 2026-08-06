@@ -203,13 +203,19 @@ export async function resolveStorageUrl(value: string) {
   if (!ref) return "";
   const supabase = getSupabaseClient();
   if (!supabase) return "";
-  const { data, error } = await supabase.storage.from(ref.bucket).createSignedUrl(ref.path, 60 * 60);
-  if (!error && data?.signedUrl) return data.signedUrl;
+  try {
+    const { data, error } = await supabase.storage.from(ref.bucket).createSignedUrl(ref.path, 60 * 60);
+    if (!error && data?.signedUrl) return data.signedUrl;
 
-  // Public buckets do not need a signed URL. Keep this fallback so the same
-  // materializer works for either private signed assets or public assets.
-  const publicUrl = supabase.storage.from(ref.bucket).getPublicUrl(ref.path).data.publicUrl;
-  if (publicUrl) return publicUrl;
+    // Public buckets do not need a signed URL. Keep this fallback so the same
+    // materializer works for either private signed assets or public assets.
+    const publicUrl = supabase.storage.from(ref.bucket).getPublicUrl(ref.path).data.publicUrl;
+    if (publicUrl) return publicUrl;
+  } catch {
+    // A transient Storage URL failure must not erase the asset or prevent the
+    // rest of the Preview from opening.
+    return "";
+  }
   return "";
 }
 

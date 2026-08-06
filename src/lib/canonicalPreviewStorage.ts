@@ -5,6 +5,7 @@ import {
   type CanonicalBookPayload,
 } from "@/lib/canonicalBook";
 import { isBookProject, type BookProject } from "@/lib/bookProject";
+import { materializeBookProjectAssets } from "@/lib/bookAssetStorage";
 import { PREVIEW_POINTER_KEY } from "@/lib/browserBookStorage";
 
 const DATABASE_NAME = "webBookMaker";
@@ -97,7 +98,10 @@ export async function loadCanonicalPreviewProject(): Promise<BookProject | null>
     const value = await withProjectStore<unknown>("readonly", (store) =>
       store.get(CURRENT_PREVIEW_ID),
     );
-    return isBookProject(value) ? value : null;
+    if (!isBookProject(value)) return null;
+    // Refresh signed URLs on every Preview open while retaining storagePath
+    // values as the canonical references for the editor and future saves.
+    return await materializeBookProjectAssets(value);
   } catch {
     return null;
   }

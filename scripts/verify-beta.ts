@@ -189,6 +189,9 @@ assert.deepEqual(
 
 const projectWithBlocks = buildBookProject({
   title: "順序検証",
+  slug: "preview-round-trip",
+  publicationStatus: "published",
+  publicationVisibility: "public",
   subtitle: "",
   author: "Verifier",
   description: "",
@@ -205,6 +208,11 @@ const projectWithBlocks = buildBookProject({
 });
 assert.equal(projectWithBlocks.ok, true, "Project with mixed content blocks should build");
 if (projectWithBlocks.ok) {
+  assert.equal(projectWithBlocks.project.config.slug, "preview-round-trip");
+  assert.deepEqual(projectWithBlocks.project.config.publication, {
+    status: "published",
+    visibility: "public",
+  });
   const parsed = parseBookProjectJson(JSON.stringify(projectWithBlocks.project));
   assert.ok(parsed, "Saved project JSON should parse");
   assert.ok(parsed?.contentBlocks, "Parsed project should retain content blocks");

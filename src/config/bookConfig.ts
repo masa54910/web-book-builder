@@ -13,9 +13,18 @@ import type { BookThemeSettings } from "@/lib/themeSystem";
 
 export type BindingDirection = "rtl" | "ltr";
 export type BookTheme = ThemeId;
+export type BookPublicationStatus = "draft" | "published" | "archived";
+export type BookPublicationVisibility = "private" | "unlisted" | "public";
 
 export type BookConfig = {
   bookId: string;
+  /** Canonical public slug carried through Preview/BookProject conversion. */
+  slug?: string;
+  /** Canonical publication state carried through Preview/BookProject conversion. */
+  publication?: {
+    status: BookPublicationStatus;
+    visibility: BookPublicationVisibility;
+  };
   title: string;
   displayTitleLines?: string[];
   subtitle: string;

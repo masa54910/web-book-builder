@@ -353,7 +353,11 @@ function stateFromPreviewProject(project: BookProject): EditorState {
     imageLayout: project.config.themeSettings?.imageLayout || "framed",
     charactersPerPage: project.config.charactersPerPage,
     tableOfContentsItemsPerPage: project.config.tableOfContentsItemsPerPage,
-    slug: createSlugCandidate(project.config.title),
+    // Preserve the user-entered slug through a Preview round trip. The
+    // title-derived fallback is only for legacy previews without slug data.
+    slug: project.config.slug || createSlugCandidate(project.config.title),
+    visibility: project.config.publication?.visibility || "private",
+    status: project.config.publication?.status || "draft",
     authorHandle: project.config.authorProfile?.handle || "",
     authorBio: project.config.authorProfile?.bio || "",
     authorWebsiteUrl: project.config.authorProfile?.websiteUrl || "",

@@ -1,4 +1,8 @@
-import type { BookConfig } from "@/config/bookConfig";
+import type {
+  BookConfig,
+  BookPublicationStatus,
+  BookPublicationVisibility,
+} from "@/config/bookConfig";
 import { normalizeLocale, type SupportedLocale } from "@/lib/localization";
 import type { BookThemeSettings } from "@/lib/themeSystem";
 import {
@@ -65,6 +69,9 @@ export type BookProject = {
 
 export type BookProjectInput = {
   title: string;
+  slug?: string;
+  publicationStatus?: BookPublicationStatus;
+  publicationVisibility?: BookPublicationVisibility;
   subtitle: string;
   author: string;
   description: string;
@@ -500,6 +507,11 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
       version: BOOK_PROJECT_VERSION,
       config: {
         bookId,
+        slug: input.slug?.trim() || undefined,
+        publication: {
+          status: input.publicationStatus || "draft",
+          visibility: input.publicationVisibility || "private",
+        },
         title,
         subtitle: input.subtitle.trim(),
         author,
