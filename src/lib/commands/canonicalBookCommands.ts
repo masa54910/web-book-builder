@@ -18,7 +18,6 @@ import {
 } from "@/lib/bookRepository";
 import { uploadBookProjectAssets } from "@/lib/bookAssetStorage";
 import { saveCanonicalPreview } from "@/lib/canonicalPreviewStorage";
-import { createSlugCandidate } from "@/lib/slug";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
 
 export type SavedBookResult = {
@@ -183,12 +182,14 @@ export async function publishBookCommand(input: {
   visibility: CanonicalPublicationVisibility;
 }) {
   void input.revision;
+  const slug = input.slug.trim();
+  if (!slug) throw new CanonicalBookCommandError("公開URLを入力してください。");
   const nextVisibility: CanonicalPublicationVisibility =
     input.visibility === "private" ? "unlisted" : input.visibility;
   return updatePublication(input.bookId, input.ownerId, {
     status: "published",
     visibility: nextVisibility,
-    slug: input.slug || createSlugCandidate("book"),
+    slug,
   });
 }
 
