@@ -133,7 +133,7 @@ export default function Ver2Hero({
                 ))}
               </div>
             ) : null}
-            {status ? <p style={{ margin: "8px 0 0", color: "#0f6f5d", fontSize: "12px", fontWeight: 700 }}>{status}</p> : null}
+            {status ? <p style={{ margin: "8px 0 0", color: "#156b9e", fontSize: "12px", fontWeight: 700 }}>{status}</p> : null}
           </div>
         </div>
 

@@ -11,7 +11,7 @@ export default function LandingHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-emerald-900/10 bg-[rgba(255,253,249,0.92)] backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-[#123e68]/10 bg-[rgba(255,255,255,0.92)] backdrop-blur-xl">
       <div className="mx-auto flex min-h-[76px] w-full max-w-[1440px] items-center justify-between gap-6 px-4 md:px-6">
         <BrandLogo
           href="/"
@@ -36,8 +36,8 @@ export default function LandingHeader() {
           <Link href="/pricing" className="rounded-full px-3 py-2 hover:bg-white/80">料金プラン</Link>
           <Link href="/#promotion" className="rounded-full px-3 py-2 hover:bg-white/80">作品を広める</Link>
           <Link href="/#faq" className="rounded-full px-3 py-2 hover:bg-white/80">FAQ</Link>
-          <Link href="/login" className="rounded-full border border-[rgba(16,120,90,.12)] bg-[rgba(255,255,255,.82)] px-4 py-2 text-emerald-950 shadow-sm backdrop-blur">ログイン</Link>
-          <Link href={user ? "/books/new" : "/signup?next=%2Fbooks%2Fnew"} className="rounded-full bg-[#0D7A62] px-5 py-2 text-white shadow-sm transition-colors hover:bg-[#13906f]">はじめる</Link>
+          <Link href="/login" className="rounded-full border border-[rgba(22,141,204,.16)] bg-[rgba(255,255,255,.86)] px-4 py-2 text-[#123e68] shadow-sm backdrop-blur">ログイン</Link>
+          <Link href={user ? "/books/new" : "/signup?next=%2Fbooks%2Fnew"} className="rounded-full bg-[#168dcc] px-5 py-2 text-white shadow-sm transition-colors hover:bg-[#0e75b0]">はじめる</Link>
         </nav>
       </div>
       {open ? (
@@ -47,8 +47,8 @@ export default function LandingHeader() {
           <Link href="/pricing" onClick={() => setOpen(false)} className="rounded-xl px-3 py-2 hover:bg-emerald-50">料金プラン</Link>
           <Link href="/#promotion" onClick={() => setOpen(false)} className="rounded-xl px-3 py-2 hover:bg-emerald-50">作品を広める</Link>
           <Link href="/#faq" onClick={() => setOpen(false)} className="rounded-xl px-3 py-2 hover:bg-emerald-50">FAQ</Link>
-          <Link href="/login" onClick={() => setOpen(false)} className="rounded-xl border border-[rgba(16,120,90,.12)] bg-[rgba(255,255,255,.82)] px-3 py-2 text-emerald-950">ログイン</Link>
-          <Link href={user ? "/books/new" : "/signup?next=%2Fbooks%2Fnew"} onClick={() => setOpen(false)} className="rounded-xl bg-[#0D7A62] px-3 py-2 text-center text-white">はじめる</Link>
+          <Link href="/login" onClick={() => setOpen(false)} className="rounded-xl border border-[rgba(22,141,204,.16)] bg-[rgba(255,255,255,.86)] px-3 py-2 text-[#123e68]">ログイン</Link>
+          <Link href={user ? "/books/new" : "/signup?next=%2Fbooks%2Fnew"} onClick={() => setOpen(false)} className="rounded-xl bg-[#168dcc] px-3 py-2 text-center text-white">はじめる</Link>
         </nav>
       ) : null}
     </header>

@@ -119,3 +119,51 @@
   color: #20302a;
   border: 1px solid rgba(40, 62, 55, 0.14);
 }
+
+/* Gallery brand reference: colors only. */
+.page {
+  background:
+    radial-gradient(circle at 7% 4%, rgba(168, 214, 238, .26), transparent 28%),
+    radial-gradient(circle at 90% 8%, rgba(207, 233, 247, .30), transparent 28%),
+    linear-gradient(180deg, #ffffff, #eef7fc 46%, #f6fbff);
+}
+
+.backLink,
+.hero,
+.section {
+  color: #13202d;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .88), rgba(241, 249, 254, .70));
+  border-color: rgba(49, 130, 177, .18);
+  box-shadow: 0 16px 38px rgba(31, 78, 112, .08);
+}
+
+.backLink,
+.actionSecondary {
+  color: #123e68;
+}
+
+.kicker {
+  color: #156b9e;
+}
+
+.title,
+.section h2 {
+  color: #123e68;
+}
+
+.lead,
+.section p,
+.list {
+  color: #55708a;
+}
+
+.actionPrimary {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2a9fd6, #156b9e);
+  border-color: rgba(255, 255, 255, .34);
+}
+
+.actionSecondary {
+  background: linear-gradient(145deg, rgba(255, 255, 255, .92), rgba(241, 249, 254, .72));
+  border-color: rgba(49, 130, 177, .18);
+}

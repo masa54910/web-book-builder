@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #2f251d;
-  --paper: #fff8ec;
-  --night: #21170f;
-  --cyan: #6bb9ad;
-  --copper: #d58a2a;
-  --publisher-brown: #6c4124;
-  --publisher-cream: #fffaf0;
+  --ink: #13202d;
+  --paper: #ffffff;
+  --night: #0b1f38;
+  --cyan: #5cb5dc;
+  --copper: #168dcc;
+  --publisher-brown: #123e68;
+  --publisher-cream: #ffffff;
 }
 
 * {
@@ -3397,23 +3397,40 @@ a {
 
 /* WebBookMaker Ver.2 shared UI polish for auth/editor surfaces */
 :root {
-  --wbm-green-900: #17483c;
-  --wbm-green-700: #0f6f5d;
-  --wbm-green-500: #1b8a73;
-  --wbm-orange-600: #e98a2b;
-  --wbm-orange-400: #f1a646;
-  --wbm-gold-500: #c99a45;
-  --wbm-cream-50: #fffdf8;
-  --wbm-cream-100: #faf4e8;
-  --wbm-ui-text: #20302a;
-  --wbm-ui-muted: #66746e;
-  --wbm-glass-light: rgba(255, 255, 255, .76);
-  --wbm-glass-medium: rgba(255, 255, 255, .58);
-  --wbm-border-light: rgba(255, 255, 255, .84);
-  --wbm-border-green: rgba(15, 111, 93, .18);
-  --wbm-shadow-sm: 0 8px 20px rgba(34, 55, 47, .06);
-  --wbm-shadow-md: 0 16px 36px rgba(34, 55, 47, .08);
-  --wbm-shadow-lg: 0 24px 58px rgba(34, 55, 47, .10);
+  --wbm-blue-950: #0b1f38;
+  --wbm-blue-900: #123e68;
+  --wbm-blue-800: #165583;
+  --wbm-blue-700: #156b9e;
+  --wbm-blue-600: #168dcc;
+  --wbm-blue-500: #2a9fd6;
+  --wbm-blue-300: #a8d6ee;
+  --wbm-blue-200: #cfe9f7;
+  --wbm-blue-100: #eaf5fc;
+  --wbm-blue-50: #f6fbff;
+  --wbm-green-900: var(--wbm-blue-900);
+  --wbm-green-700: var(--wbm-blue-700);
+  --wbm-green-500: var(--wbm-blue-600);
+  --wbm-orange-600: var(--wbm-blue-600);
+  --wbm-orange-400: var(--wbm-blue-500);
+  --wbm-gold-500: #7aaac4;
+  --wbm-cream-50: #ffffff;
+  --wbm-cream-100: var(--wbm-blue-50);
+  --wbm-ui-text: #13202d;
+  --wbm-ui-muted: #55708a;
+  --wbm-glass-light: rgba(255, 255, 255, .82);
+  --wbm-glass-medium: rgba(241, 249, 254, .72);
+  --wbm-border-light: rgba(255, 255, 255, .88);
+  --wbm-border-green: rgba(22, 141, 204, .20);
+  --wbm-bg: #eef7fc;
+  --wbm-surface: #ffffff;
+  --wbm-surface-soft: #f6fbff;
+  --wbm-border: rgba(49, 130, 177, .20);
+  --wbm-border-strong: rgba(18, 62, 104, .28);
+  --wbm-primary: var(--wbm-blue-600);
+  --wbm-primary-hover: #0e75b0;
+  --wbm-shadow-sm: 0 8px 20px rgba(31, 78, 112, .06);
+  --wbm-shadow-md: 0 16px 36px rgba(31, 78, 112, .08);
+  --wbm-shadow-lg: 0 24px 58px rgba(31, 78, 112, .10);
   --wbm-radius-control: 14px;
   --wbm-radius-card: 22px;
   --wbm-radius-large: 30px;
@@ -3638,4 +3655,209 @@ a {
     transition-duration: .01ms !important;
     animation-duration: .01ms !important;
   }
+}
+
+/* Gallery brand palette: color-only surface overrides for the Maker UI. */
+:root {
+  --ink: #13202d;
+  --paper: #ffffff;
+  --night: #0b1f38;
+  --cyan: #5cb5dc;
+  --copper: #168dcc;
+  --publisher-brown: #123e68;
+  --publisher-cream: #ffffff;
+  --wbm-bg: #eef7fc;
+  --wbm-surface: #ffffff;
+  --wbm-surface-soft: #f6fbff;
+  --wbm-primary: #168dcc;
+  --wbm-primary-hover: #0e75b0;
+  --wbm-text: #13202d;
+  --wbm-text-muted: #55708a;
+  --wbm-border: rgba(49, 130, 177, .20);
+  --wbm-border-strong: rgba(18, 62, 104, .28);
+}
+
+html {
+  background: var(--wbm-bg);
+}
+
+body {
+  color: var(--wbm-ui-text);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(168, 214, 238, .28), transparent 28rem),
+    radial-gradient(circle at 88% 14%, rgba(207, 233, 247, .34), transparent 30rem),
+    linear-gradient(150deg, #ffffff 0%, #eef7fc 54%, #e4f2fb 100%);
+}
+
+.beta-banner {
+  color: var(--wbm-blue-900);
+  background: var(--wbm-blue-100);
+  border-bottom-color: var(--wbm-border);
+}
+
+.landing-page,
+.dashboard-page,
+.auth-page,
+.legal-page,
+.author-page {
+  color: var(--wbm-ui-text);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(168, 214, 238, .26), transparent 24rem),
+    radial-gradient(circle at 90% 18%, rgba(207, 233, 247, .34), transparent 27rem),
+    linear-gradient(145deg, #ffffff 0%, #eef7fc 52%, #e4f2fb 100%);
+}
+
+.app-logo,
+.app-logo span,
+.dashboard-heading h1,
+.auth-card h1,
+.legal-page h1,
+.dashboard-heading h2,
+.maker-hero h1,
+.maker-card h2 {
+  color: var(--wbm-blue-900);
+}
+
+.app-logo span,
+.dashboard-heading p,
+.maker-hero p,
+.maker-note,
+.auth-notice,
+.auth-card label {
+  color: var(--wbm-ui-muted);
+}
+
+.app-header {
+  color: var(--wbm-ui-text);
+}
+
+.app-header nav a:not(.nav-cta),
+.app-header nav button,
+.auth-home-link,
+.auth-links a,
+.maker-secondary-button,
+.maker-secondary-link,
+.maker-small-button {
+  color: var(--wbm-blue-900);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .86), rgba(241, 249, 254, .68)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .96), rgba(22, 141, 204, .20), rgba(122, 170, 196, .18)) border-box;
+  border-color: transparent;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .94),
+    inset 0 -1px 0 rgba(255, 255, 255, .28),
+    var(--wbm-shadow-sm);
+}
+
+.app-header nav .nav-cta,
+.maker-primary-button,
+.maker-primary-link {
+  color: #ffffff;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .22), transparent 44%) padding-box,
+    linear-gradient(135deg, var(--wbm-blue-500), var(--wbm-blue-700)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .60), rgba(22, 141, 204, .42), rgba(122, 170, 196, .28)) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .34),
+    inset 0 -1px 0 rgba(0, 35, 65, .10),
+    0 18px 36px rgba(31, 78, 112, .18);
+}
+
+.maker-primary-button[data-testid="maker-create-preview"] {
+  color: #ffffff;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .23), transparent 44%) padding-box,
+    linear-gradient(135deg, var(--wbm-blue-500), var(--wbm-blue-600)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .62), rgba(22, 141, 204, .38), rgba(122, 170, 196, .28)) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .34),
+    inset 0 -1px 0 rgba(0, 35, 65, .10),
+    0 18px 36px rgba(31, 78, 112, .20);
+}
+
+.auth-card,
+.maker-card,
+.pricing-card,
+.publish-steps article,
+.promotion-card,
+.author-book-card,
+.dashboard-toolbar,
+.book-list-card,
+.management-grid > *,
+.editor-workbench > * {
+  color: var(--wbm-ui-text);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .84), rgba(241, 249, 254, .64)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, .96), rgba(22, 141, 204, .18), rgba(122, 170, 196, .16)) border-box;
+  border-color: transparent;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .94),
+    inset 0 -1px 0 rgba(255, 255, 255, .26),
+    var(--wbm-shadow-md);
+}
+
+.auth-card input,
+.maker-card input,
+.maker-card textarea,
+.maker-card select {
+  color: var(--wbm-ui-text);
+  border-color: rgba(22, 141, 204, .22);
+  background: rgba(255, 255, 255, .92);
+}
+
+.auth-card input:focus,
+.maker-card input:focus-visible,
+.maker-card textarea:focus-visible,
+.maker-card select:focus-visible {
+  border-color: rgba(22, 141, 204, .56);
+  box-shadow: 0 0 0 5px rgba(22, 141, 204, .12), inset 0 1px 0 rgba(255, 255, 255, .94);
+}
+
+.reader-shell {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(168, 214, 238, .28), transparent 28rem),
+    linear-gradient(145deg, #ffffff 0%, #eef7fc 58%, #e4f2fb 100%);
+}
+
+.reader-masthead h1,
+.reader-author-link,
+.page-progress,
+.page-jump-label {
+  color: var(--wbm-blue-900);
+}
+
+.reader-kicker,
+.reader-author-link:hover,
+.reader-author-link:focus-visible,
+.external-links a,
+.created-with a {
+  color: var(--wbm-blue-700);
+}
+
+.reader-direction,
+.reader-help {
+  color: var(--wbm-ui-muted);
+}
+
+.reader-button,
+.page-jump-form {
+  color: #ffffff;
+  background: rgba(11, 31, 56, .92);
+  border-color: rgba(22, 141, 204, .28);
+}
+
+.reader-button:hover:not(:disabled),
+.reader-button:focus-visible {
+  background: rgba(18, 62, 104, .96);
+  border-color: rgba(92, 181, 220, .72);
+}
+
+.reader-button.primary {
+  background: linear-gradient(135deg, var(--wbm-blue-600), var(--wbm-blue-700));
+  border-color: rgba(255, 255, 255, .32);
+}
+
+.external-links,
+.created-with {
+  border-top-color: var(--wbm-border);
 }

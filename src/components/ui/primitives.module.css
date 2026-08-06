@@ -17,7 +17,7 @@
 }
 
 .buttonBase:focus-visible {
-  outline: 3px solid rgba(19, 118, 99, 0.38);
+  outline: 3px solid rgba(22, 141, 204, 0.38);
   outline-offset: 2px;
 }
 
@@ -31,22 +31,22 @@
 .buttonPrimary {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.3);
-  background: linear-gradient(135deg, #17866f, #0f6f5d);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.23), 0 14px 30px rgba(16, 82, 69, 0.24);
+  background: linear-gradient(135deg, #2a9fd6, #156b9e);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.23), 0 14px 30px rgba(31, 78, 112, 0.24);
 }
 
 .buttonSecondary {
-  color: #24332e;
-  border-color: rgba(36, 53, 48, 0.15);
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 10px 22px rgba(31, 49, 43, 0.12);
+  color: #123e68;
+  border-color: rgba(49, 130, 177, 0.18);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 10px 22px rgba(31, 78, 112, 0.10);
   backdrop-filter: blur(12px);
 }
 
 .buttonTertiary {
-  color: #30403a;
-  border-color: rgba(54, 76, 68, 0.2);
-  background: rgba(255, 255, 255, 0.36);
+  color: #294b68;
+  border-color: rgba(49, 130, 177, 0.20);
+  background: rgba(246, 251, 255, 0.72);
 }
 
 .buttonDanger {
@@ -57,7 +57,7 @@
 }
 
 .buttonGhost {
-  color: #325149;
+  color: #156b9e;
   border-color: transparent;
   background: transparent;
   box-shadow: none;
@@ -105,25 +105,25 @@
 
 .cardBase {
   border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 18px 48px rgba(31, 49, 43, 0.1);
+  border: 1px solid rgba(49, 130, 177, 0.18);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88), 0 18px 48px rgba(31, 78, 112, 0.08);
   backdrop-filter: blur(14px);
 }
 
-.cardDefault { background: rgba(255, 255, 255, 0.72); }
-.cardSubtle { background: rgba(255, 255, 255, 0.58); }
-.cardElevated { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 26px 62px rgba(31, 49, 43, 0.14); }
-.cardPricing { background: linear-gradient(145deg, rgba(255, 248, 235, 0.86), rgba(255, 255, 255, 0.74)); }
-.cardAnalytics { background: linear-gradient(145deg, rgba(235, 247, 243, 0.84), rgba(255, 255, 255, 0.74)); }
-.cardContent { background: linear-gradient(145deg, rgba(248, 249, 246, 0.84), rgba(255, 255, 255, 0.74)); }
+.cardDefault { background: rgba(255, 255, 255, 0.82); }
+.cardSubtle { background: rgba(246, 251, 255, 0.72); }
+.cardElevated { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.90), 0 26px 62px rgba(31, 78, 112, 0.12); }
+.cardPricing { background: linear-gradient(145deg, rgba(234, 245, 252, 0.86), rgba(255, 255, 255, 0.76)); }
+.cardAnalytics { background: linear-gradient(145deg, rgba(234, 245, 252, 0.84), rgba(255, 255, 255, 0.76)); }
+.cardContent { background: linear-gradient(145deg, rgba(246, 251, 255, 0.84), rgba(255, 255, 255, 0.76)); }
 
 .cardPadSm { padding: 14px; }
 .cardPadMd { padding: 18px; }
 .cardPadLg { padding: 24px; }
 
 .cardInteractive { transition: transform 180ms ease, box-shadow 180ms ease; }
-.cardInteractive:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 24px 56px rgba(31, 49, 43, 0.13); }
+.cardInteractive:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 24px 56px rgba(31, 78, 112, 0.11); }
 
 .status {
   display: flex;
@@ -136,7 +136,7 @@
   line-height: 1.5;
 }
 
-.statusSuccess { color: #0f6f5d; background: rgba(223, 245, 237, 0.95); border: 1px solid rgba(15, 111, 93, 0.2); }
+.statusSuccess { color: #156b9e; background: rgba(234, 245, 252, 0.95); border: 1px solid rgba(22, 141, 204, 0.2); }
 .statusError { color: #8f2f2a; background: rgba(255, 233, 229, 0.95); border: 1px solid rgba(183, 67, 60, 0.22); }
 .statusWarning { color: #7a5216; background: rgba(255, 242, 217, 0.96); border: 1px solid rgba(186, 132, 52, 0.24); }
 .statusInfo { color: #2b5b77; background: rgba(229, 243, 251, 0.96); border: 1px solid rgba(71, 132, 171, 0.22); }
@@ -148,7 +148,7 @@
   text-align: center;
   gap: 8px;
   min-height: 120px;
-  color: #4a5852;
+  color: #55708a;
 }
 
 .loadingWrap {
@@ -163,13 +163,13 @@
 .emptyTitle {
   margin: 0;
   font-size: 20px;
-  color: #2c3a35;
+  color: #123e68;
 }
 
 .emptyDescription {
   margin: 0;
   font-size: 14px;
-  color: #60706a;
+  color: #55708a;
 }
 
 .field {
@@ -182,7 +182,7 @@
   align-items: center;
   gap: 6px;
   font-weight: 700;
-  color: #2d3a35;
+  color: #294b68;
   font-size: 13px;
 }
 
@@ -192,7 +192,7 @@
 }
 
 .fieldHelp {
-  color: #6b7872;
+  color: #55708a;
   font-size: 12px;
 }
 
@@ -206,11 +206,11 @@
 .textareaBase,
 .selectBase {
   width: 100%;
-  border: 1px solid rgba(40, 62, 55, 0.18);
+  border: 1px solid rgba(49, 130, 177, 0.20);
   border-radius: 12px;
   padding: 11px 12px;
   background: rgba(255, 255, 255, 0.88);
-  color: #23211c;
+  color: #13202d;
   font-size: 14px;
   line-height: 1.6;
 }
@@ -223,7 +223,7 @@
 .inputBase:focus-visible,
 .textareaBase:focus-visible,
 .selectBase:focus-visible {
-  outline: 3px solid rgba(19, 118, 99, 0.2);
+  outline: 3px solid rgba(22, 141, 204, 0.2);
   outline-offset: 1px;
 }
 
@@ -243,7 +243,7 @@
   z-index: 80;
   display: grid;
   place-items: center;
-  background: rgba(22, 28, 26, 0.45);
+  background: rgba(11, 31, 56, 0.38);
   padding: 16px;
 }
 
@@ -254,12 +254,12 @@
 .modalHeader {
   margin: 0 0 10px;
   font-size: 21px;
-  color: #253430;
+  color: #123e68;
 }
 
 .modalDescription {
   margin: 0;
-  color: #5f6f69;
+  color: #55708a;
   font-size: 14px;
   line-height: 1.7;
 }
@@ -280,7 +280,7 @@
 }
 
 .shareLabel {
-  color: #6f7d77;
+  color: #55708a;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -402,21 +402,21 @@
 .pageHeaderText h1 {
   margin: 0;
   font-size: clamp(28px, 4vw, 48px);
-  color: #23211c;
+  color: #123e68;
 }
 
 .pageHeaderEyebrow {
   margin: 0 0 6px;
   font-size: 12px;
   letter-spacing: 0.08em;
-  color: #6f7d77;
+  color: #55708a;
   text-transform: uppercase;
   font-weight: 700;
 }
 
 .pageHeaderDesc {
   margin: 8px 0 0;
-  color: #5f6d67;
+  color: #55708a;
 }
 
 .sectionHeading {
@@ -426,12 +426,12 @@
 .sectionHeading h2 {
   margin: 0;
   font-size: clamp(22px, 3vw, 34px);
-  color: #243430;
+  color: #123e68;
 }
 
 .sectionHeading p {
   margin: 6px 0 0;
-  color: #61716b;
+  color: #55708a;
 }
 
 @media (prefers-reduced-motion: reduce) {
