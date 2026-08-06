@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { buildFacebookShareUrl, buildShareTemplate } from "@/lib/shareTemplates";
+
 import Button from "./Button";
 import StatusMessage from "./StatusMessage";
 import styles from "./primitives.module.css";
@@ -52,20 +54,10 @@ function createXUrl(url: string, title: string, description?: string, hashtags?:
   return `https://twitter.com/intent/tweet?${query.toString()}`;
 }
 
-function createFacebookUrl(url: string, title: string, description?: string) {
-  const quote = [title, description, url].filter(Boolean).join("\n\n");
-  const query = new URLSearchParams({ u: url, quote });
-  return `https://www.facebook.com/sharer/sharer.php?${query.toString()}`;
-}
-
 function createLineUrl(url: string, title: string, description?: string) {
   const text = [title, description].filter(Boolean).join("\n\n");
   const query = new URLSearchParams({ url, text });
   return `https://social-plugins.line.me/lineit/share?${query.toString()}`;
-}
-
-function createShareTemplate(title: string, description: string | undefined, url: string) {
-  return `【${title}】\n\n${description || "WebBookMakerで公開中のWebブックです。"}\n\nWebブックはこちらから読めます。\n${url}\n\n#WebBookMaker`;
 }
 
 export default function ShareButtons({
@@ -102,7 +94,7 @@ export default function ShareButtons({
     href: string,
     successText: string,
   ) => {
-    const template = createShareTemplate(title, description, url);
+    const template = buildShareTemplate({ platform, title, description, url });
     // Start both operations synchronously in the click handler so browsers keep
     // the clipboard permission and popup attached to the user's gesture.
     const copyPromise = navigator.clipboard.writeText(template);
@@ -151,7 +143,7 @@ export default function ShareButtons({
           className={styles.shareButtonNote}
           icon={<ShareNoteIcon />}
           disabled={disabled}
-          onClick={() => void copyAndOpenTemplate("note", "https://note.com/notes/new", "note用の文章をコピーしました。開いたnoteの記事画面に貼り付けてください。")}
+          onClick={() => void copyAndOpenTemplate("note", "https://note.com/notes/new", "投稿用テンプレートをコピーしました。noteの記事画面で貼り付けてください。")}
         >
           noteで共有
         </Button>
@@ -163,14 +155,14 @@ export default function ShareButtons({
           className={styles.shareButtonFacebook}
           icon={<ShareFacebookIcon />}
           disabled={disabled}
-          onClick={() => void copyAndOpenTemplate("facebook", createFacebookUrl(url, title, description), "Facebook投稿文をコピーしました。開いた投稿画面に貼り付けてください。")}
+          onClick={() => void copyAndOpenTemplate("facebook", buildFacebookShareUrl({ title, description, url }), "投稿用テンプレートをコピーしました。Facebookの投稿欄へ貼り付けてください。")}
         >
           Facebookで共有
         </Button>
       ) : null}
       {renderShareLink("line", createLineUrl(url, title, description), "LINEで共有", <ShareLineIcon />, styles.shareButtonLine)}
       {platforms.includes("copy") ? (
-        <Button variant="tertiary" size="sm" disabled={disabled} icon={<ShareCopyIcon />} onClick={() => void copy(url, "コピーしました", url)}>
+        <Button variant="tertiary" size="sm" className={styles.shareButtonCopy} disabled={disabled} icon={<ShareCopyIcon />} onClick={() => void copy(url, "コピーしました", url)}>
           URLをコピー
         </Button>
       ) : null}

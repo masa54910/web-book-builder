@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { BookProject } from "@/lib/bookProject";
 import { trackEvent } from "@/lib/analytics";
 import { buildPromotionAsset, xIntentUrl } from "@/lib/promotion";
+import { buildFacebookShareUrl, buildShareTemplate } from "@/lib/shareTemplates";
 import { renderBookTrailer, preferredVideoMimeType } from "@/lib/videoRenderer";
 import type { SupportedLocale } from "@/lib/localization";
 import CharacterAssistant from "@/components/CharacterAssistant";
@@ -43,15 +44,37 @@ export default function PromotionCenter({
       }),
     [locale, project.config, slug],
   );
+  const noteTemplate = useMemo(
+    () => buildShareTemplate({ platform: "note", title: project.config.title, description: project.config.description, url: promotion.shareUrl }),
+    [project.config.description, project.config.title, promotion.shareUrl],
+  );
+  const facebookTemplate = useMemo(
+    () => buildShareTemplate({ platform: "facebook", title: project.config.title, description: project.config.description, url: promotion.shareUrl }),
+    [project.config.description, project.config.title, promotion.shareUrl],
+  );
+  const facebookUrl = useMemo(
+    () => buildFacebookShareUrl({ title: project.config.title, description: project.config.description, url: promotion.shareUrl }),
+    [project.config.description, project.config.title, promotion.shareUrl],
+  );
 
   useEffect(() => {
     trackEvent("promotion_center_opened", { bookId: cloudBookId || project.config.bookId });
   }, [cloudBookId, project.config.bookId]);
 
-  const copyText = async (label: string, text: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopied(label);
-    window.setTimeout(() => setCopied(""), 1400);
+  const copyText = async (label: string, text: string, successMessage?: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(successMessage || `${label}をコピーしました。`);
+      window.setTimeout(() => setCopied(""), 2600);
+      return true;
+    } catch (error) {
+      console.warn("[promotion-copy] failed", {
+        label,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      setStatus("コピーできませんでした。もう一度お試しください。");
+      return false;
+    }
   };
 
   const createVideo = async () => {
@@ -74,17 +97,38 @@ export default function PromotionCenter({
   };
 
   const openX = async () => {
-    await copyText("X投稿文", promotion.xPost);
+    const target = window.open(xIntentUrl(promotion.xPost), "_blank", "noopener,noreferrer");
+    const copiedOk = await copyText("X投稿文", promotion.xPost);
+    if (!copiedOk) return;
     trackEvent("x_clicked", { bookId: cloudBookId || project.config.bookId });
     trackEvent("promotion_completed", { bookId: cloudBookId || project.config.bookId, channel: "x" });
-    window.open(xIntentUrl(promotion.xPost), "_blank", "noopener,noreferrer");
+    if (!target) setStatus("X投稿画面を開けませんでした。ポップアップを許可してください。");
   };
 
   const openNote = async () => {
-    await copyText("note記事", `${promotion.noteTitle}\n\n${promotion.noteBody}`);
+    const target = window.open("https://note.com/notes/new", "_blank", "noopener,noreferrer");
+    const copiedOk = await copyText(
+      "note記事",
+      noteTemplate,
+      "投稿用テンプレートをコピーしました。noteの記事画面で貼り付けてください。",
+    );
+    if (!copiedOk) return;
     trackEvent("note_clicked", { bookId: cloudBookId || project.config.bookId });
     trackEvent("promotion_completed", { bookId: cloudBookId || project.config.bookId, channel: "note" });
-    window.open("https://note.com/notes/new", "_blank", "noopener,noreferrer");
+    if (!target) setStatus("noteの記事画面を開けませんでした。ポップアップを許可してください。");
+  };
+
+  const openFacebook = async () => {
+    const target = window.open(facebookUrl, "_blank", "noopener,noreferrer");
+    const copiedOk = await copyText(
+      "Facebook投稿文",
+      facebookTemplate,
+      "投稿用テンプレートをコピーしました。Facebookの投稿欄へ貼り付けてください。",
+    );
+    if (!copiedOk) return;
+    trackEvent("facebook_clicked", { bookId: cloudBookId || project.config.bookId });
+    trackEvent("promotion_completed", { bookId: cloudBookId || project.config.bookId, channel: "facebook" });
+    if (!target) setStatus("Facebookの共有画面を開けませんでした。ポップアップを許可してください。");
   };
 
   return (
@@ -98,7 +142,7 @@ export default function PromotionCenter({
         <CharacterAssistant event="publish" compact />
       </div>
 
-      <div className="promotion-grid">
+      <div className="promotion-grid promotion-video-grid">
         <article className="promotion-card">
           <strong>Video</strong>
           <h3>動画を作成</h3>
@@ -110,8 +154,11 @@ export default function PromotionCenter({
             <video className="promotion-video-preview" src={videoUrl} controls playsInline />
           ) : null}
         </article>
+      </div>
+
+      <div className="promotion-grid promotion-share-grid" aria-label="共有ツール">
         <article className="promotion-card">
-          <strong>Share</strong>
+          <strong>X</strong>
           <h3>Xに投稿する</h3>
           <p>投稿文、ハッシュタグ、共有URLをコピーしてX投稿画面を開きます。動画は保存済みファイルを添付してください。</p>
           <p className="promotion-preview">Xカード画像: {promotion.ogImageUrl}</p>
@@ -124,15 +171,24 @@ export default function PromotionCenter({
           <strong>note</strong>
           <h3>note記事を作る</h3>
           <p>新作公開テンプレートを生成します。コピー後、noteで編集して公開できます。</p>
-          <textarea readOnly value={`${promotion.noteTitle}\n\n${promotion.noteBody}`} rows={8} />
+          <textarea readOnly value={noteTemplate} rows={8} aria-label="note投稿テンプレート" />
           <button className="maker-secondary-button" type="button" onClick={() => void openNote()}>
             noteを開く
           </button>
         </article>
         <article className="promotion-card">
+          <strong>Facebook</strong>
+          <h3>Facebookへ投稿する</h3>
+          <p>投稿用テンプレートをコピーして、Facebookの共有画面を開きます。</p>
+          <textarea readOnly value={facebookTemplate} rows={8} aria-label="Facebook投稿テンプレート" />
+          <button className="maker-secondary-button" type="button" onClick={() => void openFacebook()}>
+            Facebookへ投稿する
+          </button>
+        </article>
+        <article className="promotion-card">
           <strong>Copy</strong>
           <h3>URLコピー</h3>
-          <p>{promotion.shareUrl}</p>
+          <p className="promotion-url" title={promotion.shareUrl}>{promotion.shareUrl}</p>
           <button className="maker-secondary-button" type="button" onClick={() => void copyText("URL", promotion.shareUrl)}>
             URLコピー
           </button>
@@ -140,11 +196,11 @@ export default function PromotionCenter({
       </div>
 
       <div className="promotion-disabled-channels" aria-label="今後追加予定">
-        {["Instagram", "Threads", "Facebook", "Bluesky", "TikTok", "YouTube", "Preview", "Analytics"].map((label) => (
+        {["Instagram", "Threads", "Bluesky", "TikTok", "YouTube", "Preview", "Analytics"].map((label) => (
           <span key={label}>{label} 準備中</span>
         ))}
       </div>
-      {copied ? <p className="maker-status">{copied}をコピーしました。</p> : null}
+      {copied ? <p className="maker-status" aria-live="polite">{copied}</p> : null}
       {status ? <p className="maker-status">{status}</p> : null}
     </section>
   );

@@ -20,6 +20,7 @@ import { resolveSafeInternalReturnPath } from "../src/lib/returnTo";
 import { validateRequiredBookFields } from "../src/lib/editorValidation";
 import { computeInlineImagePopoverLayout } from "../src/lib/inlineImagePopover";
 import { buildEditorDraftFields, seedFromDraftFields, type EditorDraftState } from "../src/lib/editorDraftState";
+import { buildFacebookShareUrl, buildShareTemplate } from "../src/lib/shareTemplates";
 
 function blockSignature(blocks: BookContentBlock[]) {
   return blocks.map((block) =>
@@ -310,6 +311,31 @@ const requiredBothPresent = validateRequiredBookFields(requiredBase);
 assert.equal(requiredBothPresent.isValid, true);
 assert.equal(requiredBothPresent.globalError, "");
 assert.deepEqual(requiredBothPresent.fieldErrors, {});
+
+const noteTemplate = buildShareTemplate({
+  platform: "note",
+  title: "  作品タイトル  ",
+  description: "  作品の紹介文  ",
+  url: "https://webbookmaker.vercel.app/books/sample-book",
+});
+assert.equal(
+  noteTemplate,
+  "【作品タイトル】\n\n作品の紹介文\n\nWebBookMakerで読む\nhttps://webbookmaker.vercel.app/books/sample-book\n\n#WebBookMaker",
+  "Note share template should use the canonical plain-text format",
+);
+const noDescriptionTemplate = buildShareTemplate({
+  platform: "facebook",
+  title: "作品タイトル",
+  description: "   ",
+  url: "https://webbookmaker.vercel.app/books/sample-book",
+});
+assert.equal(noDescriptionTemplate.includes("undefined"), false);
+assert.equal(noDescriptionTemplate.includes("作品の紹介文"), false);
+assert.match(
+  buildFacebookShareUrl({ title: "作品タイトル", description: "紹介", url: "https://example.com/books/a" }),
+  /^https:\/\/www\.facebook\.com\/sharer\/sharer\.php\?u=/,
+  "Facebook share URL should be encoded and include the public URL",
+);
 
 // The editor uses this result as the save/publish gate: an invalid payload
 // must return before either canonical command can be called.

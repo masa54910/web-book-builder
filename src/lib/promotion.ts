@@ -1,5 +1,6 @@
 import type { BookConfig } from "@/config/bookConfig";
 import type { SupportedLocale } from "@/lib/localization";
+import { buildShareTemplate } from "@/lib/shareTemplates";
 
 export type PromotionChannel = "x" | "note" | "instagram" | "threads" | "facebook" | "bluesky" | "tiktok" | "youtube" | "copy";
 
@@ -58,7 +59,7 @@ export function buildPromotionAsset({
   const noteTitle = locale === "ja" ? `『${config.title}』を公開しました` : `I published “${config.title}”`;
   const noteBody =
     locale === "ja"
-      ? `# ${noteTitle}\n\n${description}\n\nWebBookMakerで、表紙・目次・ページめくり付きのWebブックとして公開しました。\n\n## 作品を読む\n${shareUrl}\n\n## 見どころ\n- ${config.subtitle || "ページをめくるように読めるWeb作品です。"}\n- スマホでもPCでも読めます。\n\n${hashtagText}`
+      ? buildShareTemplate({ platform: "note", title: config.title, description: config.description, url: shareUrl })
       : `# ${noteTitle}\n\n${description}\n\nPublished with WebBookMaker as a web book with cover, table of contents, and page-turning reader.\n\n## Read\n${shareUrl}\n\n${hashtagText}`;
 
   return {
