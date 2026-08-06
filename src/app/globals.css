@@ -2907,6 +2907,18 @@ a {
   gap: 8px;
 }
 
+.promotion-card-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.promotion-card-actions .maker-secondary-button,
+.promotion-card-actions .maker-small-button {
+  width: 100%;
+  min-height: 44px;
+}
+
 .promotion-card textarea {
   width: 100%;
   min-width: 0;

@@ -1,5 +1,7 @@
 export type ShareTemplatePlatform = "note" | "facebook" | "line";
 
+export const NOTE_NEW_POST_URL = "https://note.com/new";
+
 export type ShareTemplateInput = {
   platform: ShareTemplatePlatform;
   title: string;

@@ -20,7 +20,8 @@ import { resolveSafeInternalReturnPath } from "../src/lib/returnTo";
 import { validateRequiredBookFields } from "../src/lib/editorValidation";
 import { computeInlineImagePopoverLayout } from "../src/lib/inlineImagePopover";
 import { buildEditorDraftFields, seedFromDraftFields, type EditorDraftState } from "../src/lib/editorDraftState";
-import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildShareTemplate } from "../src/lib/shareTemplates";
+import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildShareTemplate, NOTE_NEW_POST_URL } from "../src/lib/shareTemplates";
+import { xIntentUrl } from "../src/lib/promotion";
 
 function blockSignature(blocks: BookContentBlock[]) {
   return blocks.map((block) =>
@@ -336,6 +337,8 @@ assert.match(
   /^https:\/\/www\.facebook\.com\/sharer\/sharer\.php\?u=/,
   "Facebook share URL should be encoded and include the public URL",
 );
+assert.equal(NOTE_NEW_POST_URL, "https://note.com/new", "Note should use the normal new-post destination");
+assert.equal(xIntentUrl("作品タイトル\nhttps://example.com/books/a").startsWith("about:blank"), false, "X share must never target about:blank");
 const lineTemplate = buildLineShareTemplate({
   title: "作品タイトル",
   description: "紹介",

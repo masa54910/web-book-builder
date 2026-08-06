@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { buildFacebookShareUrl, buildLineShareUrl, buildShareTemplate } from "@/lib/shareTemplates";
+import { buildFacebookShareUrl, buildLineShareUrl, buildShareTemplate, NOTE_NEW_POST_URL } from "@/lib/shareTemplates";
 import { copyTextToClipboard } from "@/lib/shareClipboard";
 
 import Button from "./Button";
@@ -56,6 +56,10 @@ function createXUrl(url: string, title: string, description?: string, hashtags?:
   return `https://twitter.com/intent/tweet?${query.toString()}`;
 }
 
+function isMobileDevice() {
+  return typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 export default function ShareButtons({
   url,
   title,
@@ -70,6 +74,7 @@ export default function ShareButtons({
   onCopied,
 }: Props) {
   const [message, setMessage] = useState<string>("");
+  const [noteReady, setNoteReady] = useState(false);
 
   const copy = async (text: string, successText: string, fallbackText?: string) => {
     const copied = await copyTextToClipboard(text);
@@ -83,23 +88,34 @@ export default function ShareButtons({
     window.setTimeout(() => setMessage(""), 1600);
   };
 
-  const copyAndOpenTemplate = async (
-    platform: "note" | "facebook",
-    href: string,
-    successText: string,
-  ) => {
-    const template = buildShareTemplate({ platform, title, description, url });
-    const target = window.open("", "_blank", "noopener,noreferrer");
+  const copyNoteTemplate = async () => {
+    const template = buildShareTemplate({ platform: "note", title, description, url });
     const copied = await copyTextToClipboard(template);
-    if (copied) {
-      if (target) target.location.href = href;
-      else window.open(href, "_blank", "noopener,noreferrer");
-      setMessage(successText);
-      onShared?.(platform);
-    } else {
-      target?.close();
-      setMessage("テンプレートをコピーできませんでした。ブラウザのクリップボード許可を確認してください。");
+    setNoteReady(copied);
+    setMessage(copied
+      ? "投稿テンプレートをコピーしました。noteの記事本文へ貼り付けてください。"
+      : "テンプレートをコピーできませんでした。ブラウザのクリップボード許可を確認してください。");
+    window.setTimeout(() => setMessage(""), 2600);
+  };
+
+  const shareLine = async () => {
+    const lineTemplate = buildShareTemplate({ platform: "line", title, description, url });
+    const lineUrl = buildLineShareUrl({ title, description, url });
+    if (isMobileDevice() && typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title, text: lineTemplate, url });
+        onShared?.("line");
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
     }
+    if (isMobileDevice()) {
+      window.location.assign(lineUrl);
+      onShared?.("line");
+      return;
+    }
+    setMessage("PCブラウザではLINE共有画面を直接開けない場合があります。共有文をコピーしてください。");
     window.setTimeout(() => setMessage(""), 2600);
   };
 
@@ -130,30 +146,75 @@ export default function ShareButtons({
       {showLabel ? <span className={styles.shareLabel}>SNSで共有</span> : null}
       {renderShareLink("x", createXUrl(url, title, description, hashtags), "Xで共有", <ShareXIcon />, styles.shareButtonX)}
       {platforms.includes("note") ? (
-        <Button
-          variant="secondary"
-          size="sm"
-          className={styles.shareButtonNote}
-          icon={<ShareNoteIcon />}
-          disabled={disabled}
-          onClick={() => void copyAndOpenTemplate("note", "https://note.com/notes/new", "投稿用テンプレートをコピーしました。noteの記事画面で貼り付けてください。")}
-        >
-          noteへ投稿
-        </Button>
+        <>
+          <Button
+            variant="secondary"
+            size="sm"
+            className={styles.shareButtonNote}
+            icon={<ShareNoteIcon />}
+            disabled={disabled}
+            onClick={() => void copyNoteTemplate()}
+          >
+            テンプレートをコピー
+          </Button>
+          {!disabled && noteReady ? (
+            <Button
+              href={NOTE_NEW_POST_URL}
+              openInNewTab
+              variant="secondary"
+              size="sm"
+              className={styles.shareButtonNote}
+              icon={<ShareNoteIcon />}
+              onClick={() => onShared?.("note")}
+            >
+              noteを開く
+            </Button>
+          ) : null}
+        </>
       ) : null}
+      {renderShareLink("facebook", buildFacebookShareUrl({ title, description, url }), "Facebookで共有", <ShareFacebookIcon />, styles.shareButtonFacebook)}
       {platforms.includes("facebook") ? (
         <Button
-          variant="secondary"
+          variant="tertiary"
           size="sm"
-          className={styles.shareButtonFacebook}
-          icon={<ShareFacebookIcon />}
+          className={styles.shareButtonCopy}
           disabled={disabled}
-          onClick={() => void copyAndOpenTemplate("facebook", buildFacebookShareUrl({ title, description, url }), "投稿用テンプレートをコピーしました。Facebookの投稿欄へ貼り付けてください。")}
+          onClick={() => void copy(
+            buildShareTemplate({ platform: "facebook", title, description, url }),
+            "投稿文をコピーしました。",
+            buildShareTemplate({ platform: "facebook", title, description, url }),
+          )}
         >
-          Facebookへ投稿
+          投稿文をコピー
         </Button>
       ) : null}
-      {renderShareLink("line", buildLineShareUrl({ title, description, url }), "LINEで共有", <ShareLineIcon />, styles.shareButtonLine)}
+      {platforms.includes("line") ? (
+        <>
+          <Button
+            variant="secondary"
+            size="sm"
+            className={styles.shareButtonLine}
+            icon={<ShareLineIcon />}
+            disabled={disabled}
+            onClick={() => void shareLine()}
+          >
+            LINEで共有
+          </Button>
+          <Button
+            variant="tertiary"
+            size="sm"
+            className={styles.shareButtonCopy}
+            disabled={disabled}
+            onClick={() => void copy(
+              buildShareTemplate({ platform: "line", title, description, url }),
+              "共有文をコピーしました。",
+              buildShareTemplate({ platform: "line", title, description, url }),
+            )}
+          >
+            共有文をコピー
+          </Button>
+        </>
+      ) : null}
       {platforms.includes("copy") ? (
         <Button variant="tertiary" size="sm" className={styles.shareButtonCopy} disabled={disabled} icon={<ShareCopyIcon />} onClick={() => void copy(url, "コピーしました", url)}>
           URLをコピー
