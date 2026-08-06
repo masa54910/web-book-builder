@@ -223,7 +223,7 @@ export default function PromotionCenter({
           <textarea readOnly value={noteTemplate} rows={8} aria-label="note投稿テンプレート" />
           <button className="maker-secondary-button" type="button" aria-label="テンプレートをコピーしてnoteを開く" onClick={() => void openNote()}>
             <ServiceIcon service="note" className="promotion-action-icon promotion-action-icon-note" />
-            <span>テンプレをコピーしてnoteを開く</span>
+            <span>noteへ投稿</span>
           </button>
         </article>
         <article className="promotion-card">
