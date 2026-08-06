@@ -20,6 +20,12 @@ import { resolveSafeInternalReturnPath } from "../src/lib/returnTo";
 import { validateRequiredBookFields } from "../src/lib/editorValidation";
 import { computeInlineImagePopoverLayout } from "../src/lib/inlineImagePopover";
 import { buildEditorDraftFields, seedFromDraftFields, type EditorDraftState } from "../src/lib/editorDraftState";
+import {
+  AUTOSAVE_MAX_AGE_MS,
+  deleteAutosaveDraft,
+  loadAutosaveDraft,
+  saveAutosaveDraft,
+} from "../src/lib/browserBookStorage";
 import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildLineWebShareUrl, buildShareTemplate, buildXShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "../src/lib/shareTemplates";
 import { buildReaderFacebookShareUrl, buildReaderLineShareUrl, buildReaderLineWebShareUrl, buildReaderShareTemplate, buildReaderXShareUrl, READER_NOTE_NEW_POST_URL } from "../src/lib/readerShareTemplates";
 import { xIntentUrl } from "../src/lib/promotion";
@@ -513,6 +519,101 @@ assert.equal(restoredSeed.state.theme, "photo");
 assert.equal(restoredSeed.state.fontFamily, "serif");
 assert.equal(restoredSeed.state.coverImage, "https://cdn.example.com/cover.webp");
 assert.equal(restoredSeed.contentBlocks.some((block) => block.type === "image"), true);
+
+// Autosave snapshots are isolated by both user and book, tolerate malformed
+// storage, expire old data, and never persist transient image references.
+const autosaveStorage = new Map<string, string>();
+const fakeLocalStorage = {
+  getItem: (key: string) => autosaveStorage.get(key) ?? null,
+  setItem: (key: string, value: string) => {
+    autosaveStorage.set(key, value);
+  },
+  removeItem: (key: string) => {
+    autosaveStorage.delete(key);
+  },
+} as unknown as Storage;
+const globalWithWindow = globalThis as unknown as {
+  window?: { localStorage: Storage };
+};
+const previousWindow = globalWithWindow.window;
+globalWithWindow.window = { localStorage: fakeLocalStorage };
+try {
+  const autosaveFields = buildEditorDraftFields({
+    mode: "edit",
+    draftId: "book-1",
+    state: {
+      ...baseEditorState,
+      title: "自動保存タイトル",
+      rawText: "本文",
+      coverImage: "data:image/png;base64,transient",
+      coverImageStoragePath: "storage:book-assets/books/cover.png",
+    },
+    images: [
+      {
+        id: "pending-image",
+        fileName: "pending.png",
+        dataUrl: "blob:https://example.test/pending",
+        mimeType: "image/png",
+        size: 12,
+        caption: "",
+        insertChapter: "1",
+        orderInChapter: 1,
+      },
+    ],
+    contentBlocks: [
+      { id: "text-001", type: "text", content: "本文" },
+      {
+        id: "pending-image",
+        type: "image",
+        storagePath: "blob:https://example.test/pending",
+        fileName: "pending.png",
+        mimeType: "image/png",
+        width: 100,
+        height: 100,
+        fitMode: "contain",
+        pageMode: "inline",
+      },
+    ],
+  });
+  assert.equal(autosaveFields.coverImage, undefined);
+  assert.equal(autosaveFields.coverImageStoragePath, "storage:book-assets/books/cover.png");
+  assert.equal((autosaveFields.images as unknown[]).length, 0);
+  assert.equal((autosaveFields.contentBlocks as BookContentBlock[]).length, 1);
+
+  const savedAutosave = saveAutosaveDraft({ bookId: "book-1", userId: "user-1", fields: autosaveFields });
+  assert.ok(savedAutosave, "Autosave should be serializable");
+  assert.equal(loadAutosaveDraft("book-1", "user-1")?.fields.title, "自動保存タイトル");
+  assert.equal(loadAutosaveDraft("book-1", "other-user"), null, "User data must not cross restore boundaries");
+  assert.equal(autosaveStorage.has("webbookmaker:autosave:book-1"), true, "Other users' snapshots remain stored");
+  assert.equal(loadAutosaveDraft("book-2", "user-1"), null, "Book data must not cross restore boundaries");
+
+  fakeLocalStorage.setItem("webbookmaker:autosave:book-1", "{malformed");
+  assert.equal(loadAutosaveDraft("book-1", "user-1"), null, "Malformed JSON must be discarded safely");
+
+  const expired = saveAutosaveDraft({ bookId: "book-1", userId: "user-1", fields: autosaveFields });
+  assert.ok(expired);
+  fakeLocalStorage.setItem(
+    "webbookmaker:autosave:book-1",
+    JSON.stringify({ ...expired, fields: null }),
+  );
+  assert.equal(loadAutosaveDraft("book-1", "user-1"), null, "Malformed fields must be discarded safely");
+  saveAutosaveDraft({ bookId: "book-1", userId: "user-1", fields: autosaveFields });
+  fakeLocalStorage.setItem(
+    "webbookmaker:autosave:book-1",
+    JSON.stringify({ ...expired, savedAt: new Date(Date.now() - AUTOSAVE_MAX_AGE_MS - 1).toISOString() }),
+  );
+  assert.equal(loadAutosaveDraft("book-1", "user-1"), null, "Expired autosave must be discarded safely");
+  const finalAutosave = saveAutosaveDraft({ bookId: "book-1", userId: "user-1", fields: autosaveFields });
+  assert.ok(finalAutosave);
+  deleteAutosaveDraft("book-1");
+  assert.equal(loadAutosaveDraft("book-1", "user-1"), null, "Formal save cleanup should remove the autosave key");
+} finally {
+  if (previousWindow) {
+    globalWithWindow.window = previousWindow;
+  } else {
+    delete globalWithWindow.window;
+  }
+}
 
 const globalsCss = fs.readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
 assert.match(

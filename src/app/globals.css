@@ -3957,6 +3957,12 @@ body {
   background: linear-gradient(135deg, var(--wb-primary-light), var(--wb-primary-dark));
 }
 
+/* Keep the published state legible even when a shared badge rule is loaded
+   after the status palette. The badge dimensions and background are unchanged. */
+.dashboard-page .status-pill.statusPublished {
+  color: #ffffff;
+}
+
 .analytics-trend-bar {
   background: linear-gradient(90deg, var(--wb-primary), var(--wb-primary-light));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), var(--wb-shadow-soft);

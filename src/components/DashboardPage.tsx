@@ -147,7 +147,9 @@ export default function DashboardPage() {
         {visibleBooks.map((book) => (
           <article className="book-list-card" key={book.id}>
             <div>
-              <p className={`status-pill status-${book.status}`}>{book.status}</p>
+              <p className={`status-pill status-${book.status}${book.status === "published" ? " statusPublished" : ""}`}>
+                {book.status}
+              </p>
               <h2>{book.title}</h2>
               <p>{book.description || "説明文は未設定です。"}</p>
               <small>

@@ -1,4 +1,9 @@
-import { contentBlocksFromLegacy, type BookContentBlock, type UploadedBookImage } from "@/lib/bookProject";
+import {
+  contentBlocksFromLegacy,
+  contentBlocksToRawText,
+  type BookContentBlock,
+  type UploadedBookImage,
+} from "@/lib/bookProject";
 import type { SupportedLocale } from "@/lib/localization";
 import type { ThemeId } from "@/lib/productTypes";
 import type { BookThemeSettings } from "@/lib/themeSystem";
@@ -13,6 +18,7 @@ export type EditorDraftState = {
   copyrightText: string;
   rawText: string;
   coverImage?: string;
+  coverImageStoragePath?: string;
   coverFileName?: string;
   bindingDirection: "rtl" | "ltr";
   theme: ThemeId;
@@ -58,6 +64,33 @@ function asNumber(value: unknown, fallback: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+function isEphemeralImageReference(value: unknown) {
+  return typeof value === "string" && /^(?:data:|blob:)/i.test(value);
+}
+
+function isUsableStorageReference(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0 && !isEphemeralImageReference(value);
+}
+
+function isUsableDisplayReference(value: unknown) {
+  return isUsableStorageReference(value) && !/^storage:/i.test(String(value));
+}
+
+function isDraftContentBlock(value: unknown): value is BookContentBlock {
+  if (typeof value !== "object" || value === null) return false;
+  const block = value as Partial<BookContentBlock>;
+  if (block.type === "text") {
+    return typeof block.id === "string" && typeof block.content === "string";
+  }
+  return (
+    block.type === "image" &&
+    typeof block.id === "string" &&
+    typeof block.storagePath === "string" &&
+    typeof block.fileName === "string" &&
+    typeof block.mimeType === "string"
+  );
+}
+
 export function buildEditorDraftFields(input: {
   mode: "new" | "edit";
   state: EditorDraftState;
@@ -65,22 +98,44 @@ export function buildEditorDraftFields(input: {
   contentBlocks: BookContentBlock[];
   draftId: string;
 }) {
-  const safeImages: UploadedBookImage[] = input.images.map((image) => ({
-    ...image,
-    dataUrl: image.dataUrl.startsWith("data:image/") ? "" : image.dataUrl,
-  }));
+  const safeImages: UploadedBookImage[] = input.images
+    .map((image) => {
+      const storagePath = isUsableStorageReference(image.storagePath) ? image.storagePath : undefined;
+      const dataUrl = isUsableDisplayReference(image.dataUrl) ? image.dataUrl : "";
+      const displayUrl = isUsableDisplayReference(image.displayUrl) ? image.displayUrl : undefined;
+      return {
+        ...image,
+        storagePath,
+        dataUrl,
+        displayUrl,
+      };
+    })
+    .filter((image) => Boolean(image.storagePath || image.dataUrl || image.displayUrl));
 
-  const safeContentBlocks: BookContentBlock[] = input.contentBlocks.map((block) => {
-    if (block.type !== "image") return block;
-    return {
-      ...block,
-      storagePath: block.storagePath.startsWith("data:image/") ? "" : block.storagePath,
-      publicUrl: block.publicUrl?.startsWith("data:image/") ? "" : block.publicUrl,
-    };
-  });
+  const safeContentBlocks: BookContentBlock[] = input.contentBlocks
+    .map((block) => {
+      if (block.type !== "image") return block;
+      const storagePath = isUsableStorageReference(block.storagePath) ? block.storagePath : "";
+      const publicUrl = isUsableDisplayReference(block.publicUrl) ? block.publicUrl : undefined;
+      return {
+        ...block,
+        storagePath,
+        publicUrl,
+      };
+    })
+    .filter((block) => block.type === "text" || Boolean(block.storagePath || block.publicUrl));
+
+  const safeState = {
+    ...input.state,
+    rawText: safeContentBlocks.length ? contentBlocksToRawText(safeContentBlocks) : input.state.rawText,
+    coverImage: isUsableDisplayReference(input.state.coverImage) ? input.state.coverImage : undefined,
+    coverImageStoragePath: isUsableStorageReference(input.state.coverImageStoragePath)
+      ? input.state.coverImageStoragePath
+      : undefined,
+  };
 
   return {
-    ...input.state,
+    ...safeState,
     mode: input.mode,
     draftId: input.draftId,
     images: safeImages,
@@ -93,7 +148,7 @@ export function seedFromDraftFields(input: {
   initialState: EditorDraftState;
   fields?: Record<string, unknown>;
 }): DraftSeed {
-  if (input.mode !== "new" || !input.fields) {
+  if (!input.fields || typeof input.fields !== "object" || Array.isArray(input.fields)) {
     return {
       state: input.initialState,
       images: [],
@@ -111,21 +166,30 @@ export function seedFromDraftFields(input: {
           image !== null &&
           typeof (image as UploadedBookImage).id === "string" &&
           typeof (image as UploadedBookImage).fileName === "string" &&
-          typeof (image as UploadedBookImage).dataUrl === "string"
+          typeof (image as UploadedBookImage).dataUrl === "string" &&
+          Boolean(
+            (image as UploadedBookImage).dataUrl ||
+              (image as UploadedBookImage).storagePath ||
+              (image as UploadedBookImage).displayUrl,
+          )
         );
       })
     : [];
   const draftBlocks = Array.isArray(fields.contentBlocks)
-    ? (fields.contentBlocks as BookContentBlock[])
+    ? fields.contentBlocks.filter(isDraftContentBlock)
     : contentBlocksFromLegacy(rawText, draftImages);
   const fromLanding = asString(fields.source) === "landing";
   const hasAnyDraftContent = Boolean(
     asString(fields.title, input.initialState.title).trim() ||
       asString(fields.author, input.initialState.author).trim() ||
+      asString(fields.description, input.initialState.description).trim() ||
+      asString(fields.authorHandle, input.initialState.authorHandle).trim() ||
+      asString(fields.slug, input.initialState.slug).trim() ||
       rawText.trim() ||
       draftImages.length ||
       draftBlocks.length > 1 ||
-      asString(fields.coverImage).trim(),
+      asString(fields.coverImage).trim() ||
+      asString(fields.coverImageStoragePath).trim(),
   );
 
   const restoredState: EditorDraftState = {
@@ -138,7 +202,10 @@ export function seedFromDraftFields(input: {
     publishedAt: asString(fields.publishedAt, input.initialState.publishedAt),
     copyrightText: asString(fields.copyrightText, input.initialState.copyrightText),
     rawText,
-    coverImage: asString(fields.coverImage) || undefined,
+    coverImage: isUsableDisplayReference(fields.coverImage) ? asString(fields.coverImage) : undefined,
+    coverImageStoragePath: isUsableStorageReference(fields.coverImageStoragePath)
+      ? asString(fields.coverImageStoragePath)
+      : undefined,
     coverFileName: asString(fields.coverFileName) || undefined,
     bindingDirection: fields.bindingDirection === "ltr" ? "ltr" : "rtl",
     theme: asString(fields.theme, input.initialState.theme) as ThemeId,
@@ -157,7 +224,14 @@ export function seedFromDraftFields(input: {
     tableOfContentsItemsPerPage: asNumber(fields.tableOfContentsItemsPerPage, input.initialState.tableOfContentsItemsPerPage),
     visibility: asString(fields.visibility, input.initialState.visibility) as EditorDraftState["visibility"],
     status: asString(fields.status, input.initialState.status) as EditorDraftState["status"],
-    slug: hasAnyDraftContent && !fromLanding ? asString(fields.slug, input.initialState.slug) : "",
+    slug:
+      input.mode === "new"
+        ? hasAnyDraftContent && !fromLanding
+          ? asString(fields.slug, input.initialState.slug)
+          : ""
+        : hasAnyDraftContent
+          ? asString(fields.slug, input.initialState.slug)
+          : input.initialState.slug,
     authorHandle: asString(fields.authorHandle, input.initialState.authorHandle),
     authorBio: asString(fields.authorBio, input.initialState.authorBio),
     authorWebsiteUrl: asString(fields.authorWebsiteUrl, input.initialState.authorWebsiteUrl),

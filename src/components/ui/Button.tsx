@@ -49,6 +49,20 @@ function sizeClassName(size: Size) {
   return styles.buttonMd;
 }
 
+const BUTTON_CUSTOM_PROP_KEYS = new Set([
+  "variant",
+  "size",
+  "loading",
+  "fullWidth",
+  "icon",
+  "iconPosition",
+  "className",
+  "children",
+  "ariaLabel",
+  "href",
+  "openInNewTab",
+]);
+
 export default function Button(props: ButtonProps) {
   const {
     variant = "primary",
@@ -96,6 +110,9 @@ export default function Button(props: ButtonProps) {
 
   const nativeProps = props as NativeButtonProps;
   const { type = "button", disabled, ...rest } = nativeProps;
+  const nativeAttributes = Object.fromEntries(
+    Object.entries(rest).filter(([key]) => !BUTTON_CUSTOM_PROP_KEYS.has(key)),
+  );
 
   return (
     <button
@@ -103,7 +120,7 @@ export default function Button(props: ButtonProps) {
       aria-label={ariaLabel}
       className={classes}
       disabled={disabled || loading}
-      {...rest}
+      {...nativeAttributes}
     >
       {content}
     </button>

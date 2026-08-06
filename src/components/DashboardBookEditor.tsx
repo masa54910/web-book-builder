@@ -34,11 +34,13 @@ import {
   type CloudBookRecord,
 } from "@/lib/bookRepository";
 import {
+  deleteAutosaveDraft,
   deleteDraft,
   deletePreviewReturnState,
+  loadAutosaveDraft,
   loadDraft,
   loadPreviewReturnState,
-  saveDraft,
+  saveAutosaveDraft,
   savePreviewReturnState,
 } from "@/lib/browserBookStorage";
 import {
@@ -322,6 +324,54 @@ function contentBlocksFromRecord(record: CloudBookRecord) {
   return contentBlocksFromLegacy(record.rawText, imagesFromRecord(record));
 }
 
+function mergeRestoredImageBlocks(
+  restoredBlocks: BookContentBlock[],
+  persistedBlocks: BookContentBlock[],
+) {
+  const persistedImages = new Map(
+    persistedBlocks
+      .filter((block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image")
+      .map((block) => [block.id, block]),
+  );
+  return restoredBlocks
+    .map((block) => {
+      if (block.type !== "image") return block;
+      const persisted = persistedImages.get(block.id);
+      const displayUrl = isDisplayableImageUrl(block.publicUrl)
+        ? block.publicUrl
+        : persisted?.publicUrl;
+      const storagePath = block.storagePath || persisted?.storagePath || "";
+      return {
+        ...block,
+        storagePath,
+        publicUrl: displayUrl,
+      };
+    })
+    .filter((block) => block.type === "text" || isDisplayableImageUrl(block.publicUrl));
+}
+
+function mergeRestoredImages(
+  restoredImages: UploadedBookImage[],
+  persistedImages: UploadedBookImage[],
+) {
+  const persistedById = new Map(persistedImages.map((image) => [image.id, image]));
+  return restoredImages.map((image) => {
+    const persisted = persistedById.get(image.id);
+    const displayUrl = isDisplayableImageUrl(image.displayUrl)
+      ? image.displayUrl
+      : persisted?.displayUrl;
+    const dataUrl = isDisplayableImageUrl(image.dataUrl)
+      ? image.dataUrl
+      : displayUrl || persisted?.dataUrl || "";
+    return {
+      ...image,
+      storagePath: image.storagePath || persisted?.storagePath,
+      displayUrl,
+      dataUrl,
+    };
+  });
+}
+
 function stateFromPreviewProject(project: BookProject): EditorState {
   const coverStoragePath = project.config.coverImage;
   return {
@@ -451,6 +501,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [slugAvailabilityMessage, setSlugAvailabilityMessage] = useState("");
   const isMountedRef = useRef(true);
   const consumedPreviewDraftIdRef = useRef<string | null>(null);
+  const restoredAutosaveKeyRef = useRef<string | null>(null);
   const statusMessageTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -558,10 +609,54 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         const materializedProject = await materializeBookProjectAssets(book.bookProject);
         const materializedBook = { ...book, bookProject: materializedProject };
         if (!active) return;
-        setState(fromRecord(materializedBook));
+        const persistedState = fromRecord(materializedBook);
+        const persistedImages = imagesFromRecord(materializedBook);
+        const persistedBlocks = contentBlocksFromRecord(materializedBook);
+        const autosave = loadAutosaveDraft(materializedBook.id, user.id);
+        const persistedAt = Date.parse(materializedBook.updatedAt);
+        const autosaveAtValue = autosave ? Date.parse(autosave.savedAt) : Number.NaN;
+        const canRestoreAutosave = Boolean(
+          autosave &&
+            Number.isFinite(autosaveAtValue) &&
+            Number.isFinite(persistedAt) &&
+            autosaveAtValue > persistedAt,
+        );
+
+        if (canRestoreAutosave && autosave) {
+          const restored = seedFromDraftFields({
+            mode: "edit",
+            initialState: persistedState,
+            fields: autosave.fields,
+          });
+          if (restored.restored) {
+            const restoredBlocks = mergeRestoredImageBlocks(restored.contentBlocks, persistedBlocks);
+            const restoredImages = restored.images.length
+              ? mergeRestoredImages(restored.images, persistedImages)
+              : persistedImages;
+            setState({
+              ...restored.state,
+              coverImage: isDisplayableImageUrl(restored.state.coverImage)
+                ? restored.state.coverImage
+                : persistedState.coverImage,
+              coverImageStoragePath:
+                restored.state.coverImageStoragePath || persistedState.coverImageStoragePath,
+            });
+            setBookId(materializedBook.id);
+            setImages(restoredImages);
+            setContentBlocks(restoredBlocks.length ? restoredBlocks : persistedBlocks);
+            setAutosaveAt(autosave.savedAt);
+            setDirty(true);
+            setStatusMessage("前回の編集内容を復元しました。");
+            setEditorRevision((current) => current + 1);
+            return;
+          }
+        }
+
+        setState(persistedState);
         setBookId(materializedBook.id);
-        setImages(imagesFromRecord(materializedBook));
-        setContentBlocks(contentBlocksFromRecord(materializedBook));
+        setImages(persistedImages);
+        setContentBlocks(persistedBlocks);
+        setAutosaveAt(null);
         setEditorRevision((current) => current + 1);
         setStatusMessage("作品を読み込みました。");
       })
@@ -579,6 +674,40 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       active = false;
     };
   }, [didRestorePreviewDraft, hasRestoredDraft, mode, params.id, previewDraftId, user]);
+
+  useEffect(() => {
+    if (
+      mode !== "new" ||
+      !user ||
+      previewDraftId ||
+      draftSeed.restored ||
+      didRestorePreviewDraft ||
+      restoredAutosaveKeyRef.current === "new"
+    ) {
+      return;
+    }
+    restoredAutosaveKeyRef.current = "new";
+    const autosave = loadAutosaveDraft(null, user.id);
+    if (!autosave) return;
+    const restored = seedFromDraftFields({
+      mode: "new",
+      initialState: INITIAL_EDITOR,
+      fields: autosave.fields,
+    });
+    if (!restored.restored) return;
+    const restoreTimer = window.setTimeout(() => {
+      setState(restored.state);
+      setImages(restored.images);
+      setContentBlocks(restored.contentBlocks);
+      setAutosaveAt(autosave.savedAt);
+      setDirty(true);
+      setHasRestoredDraft(true);
+      setIsHydrated(true);
+      setStatusMessage("前回の編集内容を復元しました。");
+      setEditorRevision((current) => current + 1);
+    }, 0);
+    return () => window.clearTimeout(restoreTimer);
+  }, [didRestorePreviewDraft, draftSeed.restored, mode, previewDraftId, user]);
 
   useEffect(() => {
     if (pendingScrollRestore === null) return;
@@ -658,16 +787,22 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   }, [autosaveAt]);
 
   useEffect(() => {
-    if (mode !== "new") return;
+    if (!user) return;
     if (!dirty) return;
     if (!isHydrated || !hasRestoredDraft) return;
+    if (mode === "edit" && isLoading) return;
+    const targetBookId = mode === "edit" ? bookId || params.id || null : null;
     const timeoutId = window.setTimeout(() => {
-      const saved = saveDraft(autosaveDraftFields);
+      const saved = saveAutosaveDraft({
+        bookId: targetBookId,
+        userId: user.id,
+        fields: autosaveDraftFields,
+      });
       if (!saved) return;
       setAutosaveAt(saved.savedAt);
-    }, 700);
+    }, 900);
     return () => window.clearTimeout(timeoutId);
-  }, [autosaveDraftFields, dirty, hasRestoredDraft, isHydrated, mode]);
+  }, [autosaveDraftFields, bookId, dirty, hasRestoredDraft, isHydrated, isLoading, mode, params.id, user]);
 
   const validateRequiredBeforeAction = () => {
     const validation = validateRequiredBookFields({
@@ -972,6 +1107,16 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     if (coverInputRef.current) coverInputRef.current.value = "";
   };
 
+  const clearAutosaveAfterFormalPersistence = (persistedBookId?: string) => {
+    if (mode === "new") {
+      deleteAutosaveDraft(null);
+    } else {
+      deleteAutosaveDraft(bookId || params.id || null);
+    }
+    if (persistedBookId) deleteAutosaveDraft(persistedBookId);
+    setAutosaveAt(null);
+  };
+
   const handleCanonicalSave = async () => {
     if (!user || isSaving) return null;
     if (!validateRequiredBeforeAction()) return null;
@@ -988,6 +1133,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       if (!isMountedRef.current) return saved;
       replaceEditorStateFromCanonicalPayload(saved.project);
       setDirty(false);
+      clearAutosaveAfterFormalPersistence(saved.bookId);
       setSlugAvailabilityMessage(saved.project.slug ? SLUG_AVAILABLE_MESSAGE : "");
       showTemporaryStatusMessage(SAVE_SUCCESS_MESSAGE);
       trackEvent("book_saved", { bookId: saved.bookId });
@@ -1070,6 +1216,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       if (!isMountedRef.current) return;
       replaceEditorStateFromCanonicalPayload(published.project);
       setDirty(false);
+      clearAutosaveAfterFormalPersistence(published.bookId);
       if (mode === "new" || didRestorePreviewDraft) deleteDraft();
       if (didRestorePreviewDraft || previewDraftId) {
         deletePreviewReturnState(previewDraftId || undefined);

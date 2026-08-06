@@ -4107,10 +4107,15 @@
 /* Final detail polish: depth and brand presentation only. */
 .heroTitle,
 .heroTitleLine {
+  background: linear-gradient(180deg, #0f2f57 0%, #1f5f9e 55%, #2c83d4 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
   text-shadow:
-    0 1px 0 rgba(255, 255, 255, .8),
-    0 2px 3px rgba(18, 67, 112, .14),
-    0 6px 18px rgba(54, 139, 214, .10);
+    0 1px 0 rgba(255, 255, 255, .92),
+    0 2px 0 rgba(15, 47, 87, .14),
+    0 4px 8px rgba(15, 47, 87, .22),
+    0 10px 24px rgba(44, 131, 212, .16);
 }
 
 .footerRow {
