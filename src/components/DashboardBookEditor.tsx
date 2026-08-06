@@ -50,7 +50,7 @@ import {
   isStorageReference,
   materializeBookProjectAssets,
 } from "@/lib/bookAssetStorage";
-import { createSlugCandidate, normalizeSlugInput, validateSlug } from "@/lib/slug";
+import { normalizeSlugInput, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
 import { safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
 import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
@@ -353,9 +353,11 @@ function stateFromPreviewProject(project: BookProject): EditorState {
     imageLayout: project.config.themeSettings?.imageLayout || "framed",
     charactersPerPage: project.config.charactersPerPage,
     tableOfContentsItemsPerPage: project.config.tableOfContentsItemsPerPage,
-    // Preserve the user-entered slug through a Preview round trip. The
-    // title-derived fallback is only for legacy previews without slug data.
-    slug: project.config.slug || createSlugCandidate(project.config.title),
+    // Preserve the user-entered slug through a Preview round trip. Legacy
+    // previews without slug data must not silently become the fixed `book`
+    // fallback (especially for non-Latin titles); let validation guide the
+    // user instead.
+    slug: project.config.slug || "",
     visibility: project.config.publication?.visibility || "private",
     status: project.config.publication?.status || "draft",
     authorHandle: project.config.authorProfile?.handle || "",
