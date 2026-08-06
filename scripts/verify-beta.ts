@@ -338,7 +338,11 @@ assert.match(
   "Facebook share URL should be encoded and include the public URL",
 );
 assert.equal(NOTE_NEW_POST_URL, "https://note.com/new", "Note should use the normal new-post destination");
-assert.equal(xIntentUrl("作品タイトル\nhttps://example.com/books/a").startsWith("about:blank"), false, "X share must never target about:blank");
+assert.match(
+  xIntentUrl("作品タイトル\nhttps://example.com/books/a"),
+  /^https:\/\/twitter\.com\/intent\/tweet\?text=/,
+  "X share should resolve to the direct compose URL",
+);
 const lineTemplate = buildLineShareTemplate({
   title: "作品タイトル",
   description: "紹介",
