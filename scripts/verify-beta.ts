@@ -268,18 +268,53 @@ assert.equal(resolveSafeInternalReturnPath("//evil.example/path"), "/dashboard")
 assert.equal(resolveSafeInternalReturnPath("https://evil.example/path"), "/dashboard");
 assert.equal(resolveSafeInternalReturnPath("reader"), "/dashboard");
 
-const requiredMissingTitle = validateRequiredBookFields({ title: "   ", authorName: "Author" });
+const requiredBase = {
+  title: "Title",
+  authorName: "Author",
+  description: "Description",
+  authorHandle: "author",
+  slug: "safe-book-01",
+};
+const requiredMissingTitle = validateRequiredBookFields({ ...requiredBase, title: "   " });
 assert.equal(requiredMissingTitle.isValid, false);
-assert.equal(requiredMissingTitle.globalError, "未入力項目があります。");
+assert.equal(requiredMissingTitle.globalError, "未入力の必須項目があります。");
 assert.equal(requiredMissingTitle.fieldErrors.title, "タイトルを入力してください。");
+assert.equal(requiredMissingTitle.firstMissingField, "title");
 
-const requiredMissingAuthor = validateRequiredBookFields({ title: "Title", authorName: "  " });
+const requiredMissingAuthor = validateRequiredBookFields({ ...requiredBase, authorName: "  " });
 assert.equal(requiredMissingAuthor.isValid, false);
-assert.equal(requiredMissingAuthor.fieldErrors.author, "作者名を入力してください。");
+assert.equal(requiredMissingAuthor.fieldErrors.author, "著者名を入力してください。");
 
-const requiredBothPresent = validateRequiredBookFields({ title: "Title", authorName: "Author" });
+const requiredMissingDescription = validateRequiredBookFields({ ...requiredBase, description: "\t" });
+assert.equal(requiredMissingDescription.fieldErrors.description, "説明文を入力してください。");
+
+const requiredMissingAuthorHandle = validateRequiredBookFields({ ...requiredBase, authorHandle: "  " });
+assert.equal(requiredMissingAuthorHandle.fieldErrors.authorHandle, "作者ハンドルを入力してください。");
+
+const requiredMissingSlug = validateRequiredBookFields({ ...requiredBase, slug: "\n" });
+assert.equal(requiredMissingSlug.fieldErrors.slug, "公開URLを入力してください。");
+
+const invalidHandle = validateRequiredBookFields({ ...requiredBase, authorHandle: "日本語" });
+assert.equal(invalidHandle.isValid, false);
+assert.equal(invalidHandle.globalError, "");
+assert.equal(invalidHandle.fieldErrors.authorHandle, "作者ハンドルは半角英数字とハイフンで入力してください。");
+
+const invalidShortHandle = validateRequiredBookFields({ ...requiredBase, authorHandle: "a" });
+assert.equal(invalidShortHandle.fieldErrors.authorHandle, "作者ハンドルは半角英数字とハイフンで入力してください。");
+
+const invalidSlug = validateRequiredBookFields({ ...requiredBase, slug: "my book" });
+assert.equal(invalidSlug.isValid, false);
+assert.equal(invalidSlug.fieldErrors.slug, "公開URLは半角英数字とハイフンで入力してください。");
+
+const requiredBothPresent = validateRequiredBookFields(requiredBase);
 assert.equal(requiredBothPresent.isValid, true);
 assert.equal(requiredBothPresent.globalError, "");
+assert.deepEqual(requiredBothPresent.fieldErrors, {});
+
+// The editor uses this result as the save/publish gate: an invalid payload
+// must return before either canonical command can be called.
+assert.equal(requiredMissingTitle.isValid, false);
+assert.equal(requiredBothPresent.isValid, true);
 
 const desktopPopover = computeInlineImagePopoverLayout({
   anchorRect: { top: 860, left: 1320, right: 1368, bottom: 908, width: 48, height: 48 },

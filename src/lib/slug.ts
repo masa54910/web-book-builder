@@ -24,8 +24,12 @@ export function isValidSlug(slug: string) {
 }
 
 export function validateSlug(slug: string) {
-  const normalized = normalizeSlugInput(slug);
-  if (!normalized) return "";
+  const normalizedInput = slug.normalize("NFKC").toLowerCase();
+  if (!normalizedInput.trim()) return "";
+  if (!/^[a-z0-9-]+$/.test(normalizedInput)) {
+    return "公開URLは半角英数字とハイフンで入力してください。";
+  }
+  const normalized = normalizeSlugInput(normalizedInput);
   if (!isValidSlug(normalized)) return "公開URLは半角英小文字・半角数字・ハイフンで入力してください。";
   if (BETA_LIMITS.reservedSlugs.includes(normalized as never)) {
     return "このURLはシステムで予約されています。別のURLを指定してください。";

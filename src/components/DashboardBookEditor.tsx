@@ -52,11 +52,11 @@ import {
 } from "@/lib/bookAssetStorage";
 import { createSlugCandidate, normalizeSlugInput, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
-import { normalizeHandle, safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
+import { safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
 import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
 import { colorPresets, contrastRatio, getThemePreset, themePresets, type BookThemeSettings } from "@/lib/themeSystem";
 import { buildEditorDraftFields, seedFromDraftFields } from "@/lib/editorDraftState";
-import { validateRequiredBookFields } from "@/lib/editorValidation";
+import { validateRequiredBookFields, type RequiredBookFieldKey } from "@/lib/editorValidation";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
 import CharacterAssistant from "@/components/CharacterAssistant";
 import InlineManuscriptEditor from "@/components/InlineManuscriptEditor";
@@ -415,6 +415,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const { user } = useAuth();
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const authorInputRef = useRef<HTMLInputElement | null>(null);
+  const descriptionInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const authorHandleInputRef = useRef<HTMLInputElement | null>(null);
+  const slugInputRef = useRef<HTMLInputElement | null>(null);
   const manuscriptInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const [bookId, setBookId] = useState<string | undefined>(params.id);
@@ -664,29 +667,36 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     const validation = validateRequiredBookFields({
       title: state.title,
       authorName: state.author,
+      description: state.description,
+      authorHandle: state.authorHandle,
+      slug: state.slug,
     });
 
     setErrors((current) => {
       const next = { ...current };
-      if (validation.fieldErrors.title) {
-        next.title = validation.fieldErrors.title;
-      } else {
-        delete next.title;
-      }
-      if (validation.fieldErrors.author) {
-        next.author = validation.fieldErrors.author;
-      } else {
-        delete next.author;
-      }
+      (['title', 'author', 'description', 'authorHandle', 'slug'] as const).forEach((key) => {
+        const message = validation.fieldErrors[key];
+        if (message) {
+          next[key] = message;
+        } else {
+          delete next[key];
+        }
+      });
       return next;
     });
 
     setRequiredErrorMessage(validation.globalError);
     if (validation.isValid) return true;
 
-    const firstMissing = !validation.hasTitle ? titleInputRef.current : authorInputRef.current;
+    const firstMissing = {
+      title: titleInputRef.current,
+      author: authorInputRef.current,
+      description: descriptionInputRef.current,
+      authorHandle: authorHandleInputRef.current,
+      slug: slugInputRef.current,
+    }[validation.firstMissingField || "title"];
     firstMissing?.scrollIntoView({ behavior: "smooth", block: "center" });
-    firstMissing?.focus();
+    firstMissing?.focus({ preventScroll: true });
     return false;
   };
 
@@ -701,22 +711,31 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       }
       return next;
     });
-    if (key === "title" || key === "author") {
+
+    if (key === "title" || key === "author" || key === "description" || key === "authorHandle" || key === "slug") {
+      const requiredKey: RequiredBookFieldKey = key === "author" ? "author" : (key as RequiredBookFieldKey);
+      const nextRequiredState = {
+        ...state,
+        [key]: value,
+      };
+      const validation = validateRequiredBookFields({
+        title: nextRequiredState.title,
+        authorName: nextRequiredState.author,
+        description: nextRequiredState.description,
+        authorHandle: nextRequiredState.authorHandle,
+        slug: nextRequiredState.slug,
+      });
       setErrors((current) => {
         const next = { ...current };
-        if (key === "title" && String(value).trim().length > 0) {
-          delete next.title;
-        }
-        if (key === "author" && String(value).trim().length > 0) {
-          delete next.author;
+        const message = validation.fieldErrors[requiredKey];
+        if (message) {
+          next[requiredKey] = message;
+        } else if (String(value).trim().length > 0) {
+          delete next[requiredKey];
         }
         return next;
       });
-      const nextTitle = key === "title" ? String(value) : state.title;
-      const nextAuthor = key === "author" ? String(value) : state.author;
-      if (nextTitle.trim().length > 0 && nextAuthor.trim().length > 0) {
-        setRequiredErrorMessage("");
-      }
+      setRequiredErrorMessage(validation.globalError);
     }
     if (key === "slug") {
       setSlugAvailabilityMessage("");
@@ -778,9 +797,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     if (!user) return;
     if (!state.slug.trim()) return;
 
-    const normalizedSlug = normalizeSlugInput(state.slug || "");
-    const formatError = validateSlug(normalizedSlug);
+    const formatError = validateSlug(state.slug);
     if (formatError) return;
+    const normalizedSlug = normalizeSlugInput(state.slug || "");
 
     let active = true;
     const timeoutId = window.setTimeout(() => {
@@ -949,6 +968,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
   const handleCanonicalSave = async () => {
     if (!user || isSaving) return null;
+    if (!validateRequiredBeforeAction()) return null;
     if (pendingImageCount > 0) {
       setStatusMessage("画像の読み込みが完了するまで保存できません。");
       return null;
@@ -1108,66 +1128,101 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         <div className="maker-card">
           <h2>基本情報</h2>
           <div className="maker-grid">
-            <label>
-              <span>タイトル 必須</span>
+            <FormField id="book-title" label="タイトル" required error={errors.title}>
               <input
+                id="book-title"
                 ref={titleInputRef}
                 value={state.title}
+                required
                 onChange={(event) => update("title", event.target.value)}
                 aria-invalid={Boolean(errors.title)}
-                aria-describedby={errors.title ? "editor-title-error" : undefined}
+                aria-describedby={errors.title ? "book-title-error" : undefined}
               />
-              {errors.title ? <small id="editor-title-error" className="form-error">{errors.title}</small> : null}
-            </label>
-            <label>
-              <span>著者名 必須</span>
+            </FormField>
+            <FormField id="book-author-name" label="著者名" required error={errors.author}>
               <input
+                id="book-author-name"
                 ref={authorInputRef}
                 value={state.author}
+                required
                 onChange={(event) => update("author", event.target.value)}
                 aria-invalid={Boolean(errors.author)}
-                aria-describedby={errors.author ? "editor-author-error" : undefined}
+                aria-describedby={errors.author ? "book-author-name-error" : undefined}
               />
-              {errors.author ? <small id="editor-author-error" className="form-error">{errors.author}</small> : null}
-            </label>
+            </FormField>
             <label>
               <span>サブタイトル</span>
               <input value={state.subtitle} onChange={(event) => update("subtitle", event.target.value)} />
             </label>
-            <FormField id="editor-slug" label="公開URL" error={errors.slug || slugFormatError}>
+            <FormField
+              id="book-public-slug"
+              label="公開URL"
+              required
+              helpText="半角英数字とハイフンで入力してください。公開後の作品URLに使用されます。"
+              error={errors.slug || slugFormatError}
+            >
               <div className="slug-input-wrap">
                 <span className="slug-prefix">{publicBooksBaseUrl}</span>
                 <input
-                  id="editor-slug"
+                  id="book-public-slug"
+                  ref={slugInputRef}
                   value={state.slug}
+                  required
                   autoCapitalize="none"
                   autoCorrect="off"
                   autoComplete="off"
                   spellCheck={false}
-                  onChange={(event) => update("slug", normalizeSlugInput(event.target.value))}
+                  aria-invalid={Boolean(errors.slug || slugFormatError)}
+                  aria-describedby={`${errors.slug || slugFormatError ? "book-public-slug-error " : ""}book-public-slug-help`}
+                  onChange={(event) => update("slug", event.target.value.normalize("NFKC").toLowerCase())}
                 />
               </div>
               {!errors.slug && !slugFormatError && slugAvailabilityMessage ? <small className="maker-note">{slugAvailabilityMessage}</small> : null}
             </FormField>
           </div>
-          <label className="maker-full">
-            <span>説明文</span>
-            <textarea rows={3} value={state.description} onChange={(event) => update("description", event.target.value)} />
-          </label>
+          <FormField
+            id="book-description"
+            label="説明文"
+            required
+            helpText="作品の紹介やSNS共有、検索結果の説明に使用されます。"
+            error={errors.description}
+            className="maker-full"
+          >
+            <textarea
+              id="book-description"
+              ref={descriptionInputRef}
+              rows={3}
+              value={state.description}
+              required
+              onChange={(event) => update("description", event.target.value)}
+              aria-invalid={Boolean(errors.description)}
+              aria-describedby={errors.description ? "book-description-error book-description-help" : "book-description-help"}
+            />
+          </FormField>
         </div>
 
         <div className="maker-card">
           <h2>作者ページ</h2>
           <p className="maker-note">公開作品は作者ページから一覧表示できます。例：/authors/mako</p>
           <div className="maker-grid">
-            <label>
-              <span>作者ハンドル</span>
+            <FormField
+              id="book-author-handle"
+              label="作者ハンドル"
+              required
+              helpText="作者ページのURLに使用します。半角英数字とハイフンで入力してください。例：mako"
+              error={errors.authorHandle}
+            >
               <input
+                id="book-author-handle"
+                ref={authorHandleInputRef}
                 value={state.authorHandle}
-                placeholder="@mako"
-                onChange={(event) => update("authorHandle", normalizeHandle(event.target.value, ""))}
+                required
+                placeholder="mako"
+                aria-invalid={Boolean(errors.authorHandle)}
+                aria-describedby={errors.authorHandle ? "book-author-handle-error book-author-handle-help" : "book-author-handle-help"}
+                onChange={(event) => update("authorHandle", event.target.value.normalize("NFKC").replace(/^@+/, "").toLowerCase())}
               />
-            </label>
+            </FormField>
             <label>
               <span>ホームページ</span>
               <input value={state.authorWebsiteUrl} onChange={(event) => update("authorWebsiteUrl", event.target.value)} placeholder="https://example.com" />
