@@ -87,6 +87,7 @@ export default async function PublicBookRoute({ params }: { params: Promise<{ sl
           config={sample.config}
           chapters={sample.chapters}
           images={sample.images}
+          displayMode="published"
           shareUrl={publicBookUrl(decodedSlug)}
         />
       </div>

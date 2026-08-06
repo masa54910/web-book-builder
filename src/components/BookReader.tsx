@@ -52,6 +52,7 @@ export default function BookReader({
   config,
   chapters,
   images,
+  displayMode = "published",
   editHref,
   cloudBookId,
   shareUrl,
@@ -62,6 +63,7 @@ export default function BookReader({
   config: BookConfig;
   chapters: NovelChapter[];
   images: ImageManifestRow[];
+  displayMode?: "preview" | "published";
   editHref?: string;
   cloudBookId?: string;
   shareUrl?: string;
@@ -482,14 +484,16 @@ export default function BookReader({
         onAutoFlipLoopChange={setAutoFlipLoop}
         onAutoFlipStartModeChange={setAutoFlipStartMode}
       />
-      <ShareTools
-        bookId={config.bookId}
-        cloudBookId={cloudBookId}
-        title={config.title}
-        description={shareDescription}
-        shareUrl={shareUrl}
-        shareDisabledReason={shareDisabledReason}
-      />
+      {displayMode === "published" ? (
+        <ShareTools
+          bookId={config.bookId}
+          cloudBookId={cloudBookId}
+          title={config.title}
+          description={shareDescription}
+          shareUrl={shareUrl}
+          shareDisabledReason={shareDisabledReason}
+        />
+      ) : null}
       <p className="reader-help">{helpText}</p>
     </main>
   );

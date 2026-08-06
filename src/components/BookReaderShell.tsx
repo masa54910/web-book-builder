@@ -13,6 +13,7 @@ export default function BookReaderShell({
   config,
   chapters,
   images,
+  displayMode = "published",
   editHref,
   cloudBookId,
   shareUrl,
@@ -23,6 +24,7 @@ export default function BookReaderShell({
   config: BookConfig;
   chapters: NovelChapter[];
   images: ImageManifestRow[];
+  displayMode?: "preview" | "published";
   editHref?: string;
   cloudBookId?: string;
   shareUrl?: string;
@@ -39,6 +41,7 @@ export default function BookReaderShell({
       config={config}
       chapters={chapters}
       images={images}
+      displayMode={displayMode}
       editHref={editHref}
       cloudBookId={cloudBookId}
       shareUrl={shareUrl}
