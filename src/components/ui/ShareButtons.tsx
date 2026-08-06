@@ -145,7 +145,7 @@ export default function ShareButtons({
           disabled={disabled}
           onClick={() => void copyAndOpenTemplate("note", "https://note.com/notes/new", "投稿用テンプレートをコピーしました。noteの記事画面で貼り付けてください。")}
         >
-          noteで共有
+          noteへ投稿
         </Button>
       ) : null}
       {platforms.includes("facebook") ? (
@@ -157,7 +157,7 @@ export default function ShareButtons({
           disabled={disabled}
           onClick={() => void copyAndOpenTemplate("facebook", buildFacebookShareUrl({ title, description, url }), "投稿用テンプレートをコピーしました。Facebookの投稿欄へ貼り付けてください。")}
         >
-          Facebookで共有
+          Facebookへ投稿
         </Button>
       ) : null}
       {renderShareLink("line", createLineUrl(url, title, description), "LINEで共有", <ShareLineIcon />, styles.shareButtonLine)}
