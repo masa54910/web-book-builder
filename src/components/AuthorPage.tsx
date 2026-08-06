@@ -6,7 +6,29 @@ import { useEffect, useMemo, useState } from "react";
 
 import AppHeader from "@/components/AppHeader";
 import HomeBackLink from "@/components/HomeBackLink";
+import { materializeBookProjectAssets, resolveStorageUrl } from "@/lib/bookAssetStorage";
 import { listPublishedBooksByAuthorHandle, type CloudBookRecord } from "@/lib/bookRepository";
+
+function AuthorBookCover({ book }: { book: CloudBookRecord }) {
+  const [hasError, setHasError] = useState(false);
+  const coverUrl = book.coverPath || book.bookProject.config.coverImageUrl || "";
+
+  if (!coverUrl || hasError) {
+    return (
+      <div className="author-book-cover author-book-cover-fallback" aria-label={`${book.title}の表紙`}>
+        <span className="author-book-cover-fallback-title">{book.title || "WebBookMaker"}</span>
+        <small>WebBookMaker</small>
+      </div>
+    );
+  }
+
+  return (
+    <div className="author-book-cover">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={coverUrl} alt={`${book.title}の表紙`} onError={() => setHasError(true)} />
+    </div>
+  );
+}
 
 function estimateReadingMinutes(book: CloudBookRecord) {
   const minutes = Math.max(1, Math.ceil(book.rawText.length / 600));
@@ -23,7 +45,16 @@ export default function AuthorPage() {
   useEffect(() => {
     if (!handle) return;
     listPublishedBooksByAuthorHandle(handle)
-      .then(setBooks)
+      .then(async (records) => {
+        const hydrated = await Promise.all(
+          records.map(async (book) => {
+            const bookProject = await materializeBookProjectAssets(book.bookProject);
+            const coverPath = bookProject.config.coverImageUrl || await resolveStorageUrl(book.coverPath);
+            return { ...book, bookProject, coverPath };
+          }),
+        );
+        setBooks(hydrated);
+      })
       .catch(() => setMessage("作者ページを読み込めませんでした。"))
       .finally(() => setIsLoading(false));
   }, [handle]);
@@ -79,14 +110,7 @@ export default function AuthorPage() {
         <div className="author-book-grid">
           {books.map((book) => (
             <article className="author-book-card" key={book.id}>
-              <div className="author-book-cover">
-                {book.coverPath ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={book.coverPath} alt="" />
-                ) : (
-                  <span>{book.title.slice(0, 1)}</span>
-                )}
-              </div>
+              <AuthorBookCover book={book} />
               <div>
                 <h3>{book.title}</h3>
                 <p>{book.description || "説明文は未設定です。"}</p>

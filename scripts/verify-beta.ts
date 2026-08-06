@@ -21,6 +21,7 @@ import { validateRequiredBookFields } from "../src/lib/editorValidation";
 import { computeInlineImagePopoverLayout } from "../src/lib/inlineImagePopover";
 import { buildEditorDraftFields, seedFromDraftFields, type EditorDraftState } from "../src/lib/editorDraftState";
 import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildLineWebShareUrl, buildShareTemplate, buildXShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "../src/lib/shareTemplates";
+import { buildReaderFacebookShareUrl, buildReaderLineShareUrl, buildReaderLineWebShareUrl, buildReaderShareTemplate, buildReaderXShareUrl, READER_NOTE_NEW_POST_URL } from "../src/lib/readerShareTemplates";
 import { xIntentUrl } from "../src/lib/promotion";
 
 function blockSignature(blocks: BookContentBlock[]) {
@@ -383,6 +384,26 @@ const lineWebShareUrl = buildLineWebShareUrl({
 });
 assert.match(lineWebShareUrl, /^https:\/\/social-plugins\.line\.me\/lineit\/share\?url=/, "Desktop LINE share should use the LINE web share endpoint");
 assert.ok(lineWebShareUrl.includes(encodeURIComponent(lineTemplate)), "Desktop LINE share should preserve the complete template");
+
+const readerShareInput = {
+  title: "星降る街の小さな記録",
+  description: "孤独な少女と、星をめぐる小さな奇跡の物語。",
+  url: "https://webbookmaker.vercel.app/books/star-town-records",
+};
+const readerTemplate = buildReaderShareTemplate(readerShareInput);
+assert.ok(readerTemplate.startsWith("おすすめのWebブック"), "Reader shares should use reader-facing copy");
+assert.ok(readerTemplate.includes(readerShareInput.title), "Reader share should include the current title");
+assert.ok(readerTemplate.includes(readerShareInput.url), "Reader share should include the public URL");
+assert.equal(readerTemplate.includes("undefined"), false, "Reader share should never contain undefined");
+assert.equal(readerTemplate.includes("[object Object]"), false, "Reader share should never contain object text");
+assert.notEqual(readerTemplate, noteTemplate, "Reader and author share templates should remain separate");
+assert.match(buildReaderXShareUrl(readerShareInput), /^https:\/\/twitter\.com\/intent\/tweet\?text=/);
+assert.match(buildReaderFacebookShareUrl(readerShareInput), /^https:\/\/www\.facebook\.com\/sharer\/sharer\.php\?u=/);
+assert.ok(buildReaderFacebookShareUrl(readerShareInput).includes(encodeURIComponent(readerShareInput.url)));
+assert.match(buildReaderLineShareUrl(readerShareInput), /^https:\/\/line\.me\/R\/share\?text=/);
+assert.ok(buildReaderLineShareUrl(readerShareInput).includes(encodeURIComponent(readerTemplate)));
+assert.match(buildReaderLineWebShareUrl(readerShareInput), /^https:\/\/social-plugins\.line\.me\/lineit\/share\?/);
+assert.equal(READER_NOTE_NEW_POST_URL, NOTE_NEW_POST_URL);
 
 // The editor uses this result as the save/publish gate: an invalid payload
 // must return before either canonical command can be called.

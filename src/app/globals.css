@@ -812,9 +812,34 @@ a {
   border-radius: 10px;
   place-items: center;
   color: #fffaf0;
-  background: #111821;
+  background: linear-gradient(145deg, #f6ead6, #d8e9df);
   font-family: Georgia, serif;
   font-size: 30px;
+}
+
+.author-book-cover-fallback {
+  padding: 10px;
+  color: #24493e;
+  font-family: "Noto Sans JP", "Yu Gothic UI", sans-serif;
+  text-align: center;
+}
+
+.author-book-cover-fallback-title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.author-book-cover-fallback small {
+  display: block;
+  margin-top: 8px;
+  color: #6b7f75;
+  font-size: 8px;
+  letter-spacing: .08em;
 }
 
 .author-book-cover img {
@@ -2360,6 +2385,11 @@ a {
   justify-content: center;
   gap: 8px;
   font-size: 12px;
+}
+
+.reader-share-center {
+  width: min(1080px, 100%);
+  margin: 20px auto 0;
 }
 
 .external-links,
