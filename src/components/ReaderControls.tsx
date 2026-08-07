@@ -26,8 +26,10 @@ export default function ReaderControls({
   const [pageInput, setPageInput] = useState("");
   const readableTotal = Math.max(total - 2, 1);
   const displayedPageInput = pageInput || String(Math.min(Math.max(current, 1), readableTotal));
-  const nextLabel = bindingDirection === "rtl" ? "次へ ←" : "次へ →";
-  const previousLabel = bindingDirection === "rtl" ? "→ 前へ" : "← 前へ";
+  // Keep the handlers and binding direction untouched; only the visible arrows
+  // follow the requested reading-order presentation.
+  const nextLabel = bindingDirection === "rtl" ? "→ 次へ" : "次へ →";
+  const previousLabel = "← 前へ";
 
   const submitPageJump = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

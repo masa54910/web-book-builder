@@ -2059,13 +2059,6 @@ button.reader-edit-link:disabled {
   transform-origin: var(--cover-author-origin, left center);
 }
 
-.cover-author::before {
-  width: 35px;
-  height: 1px;
-  background: var(--book-accent-color);
-  content: "";
-}
-
 /* Gate8.5-A cover layouts. Layout 01 intentionally keeps the legacy arrangement. */
 .cover-layout-layout-02 {
   align-items: center;
@@ -2654,6 +2647,19 @@ button.reader-edit-link:disabled {
   align-items: center;
   justify-content: center;
   text-align: center;
+}
+
+.back-cover-brand {
+  position: relative;
+  z-index: 2;
+  max-width: 100%;
+  color: #fff;
+  font-family: Georgia, "Yu Mincho", serif;
+  font-size: clamp(10px, 1.7vw, 13px);
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.38);
+  white-space: nowrap;
 }
 
 .reader-controls {

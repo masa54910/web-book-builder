@@ -81,7 +81,9 @@ export default function BookCover({ back = false, data }: { back?: boolean; data
 
   if (back) {
     return (
-      <div className={`back-cover-page book-cover-style-${coverStyle} cover-layout-${design.layout}`} style={style} />
+      <div className={`back-cover-page book-cover-style-${coverStyle} cover-layout-${design.layout}`} style={style}>
+        <span className="back-cover-brand" aria-label="WebBookMaker">WebBookMaker</span>
+      </div>
     );
   }
 
