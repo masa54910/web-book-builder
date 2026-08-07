@@ -23,6 +23,34 @@ type Props = {
 };
 
 type RecommendationIconKind = "note" | "book" | "research" | "knowledge";
+type HeroInfoIconKind = "document" | "book" | "folder";
+
+function HeroInfoIcon({ kind }: { kind: HeroInfoIconKind }) {
+  if (kind === "document") {
+    return (
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M8 3h11l5 5v21H8z" />
+        <path d="M19 3v6h5M12 15h8M12 20h8M12 25h5" />
+      </svg>
+    );
+  }
+
+  if (kind === "book") {
+    return (
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M4 6.5A3.5 3.5 0 0 1 7.5 3H28v24H7.5A3.5 3.5 0 0 1 4 23.5z" />
+        <path d="M4 6.5v17M16 5v21M10 10h3M20 10h4M20 15h4" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M4 11h9l2 3h13v14H4z" />
+      <path d="M4 11V7h9l2 4M8 20h16" />
+    </svg>
+  );
+}
 
 function RecommendationIcon({ kind }: { kind: RecommendationIconKind }) {
   if (kind === "note") {
@@ -98,20 +126,20 @@ export default function Ver2Hero({
             </h1>
             <div className={styles.heroInfoCard} aria-label="WebBookMakerの特徴">
               <div className={styles.heroInfoRow}>
-                <span className={styles.heroInfoIcon} aria-hidden="true">▤</span>
+                <span className={styles.heroInfoIcon} aria-hidden="true"><HeroInfoIcon kind="document" /></span>
                 <div>
                   <strong>PDFを作る必要はありません。</strong>
                   <span>直接入力でも大丈夫です。（保存機能あり）</span>
                 </div>
               </div>
               <div className={styles.heroInfoRow}>
-                <span className={styles.heroInfoIcon} aria-hidden="true">▥</span>
+                <span className={styles.heroInfoIcon} aria-hidden="true"><HeroInfoIcon kind="book" /></span>
                 <div>
                   <strong>文章を貼り付けるだけで、表紙・目次・ページめくり付きのWebブックに。</strong>
                 </div>
               </div>
               <div className={styles.heroInfoRow}>
-                <span className={styles.heroInfoIcon} aria-hidden="true">▰</span>
+                <span className={styles.heroInfoIcon} aria-hidden="true"><HeroInfoIcon kind="folder" /></span>
                 <div>
                   <strong>もちろん、PDF・Word・Markdown・TXTなどのファイル読み込みにも対応します。</strong>
                 </div>
