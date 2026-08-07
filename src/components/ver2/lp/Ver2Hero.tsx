@@ -22,6 +22,44 @@ type Props = {
   status?: string;
 };
 
+type RecommendationIconKind = "note" | "book" | "research" | "knowledge";
+
+function RecommendationIcon({ kind }: { kind: RecommendationIconKind }) {
+  if (kind === "note") {
+    return (
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M7 5h13l5 5v17H7z" />
+        <path d="M20 5v6h5M11 16h10M11 21h7" />
+        <path d="m20 24 4-4" />
+      </svg>
+    );
+  }
+
+  if (kind === "book") {
+    return (
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M5 7.5A3.5 3.5 0 0 1 8.5 4H27v22H8.5A3.5 3.5 0 0 1 5 22.5z" />
+        <path d="M5 7.5v15M16 6v17M10 10h3M20 11h4M20 16h4" />
+      </svg>
+    );
+  }
+
+  if (kind === "research") {
+    return (
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path d="m4 10 12-6 12 6-12 6zM8 13v7c4 3 12 3 16 0v-7M16 16v10M11 27h10" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M16 4a8 8 0 0 0-5 14.2c1.2.9 2 2.2 2 3.8h6c0-1.6.8-2.9 2-3.8A8 8 0 0 0 16 4Z" />
+      <path d="M13 26h6M14 29h4M16 1v-1M5 5 3.5 3.5M27 5l1.5-1.5M2 13H0M30 13h2" />
+    </svg>
+  );
+}
+
 const ACCEPTED_MANUSCRIPT_TYPES = ".txt,.md,.markdown,.docx,.pdf,.zip,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip";
 
 function readableFileSize(size: number) {
@@ -86,6 +124,40 @@ export default function Ver2Hero({
             <Link className={styles.heroShowcaseFrame} href={SAMPLE_BOOK_ROUTE} aria-label="サンプルのWebブックを見る">
               <Ver2BookShowcase />
             </Link>
+          </div>
+        </div>
+
+        <div className={styles.heroRecommendations}>
+          <div className={styles.recommendLabel}>こんな方におすすめ</div>
+          <div className={styles.heroRecommendationGrid}>
+            <article className={styles.heroRecommendationCard}>
+              <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="note" /></span>
+              <div>
+                <h3>note・ブログを書いている方</h3>
+                <p>過去の記事をテーマごとのWebブックへ。</p>
+              </div>
+            </article>
+            <article className={styles.heroRecommendationCard}>
+              <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="book" /></span>
+              <div>
+                <h3>小説・エッセイを書いている方</h3>
+                <p>書きためた作品を、読者へ届ける作品に。</p>
+              </div>
+            </article>
+            <article className={styles.heroRecommendationCard}>
+              <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="research" /></span>
+              <div>
+                <h3>研究・論文を書いている方</h3>
+                <p>卒論・修論・レポートを、提出して終わらせない。</p>
+              </div>
+            </article>
+            <article className={styles.heroRecommendationCard}>
+              <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="knowledge" /></span>
+              <div>
+                <h3>専門知識を発信している方</h3>
+                <p>教材・ノウハウ・ガイド本を、読みやすい一冊へ。</p>
+              </div>
+            </article>
           </div>
         </div>
 
@@ -156,12 +228,6 @@ export default function Ver2Hero({
           </div>
         </div>
 
-        <div className={styles.recommendLabel}>こんな方におすすめ</div>
-        <div className={styles.featureCards}>
-          <div className={styles.featureCard}><div className={styles.featureIcon}>🔗</div><div><h3>すぐに公開</h3><p>URLですぐ読める</p></div></div>
-          <div className={styles.featureCard}><div className={styles.featureIcon}>📖</div><div><h3>本らしい読書体験</h3><p>ページめくりに対応</p></div></div>
-          <div className={styles.featureCard}><div className={styles.featureIcon}>✨</div><div><h3>簡単に共有できる</h3><p>X・note・LINEに対応</p></div></div>
-        </div>
       </div>
     </section>
   );
