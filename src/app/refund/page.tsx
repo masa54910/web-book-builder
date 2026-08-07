@@ -17,6 +17,11 @@ export default function RefundPage() {
           将来有料プランを提供する場合は、申込前に料金、更新、キャンセル、返金条件を明示します。
           外部販売ページでの購入は、各外部サービスの規約・返金条件に従います。
         </p>
+        <HomeBackLink
+          destination="home"
+          label="ホームへ戻る"
+          className="legal-bottom-home-link maker-secondary-link"
+        />
       </article>
     </main>
   );

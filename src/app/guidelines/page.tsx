@@ -16,6 +16,11 @@ export default function GuidelinesPage() {
         <p>違法、有害、権利侵害、個人情報の不適切な公開、なりすまし、マルウェア、スパム目的の作品は公開できません。</p>
         <h2>権利侵害への対応</h2>
         <p>権利侵害の申告があった場合、運営者は確認のうえ公開停止や削除を行うことがあります。</p>
+        <HomeBackLink
+          destination="home"
+          label="ホームへ戻る"
+          className="legal-bottom-home-link maker-secondary-link"
+        />
       </article>
     </main>
   );

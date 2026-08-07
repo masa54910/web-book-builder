@@ -4174,6 +4174,18 @@
   white-space: nowrap;
 }
 
+@media (min-width: 1200px) {
+  .footerLinks {
+    justify-content: flex-start;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 10px;
+    min-width: 0;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 860px) {
   .footerRow {
     grid-template-columns: 1fr;

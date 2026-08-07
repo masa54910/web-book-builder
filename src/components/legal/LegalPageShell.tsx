@@ -24,6 +24,11 @@ export default function LegalPageShell({ kicker, title, titleClassName, children
           最終更新日：2026年8月7日
         </p>
         {children}
+        <HomeBackLink
+          destination="home"
+          label="ホームへ戻る"
+          className="legal-bottom-home-link maker-secondary-link"
+        />
       </article>
     </main>
   );

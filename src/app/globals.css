@@ -760,6 +760,10 @@ a {
   line-height: 1.7;
 }
 
+.legal-bottom-home-link {
+  margin-top: 36px;
+}
+
 .legal-definition-list {
   display: grid;
   gap: 0;

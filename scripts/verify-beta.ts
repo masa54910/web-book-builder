@@ -684,6 +684,21 @@ assert.match(landingFooter, /href="\/commercial-transactions"/);
 const guidelinesPage = fs.readFileSync(path.join(process.cwd(), "src", "app", "guidelines", "page.tsx"), "utf8");
 assert.match(guidelinesPage, /<h1>投稿ガイドライン<\/h1>/);
 assert.doesNotMatch(guidelinesPage, /投稿ガイドライン（ベータ版）/);
+for (const pageName of ["terms", "privacy", "commerce", "guidelines", "refund", "contact"]) {
+  const pagePath = pageName === "commerce" ? "src/app/commerce/page.tsx" : `src/app/${pageName}/page.tsx`;
+  const pageSource = fs.readFileSync(path.join(process.cwd(), pagePath), "utf8");
+  if (["terms", "privacy", "commerce"].includes(pageName)) {
+    assert.match(legalShell, /legal-bottom-home-link/, `${pageName} should use the shared bottom home link`);
+  } else {
+    assert.match(pageSource, /legal-bottom-home-link/, `${pageName} should have a bottom home link`);
+  }
+}
+const footerCss = fs.readFileSync(
+  path.join(process.cwd(), "src", "components", "ver2", "lp", "Ver2Landing.module.css"),
+  "utf8",
+);
+assert.match(footerCss, /@media \(min-width: 1200px\)[\s\S]*?\.footerLinks[\s\S]*?flex-wrap: nowrap/);
+assert.match(footerCss, /@media \(min-width: 1200px\)[\s\S]*?\.footerLinks[\s\S]*?justify-content: flex-start/);
 assert.match(
   globalsCss,
   /\.image-frame\s*\{[\s\S]*?border:\s*0;[\s\S]*?box-shadow:\s*none;[\s\S]*?\}/,
