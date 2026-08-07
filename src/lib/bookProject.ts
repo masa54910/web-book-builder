@@ -14,6 +14,7 @@ import {
 } from "@/lib/productTypes";
 import { createSlugCandidate } from "@/lib/slug";
 import type { ImageManifestRow, NovelChapter } from "@/lib/types";
+import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 
 export const BOOK_PROJECT_VERSION = 1;
 
@@ -84,6 +85,7 @@ export type BookProjectInput = {
   theme: BookConfig["theme"];
   language?: SupportedLocale;
   themeSettings?: Partial<BookThemeSettings>;
+  coverDesign?: CoverDesign;
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
   images: UploadedBookImage[];
@@ -521,6 +523,7 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
         bindingDirection: input.bindingDirection,
         theme: input.theme,
         themeSettings: input.themeSettings,
+        coverDesign: normalizeCoverDesign(input.coverDesign),
         tableOfContentsItemsPerPage: Math.max(1, input.tableOfContentsItemsPerPage),
         charactersPerPage: Math.max(180, input.charactersPerPage),
         publisherName: input.publisherName.trim() || "WebBookMaker",

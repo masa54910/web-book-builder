@@ -93,6 +93,27 @@ export async function saveCanonicalPreview(
   };
 }
 
+/**
+ * Persist an in-preview adjustment without creating a second preview format.
+ * The BookProject is the materialized form of the current Canonical payload,
+ * so returning to the editor can consume the same preview state exactly once.
+ */
+export async function updateCanonicalPreviewProject(project: BookProject): Promise<void> {
+  await withProjectStore("readwrite", (store) => store.put(project, CURRENT_PREVIEW_ID));
+  try {
+    getStorage()?.setItem(
+      PREVIEW_POINTER_KEY,
+      JSON.stringify({
+        bookId: project.config.bookId,
+        title: project.config.title,
+        savedAt: project.updatedAt,
+      }),
+    );
+  } catch {
+    // IndexedDB remains the source for this preview if localStorage is unavailable.
+  }
+}
+
 export async function loadCanonicalPreviewProject(): Promise<BookProject | null> {
   try {
     const value = await withProjectStore<unknown>("readonly", (store) =>

@@ -7,6 +7,7 @@ import {
 import type { SupportedLocale } from "@/lib/localization";
 import type { ThemeId } from "@/lib/productTypes";
 import type { BookThemeSettings } from "@/lib/themeSystem";
+import { DEFAULT_COVER_DESIGN, normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 
 export type EditorDraftState = {
   title: string;
@@ -33,6 +34,7 @@ export type EditorDraftState = {
   accentColor: string;
   coverStyle: BookThemeSettings["coverStyle"];
   imageLayout: BookThemeSettings["imageLayout"];
+  coverDesign?: CoverDesign;
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
   visibility: "private" | "unlisted" | "public";
@@ -179,6 +181,8 @@ export function seedFromDraftFields(input: {
     ? fields.contentBlocks.filter(isDraftContentBlock)
     : contentBlocksFromLegacy(rawText, draftImages);
   const fromLanding = asString(fields.source) === "landing";
+  const storedCoverDesign = normalizeCoverDesign(fields.coverDesign ?? input.initialState.coverDesign);
+  const hasCustomCoverDesign = JSON.stringify(storedCoverDesign) !== JSON.stringify(DEFAULT_COVER_DESIGN);
   const hasAnyDraftContent = Boolean(
     asString(fields.title, input.initialState.title).trim() ||
       asString(fields.author, input.initialState.author).trim() ||
@@ -189,7 +193,8 @@ export function seedFromDraftFields(input: {
       draftImages.length ||
       draftBlocks.length > 1 ||
       asString(fields.coverImage).trim() ||
-      asString(fields.coverImageStoragePath).trim(),
+      asString(fields.coverImageStoragePath).trim() ||
+      hasCustomCoverDesign,
   );
 
   const restoredState: EditorDraftState = {
@@ -220,6 +225,7 @@ export function seedFromDraftFields(input: {
     accentColor: asString(fields.accentColor, input.initialState.accentColor),
     coverStyle: asString(fields.coverStyle, input.initialState.coverStyle) as BookThemeSettings["coverStyle"],
     imageLayout: asString(fields.imageLayout, input.initialState.imageLayout) as BookThemeSettings["imageLayout"],
+    coverDesign: storedCoverDesign,
     charactersPerPage: asNumber(fields.charactersPerPage, input.initialState.charactersPerPage),
     tableOfContentsItemsPerPage: asNumber(fields.tableOfContentsItemsPerPage, input.initialState.tableOfContentsItemsPerPage),
     visibility: asString(fields.visibility, input.initialState.visibility) as EditorDraftState["visibility"],

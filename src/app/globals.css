@@ -1687,6 +1687,50 @@ a {
   text-decoration: none;
 }
 
+button.reader-edit-link {
+  cursor: pointer;
+  font: inherit;
+}
+
+button.reader-edit-link:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.reader-preview-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.reader-preview-layout {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+}
+
+.reader-preview-layout.is-editing {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  gap: 20px;
+  align-items: start;
+}
+
+.reader-preview-layout .book-viewport {
+  width: 100%;
+  margin: 0;
+}
+
+.reader-cover-design-drawer {
+  min-width: 0;
+}
+
+.reader-cover-design-drawer .cover-design-panel {
+  position: sticky;
+  top: 14px;
+  margin: 0;
+}
+
 .reader-kicker {
   margin: 0 0 5px;
   color: var(--cyan);
@@ -1886,6 +1930,14 @@ a {
   z-index: 2;
 }
 
+.cover-design-overlay {
+  position: absolute !important;
+  inset: 0;
+  z-index: 1 !important;
+  background: rgb(0 0 0 / var(--cover-overlay-opacity, 0));
+  pointer-events: none;
+}
+
 .cover-series {
   align-self: flex-start;
   padding: 8px 10px 7px;
@@ -1898,6 +1950,8 @@ a {
 }
 
 .cover-copy {
+  display: flex;
+  flex-direction: column;
   padding: 24px 0 18px;
   border-top: 1px solid rgba(255, 255, 255, 0.46);
   border-bottom: 1px solid rgba(255, 255, 255, 0.24);
@@ -1921,6 +1975,8 @@ a {
   line-height: 0.92;
   letter-spacing: -0.045em;
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
+  transform: scale(var(--cover-title-scale, 1));
+  transform-origin: var(--cover-title-origin, left center);
 }
 
 .cover-copy p {
@@ -1939,6 +1995,8 @@ a {
   font-family: Georgia, serif;
   font-size: 13px;
   letter-spacing: 0.12em;
+  transform: scale(var(--cover-author-scale, 1));
+  transform-origin: var(--cover-author-origin, left center);
 }
 
 .cover-author::before {
@@ -1946,6 +2004,146 @@ a {
   height: 1px;
   background: var(--book-accent-color);
   content: "";
+}
+
+/* Gate8.5-A cover layouts. Layout 01 intentionally keeps the legacy arrangement. */
+.cover-layout-layout-02 {
+  align-items: center;
+  justify-content: center;
+}
+
+.cover-layout-layout-02 .cover-series,
+.cover-layout-layout-02 .cover-copy,
+.cover-layout-layout-02 .cover-author {
+  align-self: center;
+  text-align: center;
+}
+
+.cover-layout-layout-03 .cover-image-slot {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  min-height: 0;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.cover-layout-layout-03 .cover-copy {
+  position: absolute;
+  inset: 24% 34px auto;
+  z-index: 3;
+  border-color: rgba(255, 255, 255, 0.62);
+}
+
+.cover-layout-layout-03 .cover-author {
+  position: absolute;
+  right: 34px;
+  bottom: 34px;
+  z-index: 3;
+}
+
+.cover-layout-layout-04,
+.cover-layout-layout-05,
+.cover-layout-layout-10 {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  align-content: stretch;
+  justify-content: initial;
+}
+
+.cover-layout-layout-04 .cover-series,
+.cover-layout-layout-04 .cover-image-slot,
+.cover-layout-layout-04 .cover-copy,
+.cover-layout-layout-04 .cover-author,
+.cover-layout-layout-05 .cover-series,
+.cover-layout-layout-05 .cover-image-slot,
+.cover-layout-layout-05 .cover-copy,
+.cover-layout-layout-05 .cover-author,
+.cover-layout-layout-10 .cover-series,
+.cover-layout-layout-10 .cover-image-slot,
+.cover-layout-layout-10 .cover-copy,
+.cover-layout-layout-10 .cover-author {
+  grid-column: 1;
+}
+
+.cover-layout-layout-04 .cover-image-slot {
+  grid-row: 2;
+  min-height: 0;
+  margin-top: 12px;
+}
+
+.cover-layout-layout-04 .cover-copy {
+  grid-row: 3;
+  padding-top: 18px;
+}
+
+.cover-layout-layout-04 .cover-author {
+  grid-row: 4;
+}
+
+.cover-layout-layout-05 .cover-copy {
+  grid-row: 2;
+}
+
+.cover-layout-layout-05 .cover-author {
+  grid-row: 3;
+}
+
+.cover-layout-layout-05 .cover-image-slot {
+  grid-row: 4;
+  min-height: 0;
+  margin-top: 12px;
+}
+
+.cover-layout-layout-06 .cover-copy h2 {
+  font-size: clamp(46px, 8vw, 76px);
+}
+
+.cover-layout-layout-07 .cover-copy {
+  border: 0;
+  padding-block: 10px;
+}
+
+.cover-layout-layout-07 .cover-image-slot {
+  min-height: 110px;
+  max-width: 58%;
+  margin-inline: auto;
+}
+
+.cover-layout-layout-08 {
+  align-items: flex-start;
+}
+
+.cover-layout-layout-08 .cover-copy,
+.cover-layout-layout-08 .cover-author {
+  align-self: flex-start;
+  text-align: left;
+}
+
+.cover-layout-layout-09 {
+  align-items: flex-end;
+}
+
+.cover-layout-layout-09 .cover-copy,
+.cover-layout-layout-09 .cover-author {
+  align-self: flex-end;
+  text-align: right;
+}
+
+.cover-layout-layout-10 .cover-image-slot {
+  grid-row: 2;
+  min-height: 0;
+  margin-top: 12px;
+}
+
+.cover-layout-layout-10 .cover-copy {
+  grid-row: 3;
+  padding-block: 14px;
+}
+
+.cover-layout-layout-10 .cover-author {
+  grid-row: 4;
 }
 
 .title-page,
@@ -2873,6 +3071,182 @@ a {
   white-space: pre-wrap;
 }
 
+.mini-book-preview > .cover-page {
+  min-height: 360px;
+  height: 360px;
+  margin: -26px;
+  border-radius: inherit;
+}
+
+.cover-design-panel {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid rgba(38, 117, 166, 0.16);
+  border-radius: 16px;
+  background: rgba(244, 249, 253, 0.72);
+}
+
+.cover-design-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cover-design-panel-heading h3 {
+  margin: 0;
+  color: var(--wb-navy, #12365b);
+  font-size: 17px;
+}
+
+.cover-design-panel-heading .maker-note {
+  margin: 4px 0 0;
+}
+
+.cover-layout-picker {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cover-layout-option {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  justify-items: center;
+  padding: 8px 6px;
+  border: 1px solid rgba(46, 110, 160, 0.18);
+  border-radius: 12px;
+  color: var(--wb-text, #172537);
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.cover-layout-option:hover {
+  border-color: rgba(31, 139, 207, 0.48);
+  background: #f8fcff;
+  transform: translateY(-1px);
+}
+
+.cover-layout-option:focus-visible {
+  outline: 3px solid rgba(31, 139, 207, 0.2);
+  outline-offset: 2px;
+}
+
+.cover-layout-option.is-selected {
+  border-color: #218ac8;
+  background: #eef8ff;
+  box-shadow: 0 4px 12px rgba(31, 116, 167, 0.14);
+}
+
+.cover-layout-option > span:not(.cover-layout-thumb) {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cover-layout-option small {
+  overflow: hidden;
+  max-width: 100%;
+  color: #64788a;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cover-layout-thumb {
+  position: relative;
+  display: block;
+  width: 44px;
+  height: 58px;
+  overflow: hidden;
+  border: 1px solid rgba(18, 54, 91, 0.2);
+  border-radius: 5px;
+  background: linear-gradient(145deg, #1d4568, #0d243b);
+}
+
+.cover-layout-thumb-title,
+.cover-layout-thumb-image,
+.cover-layout-thumb-author {
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  display: block;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.cover-layout-thumb-title {
+  top: 9px;
+  height: 4px;
+}
+
+.cover-layout-thumb-image {
+  top: 20px;
+  height: 22px;
+  background: linear-gradient(135deg, #74bbd9, #dbeef7);
+}
+
+.cover-layout-thumb-author {
+  bottom: 8px;
+  height: 3px;
+  opacity: 0.75;
+}
+
+.cover-layout-thumb-layout-02 .cover-layout-thumb-title { top: 25px; }
+.cover-layout-thumb-layout-02 .cover-layout-thumb-image { top: 33px; height: 14px; }
+.cover-layout-thumb-layout-03 .cover-layout-thumb-image { inset: 0; width: 100%; height: 100%; margin: 0; border-radius: 0; opacity: 0.72; }
+.cover-layout-thumb-layout-04 .cover-layout-thumb-image { top: 7px; height: 25px; }
+.cover-layout-thumb-layout-04 .cover-layout-thumb-title { top: 39px; }
+.cover-layout-thumb-layout-05 .cover-layout-thumb-title { top: 9px; }
+.cover-layout-thumb-layout-05 .cover-layout-thumb-image { top: 25px; height: 25px; }
+.cover-layout-thumb-layout-06 .cover-layout-thumb-title { top: 12px; height: 10px; }
+.cover-layout-thumb-layout-07 .cover-layout-thumb-image { left: 13px; right: 13px; top: 28px; height: 12px; }
+.cover-layout-thumb-layout-08 .cover-layout-thumb-title,
+.cover-layout-thumb-layout-08 .cover-layout-thumb-image,
+.cover-layout-thumb-layout-08 .cover-layout-thumb-author { left: 5px; right: 15px; }
+.cover-layout-thumb-layout-09 .cover-layout-thumb-title,
+.cover-layout-thumb-layout-09 .cover-layout-thumb-image,
+.cover-layout-thumb-layout-09 .cover-layout-thumb-author { left: 15px; right: 5px; }
+.cover-layout-thumb-layout-10 .cover-layout-thumb-image { top: 6px; height: 36px; }
+.cover-layout-thumb-layout-10 .cover-layout-thumb-title { top: 46px; }
+
+.cover-design-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cover-design-controls label {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.cover-design-controls label > span {
+  color: #2e4a63;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cover-design-controls input[type="range"] {
+  width: 100%;
+  accent-color: #218ac8;
+}
+
+.cover-design-controls output {
+  min-width: 38px;
+  color: #547088;
+  font-size: 11px;
+  text-align: right;
+}
+
 .auto-flip-tools {
   display: flex;
   flex-wrap: wrap;
@@ -3206,6 +3580,35 @@ a {
 }
 
 @media (max-width: 760px) {
+  .reader-preview-layout.is-editing {
+    grid-template-columns: 1fr;
+  }
+
+  .reader-cover-design-drawer .cover-design-panel {
+    position: static;
+  }
+
+  .cover-layout-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cover-design-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .cover-design-panel-heading {
+    flex-direction: column;
+  }
+
+  .cover-layout-layout-03 .cover-copy {
+    inset-inline: 28px;
+  }
+
+  .cover-layout-layout-03 .cover-author {
+    right: 28px;
+    bottom: 28px;
+  }
+
   .profile-settings-page .settings-sections {
     gap: 18px;
   }

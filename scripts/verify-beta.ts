@@ -20,6 +20,7 @@ import { resolveSafeInternalReturnPath } from "../src/lib/returnTo";
 import { validateRequiredBookFields } from "../src/lib/editorValidation";
 import { computeInlineImagePopoverLayout } from "../src/lib/inlineImagePopover";
 import { buildEditorDraftFields, seedFromDraftFields, type EditorDraftState } from "../src/lib/editorDraftState";
+import { DEFAULT_COVER_DESIGN, normalizeCoverDesign } from "../src/lib/coverDesign";
 import {
   AUTOSAVE_MAX_AGE_MS,
   deleteAutosaveDraft,
@@ -441,6 +442,13 @@ assert.ok((mobilePopover.width || 0) <= 390 - 24, "Mobile popover width should f
 assert.ok(mobilePopover.left >= 12, "Mobile popover should stay inside left padding");
 assert.ok(mobilePopover.top >= 12, "Mobile popover should stay inside top padding");
 assert.ok(mobilePopover.top + 170 <= 844 - 88 - 12, "Mobile popover should stay above bottom action area");
+
+const legacyCoverDesign = normalizeCoverDesign(undefined);
+assert.deepEqual(legacyCoverDesign, DEFAULT_COVER_DESIGN, "Legacy covers should use the standard layout");
+const boundedCoverDesign = normalizeCoverDesign({ layout: "layout-10", titleScale: 9, overlayOpacity: -1 });
+assert.equal(boundedCoverDesign.layout, "layout-10");
+assert.equal(boundedCoverDesign.titleScale, 1.5);
+assert.equal(boundedCoverDesign.overlayOpacity, 0);
 
 const baseEditorState: EditorDraftState = {
   title: "",

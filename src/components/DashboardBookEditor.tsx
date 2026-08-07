@@ -58,10 +58,16 @@ import { safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productT
 import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
 import { colorPresets, contrastRatio, getThemePreset, themePresets, type BookThemeSettings } from "@/lib/themeSystem";
 import { buildEditorDraftFields, seedFromDraftFields } from "@/lib/editorDraftState";
+import {
+  DEFAULT_COVER_DESIGN,
+  normalizeCoverDesign,
+  type CoverDesign,
+} from "@/lib/coverDesign";
 import { validateRequiredBookFields, type RequiredBookFieldKey } from "@/lib/editorValidation";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
 import CharacterAssistant from "@/components/CharacterAssistant";
 import InlineManuscriptEditor from "@/components/InlineManuscriptEditor";
+import BookCover from "@/components/BookCover";
 import HomeBackLink from "@/components/HomeBackLink";
 import Button from "@/components/ui/Button";
 import FormField from "@/components/ui/FormField";
@@ -91,6 +97,7 @@ type EditorState = {
   accentColor: string;
   coverStyle: BookThemeSettings["coverStyle"];
   imageLayout: BookThemeSettings["imageLayout"];
+  coverDesign: CoverDesign;
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
   visibility: "private" | "unlisted" | "public";
@@ -141,6 +148,7 @@ const INITIAL_EDITOR: EditorState = {
   accentColor: "#6bb9ad",
   coverStyle: "overlay",
   imageLayout: "framed",
+  coverDesign: { ...DEFAULT_COVER_DESIGN },
   charactersPerPage: 380,
   tableOfContentsItemsPerPage: 6,
   visibility: "private",
@@ -156,6 +164,17 @@ const INITIAL_EDITOR: EditorState = {
   externalSalesUrl: "",
   externalSalesLabel: "",
 };
+
+function normalizeEditorDraftSeed(seed: ReturnType<typeof seedFromDraftFields>): DraftSeed {
+  return {
+    ...seed,
+    state: {
+      ...INITIAL_EDITOR,
+      ...seed.state,
+      coverDesign: normalizeCoverDesign(seed.state.coverDesign),
+    },
+  };
+}
 
 function initialStateFromDraft(mode: "new" | "edit"): DraftSeed {
   if (mode !== "new" || typeof window === "undefined") {
@@ -175,11 +194,11 @@ function initialStateFromDraft(mode: "new" | "edit"): DraftSeed {
       restored: false,
     };
   }
-  return seedFromDraftFields({
+  return normalizeEditorDraftSeed(seedFromDraftFields({
     mode,
     initialState: INITIAL_EDITOR,
     fields: draft?.fields,
-  });
+  }));
 }
 
 function fileToDataUrl(file: File) {
@@ -280,6 +299,7 @@ function fromRecord(record: CloudBookRecord): EditorState {
     accentColor: record.bookProject.config.themeSettings?.accentColor || "#6bb9ad",
     coverStyle: record.bookProject.config.themeSettings?.coverStyle || "overlay",
     imageLayout: record.bookProject.config.themeSettings?.imageLayout || "framed",
+    coverDesign: normalizeCoverDesign(record.bookProject.config.coverDesign),
     charactersPerPage: record.charactersPerPage,
     tableOfContentsItemsPerPage: record.tocItemsPerPage,
     visibility: record.visibility,
@@ -401,6 +421,7 @@ function stateFromPreviewProject(project: BookProject): EditorState {
     accentColor: project.config.themeSettings?.accentColor || "#6bb9ad",
     coverStyle: project.config.themeSettings?.coverStyle || "overlay",
     imageLayout: project.config.themeSettings?.imageLayout || "framed",
+    coverDesign: normalizeCoverDesign(project.config.coverDesign),
     charactersPerPage: project.config.charactersPerPage,
     tableOfContentsItemsPerPage: project.config.tableOfContentsItemsPerPage,
     // Preserve the user-entered slug through a Preview round trip. Legacy
@@ -623,11 +644,11 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         );
 
         if (canRestoreAutosave && autosave) {
-          const restored = seedFromDraftFields({
+          const restored = normalizeEditorDraftSeed(seedFromDraftFields({
             mode: "edit",
             initialState: persistedState,
             fields: autosave.fields,
-          });
+          }));
           if (restored.restored) {
             const restoredBlocks = mergeRestoredImageBlocks(restored.contentBlocks, persistedBlocks);
             const restoredImages = restored.images.length
@@ -689,11 +710,11 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     restoredAutosaveKeyRef.current = "new";
     const autosave = loadAutosaveDraft(null, user.id);
     if (!autosave) return;
-    const restored = seedFromDraftFields({
+    const restored = normalizeEditorDraftSeed(seedFromDraftFields({
       mode: "new",
       initialState: INITIAL_EDITOR,
       fields: autosave.fields,
-    });
+    }));
     if (!restored.restored) return;
     const restoreTimer = window.setTimeout(() => {
       setState(restored.state);
@@ -1047,6 +1068,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       accentColor: payload.themeSettings.accentColor || current.accentColor,
       coverStyle: payload.themeSettings.coverStyle || current.coverStyle,
       imageLayout: payload.themeSettings.imageLayout || current.imageLayout,
+      coverDesign: normalizeCoverDesign(payload.coverDesign),
       charactersPerPage: payload.charactersPerPage,
       tableOfContentsItemsPerPage: payload.tableOfContentsItemsPerPage,
       visibility: payload.publication.visibility,
@@ -1435,9 +1457,17 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
                 borderColor: state.accentColor,
               }}
             >
-              <strong>{state.title || "TITLE"}</strong>
-              <span>{state.author || "Author"}</span>
-              <p>{state.rawText.replace(/^# .+$/gm, "").trim().slice(0, 110) || "本文のプレビューがここに表示されます。"}</p>
+              <BookCover
+                data={{
+                  title: state.title || "TITLE",
+                  subtitle: state.subtitle,
+                  author: state.author || "Author",
+                  coverImage: state.coverImage,
+                  coverDesign: state.coverDesign,
+                  coverStyle: state.coverStyle,
+                  accentColor: state.accentColor,
+                }}
+              />
             </div>
           </section>
 

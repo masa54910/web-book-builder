@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { BookProject } from "@/lib/bookProject";
-import { loadCanonicalPreviewProject } from "@/lib/canonicalPreviewStorage";
+import { loadCanonicalPreviewProject, updateCanonicalPreviewProject } from "@/lib/canonicalPreviewStorage";
+import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { resolveSafeInternalReturnPath } from "@/lib/returnTo";
 import BookReaderShell from "./BookReaderShell";
 import HomeBackLink from "./HomeBackLink";
@@ -14,6 +15,8 @@ export default function DynamicReaderPage() {
   const searchParams = useSearchParams();
   const [project, setProject] = useState<BookProject | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const projectRef = useRef<BookProject | null>(null);
+  const persistenceChainRef = useRef(Promise.resolve());
 
   const isDashboardPreview =
     searchParams.get("mode") === "preview" && searchParams.get("from") === "dashboard";
@@ -24,12 +27,33 @@ export default function DynamicReaderPage() {
     let active = true;
     loadCanonicalPreviewProject().then((loadedProject) => {
       if (!active) return;
+      projectRef.current = loadedProject;
       setProject(loadedProject);
       setIsLoading(false);
     });
     return () => {
       active = false;
     };
+  }, []);
+
+  const handleCoverDesignChange = useCallback((patch: Partial<CoverDesign>) => {
+    const current = projectRef.current;
+    if (!current) return;
+    const nextProject: BookProject = {
+      ...current,
+      config: {
+        ...current.config,
+        coverDesign: normalizeCoverDesign({ ...current.config.coverDesign, ...patch }),
+      },
+      updatedAt: new Date().toISOString(),
+    };
+    projectRef.current = nextProject;
+    setProject(nextProject);
+    persistenceChainRef.current = persistenceChainRef.current
+      .then(() => updateCanonicalPreviewProject(nextProject))
+      .catch((error) => {
+        console.error("Preview cover design could not be saved", error);
+      });
   }, []);
 
   if (isLoading) {
@@ -70,6 +94,7 @@ export default function DynamicReaderPage() {
         images={project.images}
         displayMode="preview"
         editHref={isDashboardPreview ? safeReturnTo : "/"}
+        onCoverDesignChange={handleCoverDesignChange}
         backLink={
           isDashboardPreview
             ? {

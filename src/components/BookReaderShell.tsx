@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { BookConfig } from "@/config/bookConfig";
+import type { CoverDesign } from "@/lib/coverDesign";
 import type { ImageManifestRow, NovelChapter } from "@/lib/types";
 
 const BookReader = dynamic(() => import("./BookReader"), {
@@ -20,6 +21,7 @@ export default function BookReaderShell({
   shareDescription,
   shareDisabledReason,
   backLink,
+  onCoverDesignChange,
 }: {
   config: BookConfig;
   chapters: NovelChapter[];
@@ -30,6 +32,7 @@ export default function BookReaderShell({
   shareUrl?: string;
   shareDescription?: string;
   shareDisabledReason?: string;
+  onCoverDesignChange?: (patch: Partial<CoverDesign>) => void;
   backLink?: {
     destination?: "auto" | "home" | "dashboard";
     href?: string;
@@ -48,6 +51,7 @@ export default function BookReaderShell({
       shareDescription={shareDescription ?? config.description}
       shareDisabledReason={shareDisabledReason}
       backLink={backLink}
+      onCoverDesignChange={onCoverDesignChange}
     />
   );
 }

@@ -10,6 +10,7 @@ import type {
 } from "@/lib/productTypes";
 import type { SupportedLocale } from "@/lib/localization";
 import type { BookThemeSettings } from "@/lib/themeSystem";
+import type { CoverDesign } from "@/lib/coverDesign";
 
 export type BindingDirection = "rtl" | "ltr";
 export type BookTheme = ThemeId;
@@ -37,6 +38,8 @@ export type BookConfig = {
   bindingDirection: BindingDirection;
   theme: BookTheme;
   themeSettings?: Partial<BookThemeSettings>;
+  /** Persisted cover controls. Older projects omit this and normalize to layout-01. */
+  coverDesign?: CoverDesign;
   tableOfContentsItemsPerPage: number;
   charactersPerPage: number;
   publisherName: string;

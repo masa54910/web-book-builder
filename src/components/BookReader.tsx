@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import type { BookConfig } from "@/config/bookConfig";
+import { DEFAULT_COVER_DESIGN, normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { buildReaderPages, toBoundPageOrder } from "@/lib/paginateText";
 import { recordReaderProgress } from "@/lib/readerAnalytics";
 import { themeClassNames } from "@/lib/themeSystem";
@@ -19,6 +20,7 @@ import type { LastRead, StickyNote } from "@/lib/readerStorage";
 import type { ImageManifestRow, NovelChapter, ReaderPage } from "@/lib/types";
 import BookPage from "./BookPage";
 import ChapterTitlePage from "./ChapterTitlePage";
+import CoverDesignControls from "./CoverDesignControls";
 import ColophonPage from "./ColophonPage";
 import ContentsPage from "./ContentsPage";
 import CoverPage from "./CoverPage";
@@ -59,6 +61,7 @@ export default function BookReader({
   shareDescription,
   shareDisabledReason,
   backLink,
+  onCoverDesignChange,
 }: {
   config: BookConfig;
   chapters: NovelChapter[];
@@ -74,6 +77,7 @@ export default function BookReader({
     href?: string;
     label?: string;
   };
+  onCoverDesignChange?: (patch: Partial<CoverDesign>) => void;
 }) {
   const flipBookRef = useRef<FlipBookHandle | null>(null);
   const storage = useMemo(() => getSafeLocalStorage(), []);
@@ -91,6 +95,8 @@ export default function BookReader({
   const [autoFlipSeconds, setAutoFlipSeconds] = useState(5);
   const [autoFlipLoop, setAutoFlipLoop] = useState(false);
   const [autoFlipStartMode, setAutoFlipStartMode] = useState<"cover" | "current">("current");
+  const [isCoverDesignOpen, setIsCoverDesignOpen] = useState(false);
+  const coverDesign = normalizeCoverDesign(config.coverDesign);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 760px)");
@@ -416,46 +422,80 @@ export default function BookReader({
               編集画面へ戻る
             </a>
           ) : null}
+          {displayMode === "preview" ? (
+            <div className="reader-preview-tools" aria-label="Previewの編集">
+              <button
+                className="reader-edit-link reader-preview-action"
+                type="button"
+                aria-expanded={isCoverDesignOpen}
+                onClick={() => setIsCoverDesignOpen((open) => !open)}
+              >
+                表紙を調整
+              </button>
+              <button
+                className="reader-edit-link reader-preview-action"
+                type="button"
+                disabled
+                aria-disabled="true"
+                title="ページ調整モードは準備中です"
+              >
+                ページを調整
+              </button>
+            </div>
+          ) : null}
           <span className="reader-direction">{directionLabel}</span>
         </div>
       </header>
 
-      <section className="book-viewport" aria-label="デジタル書籍リーダー">
-        <HTMLFlipBook
-          key={`${isMobile ? "mobile" : "desktop"}-${pages.length}`}
-          ref={flipBookRef}
-          className="flip-book"
-          style={{}}
-          startPage={0}
-          size="stretch"
-          width={isMobile ? 340 : 430}
-          height={isMobile ? 560 : 620}
-          minWidth={280}
-          maxWidth={470}
-          minHeight={470}
-          maxHeight={660}
-          drawShadow
-          flippingTime={780}
-          usePortrait
-          startZIndex={10}
-          autoSize
-          maxShadowOpacity={0.48}
-          showCover
-          mobileScrollSupport
-          clickEventForward
-          useMouseEvents
-          swipeDistance={24}
-          showPageCorners
-          disableFlipByClick={false}
-          onFlip={(event: { data: number }) => {
-            setCurrentPage(event.data);
-            saveLastReadAt(event.data);
-            recordReaderProgress(config.bookId, pages[event.data], event.data, pages.length, cloudBookId);
-          }}
-        >
-          {pages.map(renderPage)}
-        </HTMLFlipBook>
-      </section>
+      <div className={`reader-preview-layout ${displayMode === "preview" && isCoverDesignOpen ? "is-editing" : ""}`}>
+        <section className="book-viewport" aria-label="デジタル書籍リーダー">
+          <HTMLFlipBook
+            key={`${isMobile ? "mobile" : "desktop"}-${pages.length}`}
+            ref={flipBookRef}
+            className="flip-book"
+            style={{}}
+            startPage={0}
+            size="stretch"
+            width={isMobile ? 340 : 430}
+            height={isMobile ? 560 : 620}
+            minWidth={280}
+            maxWidth={470}
+            minHeight={470}
+            maxHeight={660}
+            drawShadow
+            flippingTime={780}
+            usePortrait
+            startZIndex={10}
+            autoSize
+            maxShadowOpacity={0.48}
+            showCover
+            mobileScrollSupport
+            clickEventForward
+            useMouseEvents
+            swipeDistance={24}
+            showPageCorners
+            disableFlipByClick={false}
+            onFlip={(event: { data: number }) => {
+              setCurrentPage(event.data);
+              saveLastReadAt(event.data);
+              recordReaderProgress(config.bookId, pages[event.data], event.data, pages.length, cloudBookId);
+            }}
+          >
+            {pages.map(renderPage)}
+          </HTMLFlipBook>
+        </section>
+        {displayMode === "preview" && isCoverDesignOpen ? (
+          <aside className="reader-cover-design-drawer" aria-label="表紙デザイン設定">
+            <CoverDesignControls
+              value={coverDesign}
+              onChange={(patch) => onCoverDesignChange?.(patch)}
+              onReset={() => onCoverDesignChange?.({ ...DEFAULT_COVER_DESIGN })}
+              heading="表紙デザイン"
+              description="Previewを見ながら表紙を調整できます。"
+            />
+          </aside>
+        ) : null}
+      </div>
 
       <ReaderControls
         bindingDirection={config.bindingDirection}
