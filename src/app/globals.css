@@ -4032,3 +4032,41 @@ body {
     transform: none !important;
   }
 }
+
+/* Brand frame and page background: keep surfaces white while softening the UI canvas. */
+:root {
+  --wb-cream-surface: rgba(255, 253, 248, .82);
+  --wb-page-background: var(--wb-bg-page);
+}
+
+html {
+  background: var(--wb-page-background);
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(168, 214, 238, .22), transparent 28rem),
+    radial-gradient(circle at 88% 14%, rgba(207, 233, 247, .26), transparent 30rem),
+    linear-gradient(150deg, var(--wb-page-background) 0%, var(--wb-bg-section) 54%, var(--wb-page-background) 100%);
+}
+
+.landing-page,
+.dashboard-page,
+.auth-page,
+.legal-page,
+.author-page {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(168, 214, 238, .20), transparent 24rem),
+    radial-gradient(circle at 90% 18%, rgba(207, 233, 247, .26), transparent 27rem),
+    linear-gradient(145deg, var(--wb-page-background) 0%, var(--wb-bg-section) 52%, var(--wb-page-background) 100%);
+}
+
+.app-header {
+  background: var(--wb-cream-surface);
+}
+
+.reader-shell {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(168, 214, 238, .22), transparent 28rem),
+    linear-gradient(145deg, var(--wb-page-background) 0%, var(--wb-bg-section) 58%, var(--wb-page-background) 100%);
+}
