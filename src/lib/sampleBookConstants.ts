@@ -2,6 +2,7 @@ export const SAMPLE_BOOK_SLUG = "hoshifuru-machi-no-chiisana-kiroku";
 export const SAMPLE_BOOK_TITLE = "星降る街の小さな記録";
 export const SAMPLE_BOOK_DISPLAY_TITLE_LINES = ["星降る街の", "小さな記録"] as const;
 export const SAMPLE_BOOK_AUTHOR = "WebBookMaker サンプル作者";
+export const SAMPLE_BOOK_DESCRIPTION = "WebBookMakerの基本機能を体験できる公式サンプルです。ページめくり、目次、共有導線まで実際の公開導線で確認できます。";
 export const SAMPLE_BOOK_THEME = "クラシック";
 
 export const SAMPLE_BOOK_ROUTE = `/books/${SAMPLE_BOOK_SLUG}`;

@@ -22,7 +22,7 @@ export default function Ver2HowItWorks() {
           </article>
           <article className={styles.step}>
             <div className={styles.stepHead}><span className={styles.stepNum}>3</span><h3>公開して、読者へ届ける</h3></div>
-            <div className={styles.sharebox}><div className={styles.url}>https://webbookmaker.app/books/123456</div><div className={styles.socials}><Link className={`${styles.social} ${styles.x}`} href="/demo/x" aria-label="X共有の見本を見る">𝕏</Link><Link className={`${styles.social} ${styles.note}`} href="/demo/note" aria-label="note共有の見本を見る">note</Link><Link className={`${styles.social} ${styles.line}`} href="/demo/line" aria-label="LINE共有の見本を見る">LINE</Link><Link className={`${styles.social} ${styles.link}`} href="/demo/share" aria-label="リンク共有の見本を見る">🔗</Link></div></div>
+            <div className={styles.sharebox} aria-label="利用できる共有方法の紹介"><div className={styles.url}>https://webbookmaker.app/books/123456</div><div className={styles.socials}><span className={`${styles.social} ${styles.x}`} role="img" aria-label="Xで共有">𝕏</span><span className={`${styles.social} ${styles.note}`} role="img" aria-label="noteで共有">note</span><span className={`${styles.social} ${styles.line}`} role="img" aria-label="LINEで共有">LINE</span><span className={`${styles.social} ${styles.link}`} role="img" aria-label="URLを共有">🔗</span></div></div>
           </article>
           <article className={`${styles.step} ${styles.growCard}`}>
             <div className={styles.stepHead}><span className={styles.stepNum}>4</span><h3>公開後も作品を分析</h3></div>

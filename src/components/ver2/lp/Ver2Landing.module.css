@@ -4220,3 +4220,246 @@
 .footer {
   background: var(--wb-cream-surface);
 }
+
+/* Home-only sharing examples: informative mock cards, never interactive. */
+.social {
+  cursor: default;
+  user-select: none;
+}
+
+.xCard .promoCta,
+.noteCard .promoCta {
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
+}
+
+.shareSampleCard {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 255px;
+  overflow: hidden;
+  padding: 15px;
+  color: #172434;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.xShareSample {
+  background: linear-gradient(155deg, #f7fbff 0%, #ffffff 55%, #f0f7fc 100%);
+}
+
+.noteShareSample {
+  background: linear-gradient(155deg, #fffdf8 0%, #ffffff 58%, #f3fbf7 100%);
+}
+
+.shareSampleHeader,
+.noteSampleTopbar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.shareSampleServiceIcon {
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+}
+
+.shareSampleServiceIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.shareSampleServiceIconX {
+  background: #101419;
+}
+
+.shareSampleHeading {
+  display: grid;
+  min-width: 0;
+}
+
+.shareSampleHeading strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.shareSampleHeading small,
+.shareSampleMenu,
+.noteSampleTopbar > span {
+  color: #718095;
+  font-size: 9px;
+}
+
+.shareSampleMenu {
+  margin-left: auto;
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+.shareSamplePostText {
+  max-height: 82px;
+  overflow: hidden;
+  margin: 11px 1px 10px;
+  white-space: pre-line;
+  color: #1d2d3e;
+  font-size: 10.5px;
+  line-height: 1.48;
+}
+
+.shareSampleLinkCard {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  min-height: 82px;
+  overflow: hidden;
+  border: 1px solid #dce7ef;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.shareSampleCover {
+  position: relative;
+  min-height: 82px;
+  overflow: hidden;
+  background: #dfeaf2;
+}
+
+.shareSampleCover img {
+  object-fit: cover;
+}
+
+.shareSampleLinkMeta {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.shareSampleLinkMeta small {
+  color: #738395;
+  font-size: 9px;
+}
+
+.shareSampleLinkMeta strong,
+.shareSampleLinkMeta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shareSampleLinkMeta strong {
+  font-size: 10.5px;
+}
+
+.shareSampleLinkMeta span {
+  color: #617184;
+  font-size: 9px;
+}
+
+.shareSampleActions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 0 4px;
+  color: #718095;
+  font-size: 13px;
+}
+
+.noteSampleTopbar {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e7ece9;
+}
+
+.noteSampleWordmark {
+  color: #16a982;
+  font-size: 19px;
+  letter-spacing: -.04em;
+}
+
+.noteSampleTopbar > span:not(.shareSampleMenu) {
+  color: #6d7d74;
+}
+
+.noteSampleArticle {
+  padding: 10px 3px 0;
+}
+
+.noteSampleLabel {
+  color: #66776d;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.noteSampleArticle h4 {
+  margin: 5px 0 9px;
+  color: #17251f;
+  font-size: 16px;
+  line-height: 1.28;
+}
+
+.noteSampleArticle > .shareSampleCover {
+  width: 100%;
+  min-height: 78px;
+  aspect-ratio: 16 / 6.5;
+  border-radius: 8px;
+}
+
+.noteSampleTemplateText {
+  max-height: 68px;
+  overflow: hidden;
+  margin: 9px 0 6px;
+  white-space: pre-line;
+  color: #4f5e56;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.noteSampleAuthor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6d7d74;
+  font-size: 9px;
+}
+
+.noteSampleAuthorMark {
+  width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #153b61;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+@media (max-width: 1100px) {
+  .shareSamplePostText {
+    max-height: 78px;
+  }
+}
+
+@media (max-width: 640px) {
+  .shareSampleCard {
+    padding: 13px;
+  }
+
+  .shareSamplePostText {
+    max-height: none;
+  }
+
+  .noteSampleArticle h4 {
+    font-size: 18px;
+  }
+}
