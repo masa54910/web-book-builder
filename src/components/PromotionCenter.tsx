@@ -7,20 +7,10 @@ import { trackEvent } from "@/lib/analytics";
 import { buildPromotionAsset } from "@/lib/promotion";
 import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildLineWebShareUrl, buildShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "@/lib/shareTemplates";
 import { copyTextToClipboard } from "@/lib/shareClipboard";
-import { renderBookTrailer, preferredVideoMimeType } from "@/lib/videoRenderer";
 import type { SupportedLocale } from "@/lib/localization";
 import CharacterAssistant from "@/components/CharacterAssistant";
 import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
 import ServiceIcon from "@/components/ui/ServiceIcons";
-
-function downloadBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 export default function PromotionCenter({
   project,
@@ -34,8 +24,6 @@ export default function PromotionCenter({
   locale?: SupportedLocale;
 }) {
   const [status, setStatus] = useState("");
-  const [isRendering, setIsRendering] = useState(false);
-  const [videoUrl, setVideoUrl] = useState("");
   const [copied, setCopied] = useState("");
   const promotion = useMemo(
     () =>
@@ -92,25 +80,6 @@ export default function PromotionCenter({
     return false;
   };
 
-  const createVideo = async () => {
-    setIsRendering(true);
-    setStatus("動画をレンダリングしています…");
-    trackEvent("video_created", { bookId: cloudBookId || project.config.bookId });
-    try {
-      const result = await renderBookTrailer(project, promotion);
-      if (videoUrl) URL.revokeObjectURL(videoUrl);
-      const url = URL.createObjectURL(result.blob);
-      setVideoUrl(url);
-      downloadBlob(result.blob, result.fileName);
-      setStatus(`${result.fileName} を保存しました。`);
-      trackEvent("video_saved", { bookId: cloudBookId || project.config.bookId, mimeType: result.mimeType });
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "動画生成に失敗しました。公開状態には影響しません。");
-    } finally {
-      setIsRendering(false);
-    }
-  };
-
   const trackPromotion = (channel: "x" | "note" | "facebook" | "line") => {
     trackEvent(`${channel}_clicked`, { bookId: cloudBookId || project.config.bookId });
     trackEvent("promotion_completed", { bookId: cloudBookId || project.config.bookId, channel });
@@ -152,20 +121,6 @@ export default function PromotionCenter({
         <CharacterAssistant event="publish" compact />
       </div>
 
-      <div className="promotion-grid promotion-video-grid">
-        <article className="promotion-card">
-          <strong>Video</strong>
-          <h3>動画を作成</h3>
-          <p>作品データから16:9の紹介動画をレンダリングします。対応形式: {preferredVideoMimeType() || "未対応"}</p>
-          <button className="maker-primary-button" type="button" disabled={isRendering} onClick={() => void createVideo()}>
-            {isRendering ? "生成中…" : "動画を作成"}
-          </button>
-          {videoUrl ? (
-            <video className="promotion-video-preview" src={videoUrl} controls playsInline />
-          ) : null}
-        </article>
-      </div>
-
       <div className="promotion-grid promotion-share-grid" aria-label="共有ツール">
         <article className="promotion-card">
           <div className="promotion-service-label">
@@ -173,7 +128,7 @@ export default function PromotionCenter({
             <strong>X</strong>
           </div>
           <h3>Xに投稿する</h3>
-          <p>投稿文・ハッシュタグ・公開URLを含むX投稿画面を開きます。動画は保存済みファイルを添付してください。</p>
+          <p>投稿文・ハッシュタグ・公開URLを含むX投稿画面を開きます。</p>
           <p className="promotion-preview">Xカード画像: {promotion.ogImageUrl}</p>
           <textarea readOnly value={promotion.xPost} rows={6} />
           <a className="maker-secondary-button" href={xShareUrl} target="_blank" rel="noopener noreferrer" aria-label="Xで作品を共有" onClick={() => trackPromotion("x")}>

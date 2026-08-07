@@ -766,7 +766,7 @@
   gap: 22px 24px;
 }
 
-.videoCard { background: linear-gradient(145deg, rgba(237, 247, 242, 0.82), rgba(255, 255, 255, 0.72)); }
+.adjustmentCard { background: linear-gradient(145deg, rgba(234, 245, 252, 0.86), rgba(255, 255, 255, 0.74)); }
 .xCard { background: linear-gradient(145deg, rgba(236, 246, 251, 0.82), rgba(255, 255, 255, 0.72)); }
 .noteCard { background: linear-gradient(145deg, rgba(255, 247, 236, 0.85), rgba(255, 255, 255, 0.72)); }
 .portfolioCard { background: linear-gradient(145deg, rgba(246, 240, 249, 0.84), rgba(255, 255, 255, 0.72)); }
@@ -832,6 +832,147 @@
   overflow: hidden;
 }
 
+.adjustmentPreview {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, .9), transparent 48%),
+    linear-gradient(145deg, rgba(231, 244, 252, .92), rgba(255, 255, 255, .72));
+  pointer-events: none;
+  cursor: default;
+}
+
+.adjustmentPreviewBook {
+  position: relative;
+  min-height: 208px;
+  padding: 24px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  overflow: hidden;
+  border-radius: 14px;
+  color: #fff;
+  background:
+    linear-gradient(145deg, rgba(14, 44, 78, .98), rgba(42, 126, 180, .9));
+  box-shadow: 0 12px 24px rgba(31, 78, 112, .18);
+}
+
+.adjustmentPreviewBook::before,
+.adjustmentPreviewBook::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .48);
+}
+
+.adjustmentPreviewBook::before {
+  width: 90px;
+  height: 90px;
+  top: -26px;
+  right: -26px;
+  opacity: .2;
+}
+
+.adjustmentPreviewBook::after {
+  width: 48px;
+  height: 48px;
+  top: 36px;
+  left: -22px;
+  opacity: .16;
+}
+
+.adjustmentPreviewBook span,
+.adjustmentPreviewBook strong,
+.adjustmentPreviewBook i {
+  position: relative;
+  z-index: 1;
+}
+
+.adjustmentPreviewBook span {
+  font-size: 10px;
+  letter-spacing: .14em;
+  opacity: .74;
+}
+
+.adjustmentPreviewBook strong {
+  font-size: clamp(18px, 2.2vw, 27px);
+  line-height: 1.08;
+}
+
+.adjustmentPreviewBook i {
+  display: block;
+  width: 72%;
+  height: 1px;
+  margin-top: 4px;
+  background: rgba(255, 255, 255, .5);
+}
+
+.adjustmentPreviewPanel {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(49, 130, 177, .2);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .82);
+  box-shadow: 0 8px 18px rgba(31, 78, 112, .08);
+}
+
+.adjustmentPreviewPanelTitle {
+  display: block;
+  margin-bottom: 10px;
+  color: #123e68;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.adjustmentPreviewActions,
+.adjustmentPreviewOptions {
+  display: grid;
+  gap: 7px;
+}
+
+.adjustmentPreviewActions span {
+  display: block;
+  padding: 8px 9px;
+  border-radius: 8px;
+  color: #fff;
+  background: linear-gradient(135deg, #2a9fd6, #156b9e);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.adjustmentPreviewOptions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 11px;
+}
+
+.adjustmentPreviewOptions span {
+  min-width: 0;
+  padding: 6px 5px;
+  overflow: hidden;
+  border: 1px solid rgba(49, 130, 177, .16);
+  border-radius: 7px;
+  color: #55708a;
+  background: #f5fafe;
+  font-size: 9px;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adjustmentSubcopy {
+  display: block;
+  margin-top: 18px;
+  color: #55708a;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .promoCta {
   grid-column: 1 / -1;
   grid-row: 2;
@@ -849,47 +990,9 @@
   text-decoration: none;
 }
 
-.videoCta { background: linear-gradient(135deg, #1b8a73, #0f6f5d); }
 .xCta { background: linear-gradient(135deg, #347ca8, #235f88); }
 .noteCta { background: linear-gradient(135deg, #d79a3b, #b9771f); }
 .portfolioCta { background: linear-gradient(135deg, #9a6caf, #79538c); }
-
-.videoPreview {
-  padding: 18px;
-  background: linear-gradient(145deg, rgba(231, 244, 237, 0.92), rgba(255, 255, 255, 0.72));
-}
-
-.videoScreen {
-  position: relative;
-  min-height: 218px;
-  border-radius: 16px;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(145deg, rgba(24, 59, 83, 0.9), rgba(34, 85, 108, 0.82));
-}
-
-.videoPreviewImage {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-}
-
-.playButton {
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 58px;
-  height: 58px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: rgba(18, 24, 22, 0.82);
-  color: #fff;
-}
 
 .postPreview {
   display: grid;
@@ -1438,6 +1541,8 @@
 @media (max-width: 700px) {
   .promoGrid { grid-template-columns: 1fr; }
   .promoCta { width: 100%; }
+  .adjustmentPreview { grid-template-columns: 1fr; }
+  .adjustmentPreviewBook { min-height: 156px; }
   .featureCards { grid-template-columns: 1fr; }
 }
 
@@ -3919,14 +4024,13 @@
   color: #123e68;
 }
 
-.videoCard,
+.adjustmentCard,
 .xCard,
 .noteCard,
 .portfolioCard {
   background: linear-gradient(145deg, rgba(234, 245, 252, .86), rgba(255, 255, 255, .74));
 }
 
-.videoCta,
 .xCta,
 .noteCta,
 .portfolioCta {
@@ -3971,7 +4075,6 @@
 .textPanel button,
 .textPanelCta,
 .promoCta,
-.videoCta,
 .xCta,
 .noteCta,
 .portfolioCta,
@@ -3997,7 +4100,6 @@
 .textPanel button:hover,
 .textPanelCta:hover,
 .promoCta:hover,
-.videoCta:hover,
 .xCta:hover,
 .noteCta:hover,
 .portfolioCta:hover,
@@ -4014,7 +4116,6 @@
 .textPanel button:active,
 .textPanelCta:active,
 .promoCta:active,
-.videoCta:active,
 .xCta:active,
 .noteCta:active,
 .portfolioCta:active,
@@ -4031,7 +4132,6 @@
 .textPanel button:focus-visible,
 .textPanelCta:focus-visible,
 .promoCta:focus-visible,
-.videoCta:focus-visible,
 .xCta:focus-visible,
 .noteCta:focus-visible,
 .portfolioCta:focus-visible,
@@ -4052,7 +4152,7 @@
 .cta,
 .ctaComposer,
 .bookStage,
-.videoCard,
+.adjustmentCard,
 .xCard,
 .noteCard,
 .portfolioCard {
@@ -4063,7 +4163,7 @@
 .step,
 .promo,
 .faqItem,
-.videoCard,
+.adjustmentCard,
 .xCard,
 .noteCard,
 .portfolioCard {
@@ -4072,7 +4172,7 @@
 
 .featureCard:hover,
 .promo:hover,
-.videoCard:hover,
+.adjustmentCard:hover,
 .xCard:hover,
 .noteCard:hover,
 .portfolioCard:hover {

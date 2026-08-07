@@ -17,7 +17,7 @@ export default function Ver2BookShowcase() {
             priority
           />
         </div>
-        <div className={styles.featureBadges}><span><i>✓</i> 公開URL</span><span><i>✓</i> X共有</span><span><i>✓</i> note記事</span><span><i>✓</i> 紹介動画</span></div>
+        <div className={styles.featureBadges}><span><i>✓</i> 公開URL</span><span><i>✓</i> X共有</span><span><i>✓</i> note記事</span></div>
       </div>
     </div>
   );

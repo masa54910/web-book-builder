@@ -98,7 +98,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     id: "plus",
     name: "Plus",
     priceLabel: "準備中",
-    features: ["ページ無制限", "ブランド削除", "追加テーマ", "高度解析", "高画質動画", "追加動画テンプレート"],
+    features: ["ページ無制限", "ブランド削除", "追加テーマ", "高度解析"],
   },
 ];
 

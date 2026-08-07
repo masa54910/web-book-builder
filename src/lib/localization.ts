@@ -28,8 +28,7 @@ type TranslationKey =
   | "reader.autoflip.stop"
   | "promotion.title"
   | "promotion.x"
-  | "promotion.note"
-  | "promotion.video";
+  | "promotion.note";
 
 const dictionary: Record<SupportedLocale, Record<TranslationKey, string>> = {
   ja: {
@@ -48,7 +47,6 @@ const dictionary: Record<SupportedLocale, Record<TranslationKey, string>> = {
     "promotion.title": "Promotion Center",
     "promotion.x": "Xに投稿する",
     "promotion.note": "note記事を作る",
-    "promotion.video": "動画を作成",
   },
   en: {
     "nav.home": "Home",
@@ -66,7 +64,6 @@ const dictionary: Record<SupportedLocale, Record<TranslationKey, string>> = {
     "promotion.title": "Promotion Center",
     "promotion.x": "Post to X",
     "promotion.note": "Create note article",
-    "promotion.video": "Create video",
   },
   ko: {} as Record<TranslationKey, string>,
   "zh-CN": {} as Record<TranslationKey, string>,

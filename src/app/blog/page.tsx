@@ -16,7 +16,7 @@ const posts = [
   },
   {
     title: "公開後に作品を育てるためのPromotion Center",
-    excerpt: "X、note、紹介動画、共有URL。保存して終わりにしないための導線をベータ版から用意しています。",
+    excerpt: "X、note、共有URL。保存して終わりにしないための導線をベータ版から用意しています。",
     tag: "Promotion",
   },
   {

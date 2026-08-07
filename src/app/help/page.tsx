@@ -30,7 +30,7 @@ export default function HelpPage() {
         </article>
         <article>
           <h2>3. 公開して広める</h2>
-          <p>公開後はPromotion CenterからX投稿文、note紹介文、動画プレビュー、共有URLを作成できます。</p>
+          <p>公開後はPromotion CenterからX投稿文、note紹介文、共有URLを作成できます。</p>
         </article>
         <article>
           <h2>ベータ版の注意</h2>

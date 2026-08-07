@@ -10,7 +10,6 @@ const compareRows = [
   { label: "作成可能ページ", free: "20ページまで", publish: "1冊ごとに無制限", writer: "無制限" },
   { label: "公開URL", free: "利用可", publish: "利用可", writer: "利用可" },
   { label: "共有素材", free: "基本", publish: "拡張", writer: "拡張 + 分析" },
-  { label: "紹介動画", free: "-", publish: "準備中", writer: "準備中" },
   { label: "分析レポート", free: "-", publish: "簡易", writer: "詳細" },
 ];
 

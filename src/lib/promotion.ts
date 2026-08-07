@@ -2,7 +2,7 @@ import type { BookConfig } from "@/config/bookConfig";
 import type { SupportedLocale } from "@/lib/localization";
 import { buildShareTemplate, buildXShareTemplate } from "@/lib/shareTemplates";
 
-export type PromotionChannel = "x" | "note" | "instagram" | "threads" | "facebook" | "bluesky" | "tiktok" | "youtube" | "copy";
+export type PromotionChannel = "x" | "note" | "instagram" | "threads" | "facebook" | "bluesky" | "copy";
 
 export type PromotionAsset = {
   bookId: string;

@@ -23,8 +23,7 @@ WebBookMakerは、ユーザーが自分の原稿からページめくり付きWe
 - 自動ページめくり（速度変更、ループ、表紙/現在ページ開始）
 - 参考URLの選択・コピー
 - SNS共有、URLコピー、X投稿テンプレート
-- Promotion Center（動画作成、X投稿、note記事テンプレート、URLコピー）
-- Canvas/MediaRecorderベースの動画レンダリング（画面録画なし、MP4優先・WebMフォールバック）
+- Promotion Center（X投稿、note記事テンプレート、Facebook・LINE共有、URLコピー）
 - UI多言語の型・辞書構造（日本語 / English / 한국어 / 简体中文 / 繁體中文 / Français / Bahasa Indonesia / Tiếng Việt）
 - WebBookMaker編集部キャラクターイベント（ミオ / ブッキー）
 - 作品ごとのテーマ設定（背景、フォント、文字サイズ、余白、ページ幅）
@@ -105,7 +104,6 @@ Preview/Productionでは `NEXT_PUBLIC_ENABLE_DEMO_MODE=false` とし、Supabase�
 - `src/lib/localization.ts` UI多言語辞書
 - `src/lib/characterEvents.ts` ミオ/ブッキーのイベントメッセージ
 - `src/lib/promotion.ts` X/note/共有URLのプロモーション素材生成
-- `src/lib/videoRenderer.ts` Canvasベースの動画レンダリング
 - `src/components/PromotionCenter.tsx` 公開後のプロモーション導線
 - `src/components/CharacterAssistant.tsx` 編集部キャラクター表示
 

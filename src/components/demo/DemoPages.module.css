@@ -198,25 +198,6 @@
   padding: 16px;
 }
 
-.videoFrame {
-  margin-top: 12px;
-  border-radius: 18px;
-  border: 1px solid rgba(15, 111, 93, 0.17);
-  background: radial-gradient(circle at 18% 20%, rgba(77, 160, 136, 0.18), rgba(20, 53, 46, 0.95));
-  min-height: 220px;
-  display: grid;
-  place-items: center;
-  color: #eef8f4;
-  font-weight: 700;
-}
-
-.videoBadge {
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.16);
-}
-
 .bookGrid {
   display: grid;
   gap: 12px;
