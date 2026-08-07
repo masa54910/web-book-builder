@@ -25,7 +25,7 @@ import type { LastRead, StickyNote } from "@/lib/readerStorage";
 import type { ImageManifestRow, NovelChapter, ReaderPage } from "@/lib/types";
 import BookPage from "./BookPage";
 import ChapterTitlePage from "./ChapterTitlePage";
-import CoverDesignControls from "./CoverDesignControls";
+import CoverAdjustModal from "./CoverAdjustModal";
 import PageAdjustmentControls from "./PageAdjustmentControls";
 import ColophonPage from "./ColophonPage";
 import ContentsPage from "./ContentsPage";
@@ -352,6 +352,7 @@ export default function BookReader({
         setIsPageAdjustmentOpen(false);
         return;
       }
+      if (displayMode === "preview" && isCoverDesignOpen) return;
       const nextKey = config.bindingDirection === "rtl" ? "ArrowLeft" : "ArrowRight";
       const previousKey = config.bindingDirection === "rtl" ? "ArrowRight" : "ArrowLeft";
       if (event.key === nextKey) {
@@ -365,6 +366,15 @@ export default function BookReader({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [config.bindingDirection, displayMode, isCoverDesignOpen, isPageAdjustmentOpen, pageFlip]);
+
+  useEffect(() => {
+    if (displayMode !== "preview" || !isCoverDesignOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [displayMode, isCoverDesignOpen]);
 
   const renderPage = (page: ReaderPage) => {
     let content: React.ReactNode;
@@ -504,7 +514,7 @@ export default function BookReader({
         </div>
       ) : null}
 
-      <div className={`reader-preview-layout ${displayMode === "preview" && (isCoverDesignOpen || isPageAdjustmentOpen) ? "is-editing" : ""}`}>
+      <div className={`reader-preview-layout ${displayMode === "preview" && isPageAdjustmentOpen ? "is-editing" : ""}`}>
         <section className="book-viewport" aria-label="デジタル書籍リーダー">
           <HTMLFlipBook
             key={`${isMobile ? "mobile" : "desktop"}-${pagesWithAdjustments.length}`}
@@ -541,18 +551,6 @@ export default function BookReader({
             {pagesWithAdjustments.map(renderPage)}
           </HTMLFlipBook>
         </section>
-        {displayMode === "preview" && isCoverDesignOpen ? (
-          <aside className="reader-cover-design-drawer" aria-label="表紙デザイン設定">
-            <CoverDesignControls
-              value={coverDesign}
-              onChange={(patch) => onCoverDesignChange?.(patch)}
-              onReset={() => onCoverDesignChange?.({ ...DEFAULT_COVER_DESIGN })}
-              onClose={() => setIsCoverDesignOpen(false)}
-              heading="表紙デザイン"
-              description="Previewを見ながら表紙を調整できます。"
-            />
-          </aside>
-        ) : null}
         {displayMode === "preview" && isPageAdjustmentOpen ? (
           <aside className="reader-page-adjustment-drawer" aria-label="ページ調整設定">
             <PageAdjustmentControls
@@ -575,6 +573,16 @@ export default function BookReader({
           </aside>
         ) : null}
       </div>
+
+      {displayMode === "preview" && isCoverDesignOpen ? (
+        <CoverAdjustModal
+          config={config}
+          value={coverDesign}
+          onChange={(patch) => onCoverDesignChange?.(patch)}
+          onReset={() => onCoverDesignChange?.({ ...DEFAULT_COVER_DESIGN })}
+          onClose={() => setIsCoverDesignOpen(false)}
+        />
+      ) : null}
 
       <ReaderControls
         bindingDirection={config.bindingDirection}
