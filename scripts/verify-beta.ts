@@ -26,6 +26,12 @@ import {
   loadAutosaveDraft,
   saveAutosaveDraft,
 } from "../src/lib/browserBookStorage";
+import {
+  HOME_DRAFT_STORAGE_KEY,
+  deleteHomeDraft,
+  loadHomeDraft,
+  saveHomeDraft,
+} from "../src/lib/homeDraftStorage";
 import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildLineWebShareUrl, buildShareTemplate, buildXShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "../src/lib/shareTemplates";
 import { buildReaderFacebookShareUrl, buildReaderLineShareUrl, buildReaderLineWebShareUrl, buildReaderShareTemplate, buildReaderXShareUrl, READER_NOTE_NEW_POST_URL } from "../src/lib/readerShareTemplates";
 import { xIntentUrl } from "../src/lib/promotion";
@@ -607,6 +613,36 @@ try {
   assert.ok(finalAutosave);
   deleteAutosaveDraft("book-1");
   assert.equal(loadAutosaveDraft("book-1", "user-1"), null, "Formal save cleanup should remove the autosave key");
+
+  const savedHomeDraft = saveHomeDraft("ホーム入力の復元テスト", "cta");
+  assert.ok(savedHomeDraft, "Home draft should be serializable");
+  assert.equal(savedHomeDraft?.target, "cta");
+  assert.equal(loadHomeDraft()?.text, "ホーム入力の復元テスト");
+  assert.equal(loadHomeDraft()?.target, "cta");
+  assert.equal(autosaveStorage.has(HOME_DRAFT_STORAGE_KEY), true, "Home draft must use its dedicated storage key");
+
+  assert.equal(saveHomeDraft("   "), null, "Empty home drafts should be removed");
+  assert.equal(loadHomeDraft(), null, "Empty home drafts should not be restored");
+
+  fakeLocalStorage.setItem(HOME_DRAFT_STORAGE_KEY, JSON.stringify({ version: 999, text: "old", savedAt: Date.now() }));
+  assert.equal(loadHomeDraft(), null, "Unknown home draft versions must be discarded safely");
+
+  const throwingStorage = {
+    getItem: () => {
+      throw new Error("storage unavailable");
+    },
+    setItem: () => {
+      throw new Error("storage unavailable");
+    },
+    removeItem: () => {
+      throw new Error("storage unavailable");
+    },
+  } as unknown as Storage;
+  globalWithWindow.window = { localStorage: throwingStorage };
+  assert.equal(saveHomeDraft("Storage errors must not crash the home"), null);
+  assert.equal(loadHomeDraft(), null);
+  deleteHomeDraft();
+  globalWithWindow.window = { localStorage: fakeLocalStorage };
 } finally {
   if (previousWindow) {
     globalWithWindow.window = previousWindow;

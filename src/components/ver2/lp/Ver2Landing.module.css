@@ -4179,3 +4179,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Home hero lead: reuse the exact WebBook navy token from BrandLogo. */
+.heroTitle {
+  background: none;
+  color: var(--wb-navy);
+  -webkit-text-fill-color: var(--wb-navy);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, .92),
+    0 2px 0 rgba(15, 47, 87, .14),
+    0 4px 8px rgba(15, 47, 87, .18),
+    0 10px 24px rgba(44, 131, 212, .12);
+}
+
+.heroTitle .heroTitleLead {
+  color: var(--wb-navy);
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: var(--wb-navy);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, .92),
+    0 2px 0 rgba(15, 47, 87, .14),
+    0 4px 8px rgba(15, 47, 87, .18),
+    0 10px 24px rgba(44, 131, 212, .12);
+}

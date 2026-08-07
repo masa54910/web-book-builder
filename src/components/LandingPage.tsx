@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/lib/auth/AuthContext";
 import { saveDraft } from "@/lib/browserBookStorage";
+import { deleteHomeDraft, loadHomeDraft, saveHomeDraft } from "@/lib/homeDraftStorage";
 import { buildReaderPages } from "@/lib/paginateText";
 import { extractChaptersFromText } from "@/lib/bookProject";
 import { importManuscriptFile } from "@/lib/fileImport";
@@ -38,6 +39,7 @@ type FlowEstimate = {
 const FREE_PAGE_LIMIT = 20;
 const DEFAULT_CHARACTERS_PER_PAGE = 380;
 const DEFAULT_TOC_ITEMS_PER_PAGE = 6;
+const HOME_DRAFT_SAVE_DELAY_MS = 3_000;
 
 function fileFingerprint(file: File, text: string) {
   return `${file.name}:${file.size}:${text.length}:${text.slice(0, 80)}`;
@@ -70,6 +72,45 @@ export default function LandingPage() {
   const [attachedFiles, setAttachedFiles] = useState<AttachedFileSummary[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [flowEstimate, setFlowEstimate] = useState<FlowEstimate | null>(null);
+  const homeDraftHydratedRef = useRef(false);
+
+  useEffect(() => {
+    if (homeDraftHydratedRef.current) return;
+
+    const saved = loadHomeDraft();
+    homeDraftHydratedRef.current = true;
+
+    if (!saved || heroText.trim() || ctaText.trim()) return;
+
+    const restoreTimer = window.setTimeout(() => {
+      if (saved.target === "cta") {
+        setActiveTarget("cta");
+        setCtaText(saved.text);
+      } else {
+        setActiveTarget("hero");
+        setHeroText(saved.text);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(restoreTimer);
+  }, [ctaText, heroText]);
+
+  useEffect(() => {
+    if (!homeDraftHydratedRef.current) return;
+
+    const activeDraftText = activeTarget === "cta" ? ctaText : heroText;
+    const draftText = activeDraftText.trim() ? activeDraftText : heroText.trim() ? heroText : ctaText;
+    if (!draftText.trim()) {
+      deleteHomeDraft();
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      saveHomeDraft(draftText, activeTarget);
+    }, HOME_DRAFT_SAVE_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [activeTarget, ctaText, heroText]);
 
   const activeText = useMemo(
     () => (activeTarget === "cta" ? ctaText : heroText).trim() || (heroText.trim() ? heroText : ctaText).trim(),
@@ -108,6 +149,7 @@ export default function LandingPage() {
     }
 
     setFlowEstimate(null);
+    deleteHomeDraft();
     const next = "/books/new";
     if (user) {
       router.push(next);

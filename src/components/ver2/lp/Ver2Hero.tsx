@@ -54,7 +54,7 @@ export default function Ver2Hero({
           <div className={styles.heroCopy}>
             <div className={styles.kicker}>PDF不要。文章をコピペするだけ。</div>
             <h1 className={styles.heroTitle}>
-              書いた文章を、
+              <span className={styles.heroTitleLead}>書いた文章を</span>
               <br />
               <span className={styles.heroTitleLine}>そのまま<span>Webブック</span>に。</span>
             </h1>
