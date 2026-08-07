@@ -14,6 +14,8 @@ type PublicBookMetadataRow = {
   title: string;
   description: string;
   author_name: string;
+  cover_path: string | null;
+  updated_at: string | null;
 };
 
 async function loadPublicBookMetadata(slug: string) {
@@ -26,7 +28,7 @@ async function loadPublicBookMetadata(slug: string) {
   });
   const { data } = await supabase
     .from("books")
-    .select("title, description, author_name")
+    .select("title, description, author_name, cover_path, updated_at")
     .eq("slug", slug)
     .eq("status", "published")
     .in("visibility", ["public", "unlisted"])
@@ -44,14 +46,21 @@ export async function generateMetadata({
   const decodedSlug = decodeURIComponent(slug || "");
   const sample = decodedSlug === SAMPLE_BOOK_SLUG ? loadSampleBookProject() : null;
   const book = sample
-    ? { title: sample.config.title, description: sample.config.description, author_name: sample.config.author }
+    ? {
+        title: sample.config.title,
+        description: sample.config.description,
+        author_name: sample.config.author,
+        cover_path: sample.config.coverImage || null,
+        updated_at: null,
+      }
     : await loadPublicBookMetadata(decodedSlug);
   const title = book?.title ? `${book.title} | WebBookMaker` : "WebBookMaker | Webで読める一冊";
   const description =
     book?.description || (book?.author_name ? `${book.author_name} のWebブックを公開しています。` : "ページをめくるように読めるWebブック。");
   const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://webbookmaker.vercel.app").replace(/\/$/, "");
   const publicUrl = `${baseUrl}/books/${encodeURIComponent(decodedSlug)}`;
-  const ogImageUrl = `${baseUrl}/api/og/book/${encodeURIComponent(decodedSlug)}`;
+  const ogImageVersion = book?.updated_at ? `?v=${encodeURIComponent(book.updated_at)}` : "";
+  const ogImageUrl = `${baseUrl}/api/og/book/${encodeURIComponent(decodedSlug)}${ogImageVersion}`;
 
   return {
     title,
@@ -71,6 +80,7 @@ export async function generateMetadata({
       description,
       images: [ogImageUrl],
     },
+    authors: book?.author_name ? [{ name: book.author_name }] : undefined,
   };
 }
 
