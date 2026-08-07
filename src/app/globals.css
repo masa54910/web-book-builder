@@ -2046,6 +2046,17 @@ button.reader-edit-link:disabled {
   transform: translateX(-50%);
 }
 
+/* Page adjustment is a single-page editing canvas. Hide the decorative
+ * center seam and page-flip shadows only while that mode is active; the
+ * normal Preview and published Reader retain their book depth. */
+.reader-preview-layout.is-editing .book-viewport::after,
+.reader-preview-layout.is-editing .book-viewport .stf__outerShadow,
+.reader-preview-layout.is-editing .book-viewport .stf__innerShadow,
+.reader-preview-layout.is-editing .book-viewport .stf__hardShadow,
+.reader-preview-layout.is-editing .book-viewport .stf__hardInnerShadow {
+  display: none !important;
+}
+
 .flip-book {
   margin: 0 auto;
 }

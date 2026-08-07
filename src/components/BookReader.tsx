@@ -15,6 +15,7 @@ import {
 import { buildReaderPages, toBoundPageOrder } from "@/lib/paginateText";
 import { recordReaderProgress } from "@/lib/readerAnalytics";
 import { themeClassNames } from "@/lib/themeSystem";
+import type { BookContentBlock } from "@/lib/bookProject";
 import {
   readLastRead,
   readStickyNotes,
@@ -57,10 +58,48 @@ type FlipBookHandle = {
   pageFlip: () => PageFlipApi;
 };
 
+function sourceBlockIdsForPage(page: ReaderPage) {
+  const ids = page.sourceBlockIds?.filter(Boolean) || [];
+  return ids.length ? ids : [page.id];
+}
+
+function primarySourceBlockId(page: ReaderPage) {
+  return sourceBlockIdsForPage(page).find((id) => id !== page.id) || page.id;
+}
+
+/**
+ * Prefer stable content-block adjustments, while still accepting the rendered
+ * page ids used by older projects. The last source block is the natural target
+ * when a rendered page contains more than one block.
+ */
+function adjustmentTargetIds(page: ReaderPage) {
+  const ids = sourceBlockIdsForPage(page);
+  const blockIds = ids.filter((id) => id !== page.id);
+  return [...blockIds.reverse(), page.id];
+}
+
+function adjustmentForPage(adjustments: PageAdjustment[], page: ReaderPage | undefined) {
+  if (!page) return undefined;
+  for (const id of adjustmentTargetIds(page)) {
+    const adjustment = findPageAdjustment(adjustments, id);
+    if (adjustment) return adjustment;
+  }
+  return undefined;
+}
+
+function adjustmentBlockIdForPage(adjustments: PageAdjustment[], page: ReaderPage) {
+  for (const id of adjustmentTargetIds(page)) {
+    if (findPageAdjustment(adjustments, id)) return id;
+  }
+  const ids = sourceBlockIdsForPage(page).filter((id) => id !== page.id);
+  return ids.at(-1) || page.id;
+}
+
 export default function BookReader({
   config,
   chapters,
   images,
+  contentBlocks,
   displayMode = "published",
   editHref,
   cloudBookId,
@@ -77,6 +116,7 @@ export default function BookReader({
   config: BookConfig;
   chapters: NovelChapter[];
   images: ImageManifestRow[];
+  contentBlocks?: BookContentBlock[];
   displayMode?: "preview" | "published";
   editHref?: string;
   cloudBookId?: string;
@@ -92,9 +132,11 @@ export default function BookReader({
   onPageAdjustmentChange?: (blockId: string, patch: Partial<PageAdjustment>) => void;
   onPageAdjustmentReset?: (blockId: string) => void;
   onPageAdjustmentsResetAll?: () => void;
-  onPageImageAdd?: (file: File) => void;
+  onPageImageAdd?: (file: File, page: ReaderPage | null) => void;
 }) {
   const flipBookRef = useRef<FlipBookHandle | null>(null);
+  const activePageIdRef = useRef<string | null>(null);
+  const activePageSourceIdRef = useRef<string | null>(null);
   const storage = useMemo(() => getSafeLocalStorage(), []);
   const [isMobile, setIsMobile] = useState(() =>
     typeof window === "undefined" ? false : window.matchMedia("(max-width: 760px)").matches,
@@ -113,7 +155,10 @@ export default function BookReader({
   const [isCoverDesignOpen, setIsCoverDesignOpen] = useState(false);
   const [isPageAdjustmentOpen, setIsPageAdjustmentOpen] = useState(false);
   const coverDesign = normalizeCoverDesign(config.coverDesign);
-  const pageAdjustments = normalizePageAdjustments(config.pageAdjustments);
+  const pageAdjustments = useMemo(
+    () => normalizePageAdjustments(config.pageAdjustments),
+    [config.pageAdjustments],
+  );
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 760px)");
@@ -130,12 +175,13 @@ export default function BookReader({
       buildReaderPages({
         chapters,
         images,
+        contentBlocks,
         charactersPerPage: isMobile
           ? Math.max(220, Math.floor(config.charactersPerPage * 0.82))
           : config.charactersPerPage,
         tableOfContentsItemsPerPage: config.tableOfContentsItemsPerPage,
       }),
-    [chapters, config.charactersPerPage, config.tableOfContentsItemsPerPage, images, isMobile],
+    [chapters, config.charactersPerPage, config.tableOfContentsItemsPerPage, contentBlocks, images, isMobile],
   );
   const pages = useMemo(
     () => toBoundPageOrder(logicalPages, isMobile, config.bindingDirection),
@@ -148,7 +194,7 @@ export default function BookReader({
   const pagesWithAdjustments = useMemo(() => {
     const adjustedPages: ReaderPage[] = [];
     for (const page of pages) {
-      const adjustment = findPageAdjustment(pageAdjustments, page.id);
+      const adjustment = adjustmentForPage(pageAdjustments, page);
       if (adjustment?.pageBreakBefore) {
         adjustedPages.push({
           id: `page-break-before-${page.id}`,
@@ -169,6 +215,14 @@ export default function BookReader({
   }, [pageAdjustments, pages]);
 
   const activePageIndex = Math.min(currentPage, Math.max(0, pagesWithAdjustments.length - 1));
+
+  useEffect(() => {
+    if (!activePageIdRef.current) {
+      const activePage = pagesWithAdjustments[activePageIndex];
+      activePageIdRef.current = activePage?.id || null;
+      activePageSourceIdRef.current = activePage ? primarySourceBlockId(activePage) : null;
+    }
+  }, [activePageIndex, pagesWithAdjustments]);
 
   const pageDetails = useCallback(
     (pageIndex: number) => {
@@ -388,6 +442,27 @@ export default function BookReader({
     return () => window.cancelAnimationFrame(frame);
   }, [displayMode, isPageAdjustmentOpen, pageFlip]);
 
+  useEffect(() => {
+    if (displayMode !== "preview") return;
+    const activePageId = activePageIdRef.current;
+    if (!activePageId) return;
+    let targetIndex = pagesWithAdjustments.findIndex((page) => page.id === activePageId);
+    if (targetIndex < 0 && activePageSourceIdRef.current) {
+      targetIndex = pagesWithAdjustments.findIndex((page) =>
+        sourceBlockIdsForPage(page).includes(activePageSourceIdRef.current as string),
+      );
+    }
+    if (targetIndex < 0) return;
+    const frame = window.requestAnimationFrame(() => {
+      const api = pageFlip();
+      if (!api) return;
+      api.update();
+      api.turnToPage(targetIndex);
+      setCurrentPage(targetIndex);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [displayMode, pageFlip, pagesWithAdjustments]);
+
   const renderPage = (page: ReaderPage) => {
     let content: React.ReactNode;
     if (page.kind === "cover") content = <CoverPage config={config} />;
@@ -416,7 +491,7 @@ export default function BookReader({
           onJumpToPrevious={
             previousChapter ? () => jumpToId(`chapter-${previousChapter.slug}`) : undefined
           }
-          adjustment={findPageAdjustment(pageAdjustments, page.id)}
+          adjustment={adjustmentForPage(pageAdjustments, page)}
         />
       );
     } else if (page.kind === "image") {
@@ -426,7 +501,7 @@ export default function BookReader({
           alt={page.alt}
           caption={page.caption}
           missing={page.missing}
-          adjustment={findPageAdjustment(pageAdjustments, page.id)}
+          adjustment={adjustmentForPage(pageAdjustments, page)}
         />
       );
     } else if (page.kind === "pageBreak") {
@@ -556,6 +631,9 @@ export default function BookReader({
             disableFlipByClick={false}
             onFlip={(event: { data: number }) => {
               setCurrentPage(event.data);
+              const activePage = pagesWithAdjustments[event.data];
+              activePageIdRef.current = activePage?.id || null;
+              activePageSourceIdRef.current = activePage ? primarySourceBlockId(activePage) : null;
               saveLastReadAt(event.data);
               recordReaderProgress(config.bookId, pagesWithAdjustments[event.data], event.data, pagesWithAdjustments.length, cloudBookId);
             }}
@@ -569,17 +647,24 @@ export default function BookReader({
               page={pagesWithAdjustments[activePageIndex] || null}
               pageNumber={(logicalFolioById.get(pagesWithAdjustments[activePageIndex]?.id || "") ?? activePageIndex) + 1}
               totalPages={pagesWithAdjustments.length}
-              value={findPageAdjustment(pageAdjustments, pagesWithAdjustments[activePageIndex]?.id || "")}
+              value={adjustmentForPage(pageAdjustments, pagesWithAdjustments[activePageIndex])}
               onChange={(patch) => {
                 const target = pagesWithAdjustments[activePageIndex];
-                if (target && target.kind !== "pageBreak") onPageAdjustmentChange?.(target.id, patch);
+                if (target && target.kind !== "pageBreak") {
+                  onPageAdjustmentChange?.(adjustmentBlockIdForPage(pageAdjustments, target), patch);
+                }
               }}
               onReset={() => {
                 const target = pagesWithAdjustments[activePageIndex];
-                if (target && target.kind !== "pageBreak") onPageAdjustmentReset?.(target.id);
+                if (target && target.kind !== "pageBreak") {
+                  onPageAdjustmentReset?.(adjustmentBlockIdForPage(pageAdjustments, target));
+                }
               }}
               onResetAll={onPageAdjustmentsResetAll}
-              onImageAdd={onPageImageAdd}
+              onImageAdd={(file) => {
+                const target = pagesWithAdjustments[activePageIndex];
+                onPageImageAdd?.(file, target?.kind === "text" || target?.kind === "image" ? target : null);
+              }}
               onClose={() => setIsPageAdjustmentOpen(false)}
             />
           </aside>

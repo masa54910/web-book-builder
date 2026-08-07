@@ -4,7 +4,14 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { contentBlocksToRawText, type BookContentBlock, type BookProject } from "@/lib/bookProject";
+import {
+  contentBlocksFromLegacy,
+  contentBlocksToRawText,
+  extractChaptersFromText,
+  type BookContentBlock,
+  type BookProject,
+  type UploadedBookImage,
+} from "@/lib/bookProject";
 import { loadCanonicalPreviewProject, updateCanonicalPreviewProject } from "@/lib/canonicalPreviewStorage";
 import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import {
@@ -14,6 +21,7 @@ import {
   type PageAdjustment,
 } from "@/lib/pageAdjustments";
 import { resolveSafeInternalReturnPath } from "@/lib/returnTo";
+import type { ReaderPage } from "@/lib/types";
 import BookReaderShell from "./BookReaderShell";
 import HomeBackLink from "./HomeBackLink";
 
@@ -24,6 +32,107 @@ function fileToDataUrl(file: File) {
     reader.onerror = () => reject(reader.error || new Error("画像を読み込めませんでした"));
     reader.readAsDataURL(file);
   });
+}
+
+function pageSourceIds(page: ReaderPage) {
+  return new Set((page.sourceBlockIds || []).filter((id) => id !== page.id));
+}
+
+function findImageInsertionIndex(blocks: BookContentBlock[], page: ReaderPage | null) {
+  if (!page) return blocks.length;
+  const sourceIds = pageSourceIds(page);
+  if (page.kind === "image") {
+    sourceIds.add(page.imageId);
+    sourceIds.add(page.imageIndex);
+  }
+
+  let lastSourceIndex = -1;
+  blocks.forEach((block, index) => {
+    if (sourceIds.has(block.id)) lastSourceIndex = index;
+  });
+  if (lastSourceIndex >= 0) return lastSourceIndex + 1;
+
+  if (page.kind === "text") {
+    for (const paragraph of page.paragraphs) {
+      const normalized = paragraph.trim();
+      if (!normalized) continue;
+      blocks.forEach((block, index) => {
+        if (block.type === "text" && block.content.includes(normalized)) lastSourceIndex = index;
+      });
+    }
+  }
+  return lastSourceIndex >= 0 ? lastSourceIndex + 1 : blocks.length;
+}
+
+function insertImageBlockAtPage(
+  blocks: BookContentBlock[],
+  imageBlock: Extract<BookContentBlock, { type: "image" }>,
+  page: ReaderPage | null,
+) {
+  const nextBlocks = [...blocks];
+  if (page?.kind === "text") {
+    const lastParagraph = page.paragraphs.map((paragraph) => paragraph.trim()).filter(Boolean).at(-1);
+    if (lastParagraph) {
+      const sourceIds = pageSourceIds(page);
+      let sourceIndex = -1;
+      blocks.forEach((block, index) => {
+        if (block.type === "text" && (sourceIds.has(block.id) || block.content.includes(lastParagraph))) {
+          sourceIndex = index;
+        }
+      });
+      if (sourceIndex >= 0) {
+        const sourceBlock = blocks[sourceIndex];
+        if (sourceBlock.type === "text") {
+          const paragraphEnd = sourceBlock.content.lastIndexOf(lastParagraph) + lastParagraph.length;
+          if (paragraphEnd > lastParagraph.length - 1 && paragraphEnd < sourceBlock.content.length) {
+            const before = sourceBlock.content.slice(0, paragraphEnd).trimEnd();
+            const after = sourceBlock.content.slice(paragraphEnd).trimStart();
+            nextBlocks.splice(
+              sourceIndex,
+              1,
+              { ...sourceBlock, content: before },
+              imageBlock,
+              { ...sourceBlock, id: `${sourceBlock.id}-continuation-${imageBlock.id}`, content: after },
+            );
+            return nextBlocks;
+          }
+        }
+      }
+    }
+  }
+  nextBlocks.splice(findImageInsertionIndex(blocks, page), 0, imageBlock);
+  return nextBlocks;
+}
+
+function chaptersAfterContentChange(current: BookProject, rawText: string) {
+  const extracted = extractChaptersFromText(rawText, current.config.title);
+  return extracted.map((chapter, index) => {
+    const previous = current.chapters.find((item) => item.slug === chapter.slug) || current.chapters[index];
+    return previous
+      ? {
+          ...chapter,
+          id: previous.id,
+          slug: previous.slug,
+          source: previous.source,
+          subtitle: previous.subtitle,
+        }
+      : chapter;
+  });
+}
+
+function uploadedImagesFromManifest(project: BookProject): UploadedBookImage[] {
+  return project.images.map((image, index) => ({
+    id: image.image_id || image.image_index,
+    fileName: image.source_path || image.alt || `image-${index + 1}`,
+    dataUrl: image.public_url || image.image_url || "",
+    storagePath: image.storage_path,
+    displayUrl: image.public_url || image.image_url || undefined,
+    mimeType: "image/*",
+    size: 0,
+    caption: image.caption || "",
+    insertChapter: image.chapter_title,
+    orderInChapter: index,
+  }));
 }
 
 export default function DynamicReaderPage() {
@@ -132,7 +241,7 @@ export default function DynamicReaderPage() {
       });
   }, []);
 
-  const handlePageImageAdd = useCallback((file: File) => {
+  const handlePageImageAdd = useCallback((file: File, targetPage: ReaderPage | null) => {
     if (!file.type.startsWith("image/")) return;
     void fileToDataUrl(file).then((dataUrl) => {
       const current = projectRef.current;
@@ -151,10 +260,17 @@ export default function DynamicReaderPage() {
         pageMode: "full-page",
         uploadState: "ready",
       };
-      const nextBlocks = [...(current.contentBlocks || []), imageBlock];
+      const existingBlocks = current.contentBlocks?.length
+        ? current.contentBlocks
+        : contentBlocksFromLegacy(current.rawText, uploadedImagesFromManifest(current));
+      const nextBlocks = insertImageBlockAtPage(existingBlocks, imageBlock, targetPage);
+      const nextRawText = contentBlocksToRawText(nextBlocks);
+      const targetChapter = targetPage && "chapterTitle" in targetPage
+        ? current.chapters.find((chapter) => chapter.title === targetPage.chapterTitle)
+        : current.chapters.at(-1);
       const imageRow = {
-        chapter_order: current.chapters.at(-1)?.order || 1,
-        chapter_title: current.chapters.at(-1)?.title || current.config.title,
+        chapter_order: targetChapter?.order || 1,
+        chapter_title: targetChapter?.title || current.config.title,
         image_index: blockId,
         image_id: blockId,
         image_url: dataUrl,
@@ -165,25 +281,11 @@ export default function DynamicReaderPage() {
         source_path: file.name,
         local_path: "",
       };
-      const imageToken = `[[image:${blockId}||full-page]]`;
-      const nextChapters = current.chapters.length
-        ? current.chapters.map((chapter, index) =>
-            index === current.chapters.length - 1
-              ? { ...chapter, body: `${chapter.body}\n\n${imageToken}` }
-              : chapter,
-          )
-        : [{
-            id: "chapter-01",
-            order: 1,
-            title: current.config.title || "作品",
-            slug: "chapter-01",
-            source: "preview-upload",
-            body: imageToken,
-          }];
+      const nextChapters = chaptersAfterContentChange(current, nextRawText);
       const nextProject: BookProject = {
         ...current,
         chapters: nextChapters,
-        rawText: contentBlocksToRawText(nextBlocks),
+        rawText: nextRawText,
         contentBlocks: nextBlocks,
         images: [...current.images, imageRow],
         missingImageIds: current.missingImageIds.filter((id) => id !== blockId),
@@ -237,6 +339,7 @@ export default function DynamicReaderPage() {
         config={project.config}
         chapters={project.chapters}
         images={project.images}
+        contentBlocks={project.contentBlocks}
         displayMode="preview"
         editHref={isDashboardPreview ? safeReturnTo : "/"}
         onCoverDesignChange={handleCoverDesignChange}

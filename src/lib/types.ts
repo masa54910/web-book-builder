@@ -32,7 +32,7 @@ export type ChapterManifestRow = {
   subtitle?: string;
 };
 
-export type ReaderPage =
+type ReaderPageShape =
   | { id: "cover"; kind: "cover" }
   | { id: "title"; kind: "title" }
   | {
@@ -74,3 +74,12 @@ export type ReaderPage =
     }
   | { id: "colophon"; kind: "colophon" }
   | { id: "back-cover"; kind: "backCover" };
+
+/**
+ * Rendered-page metadata used by Preview adjustments. A page may contain
+ * multiple source blocks; the page id is kept as a stable fallback for
+ * legacy projects that do not carry block metadata.
+ */
+export type ReaderPage = ReaderPageShape & {
+  sourceBlockIds?: string[];
+};

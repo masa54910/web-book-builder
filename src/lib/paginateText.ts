@@ -1,4 +1,5 @@
 import type { BindingDirection } from "@/config/bookConfig";
+import type { BookContentBlock } from "./bookProject";
 import type { ImageManifestRow, NovelChapter, ReaderPage } from "./types";
 
 const IMAGE_PATTERN = /^\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?\]\]$/;
@@ -54,11 +55,13 @@ function imageSource(image?: ImageManifestRow) {
 export function buildReaderPages({
   chapters,
   images,
+  contentBlocks,
   charactersPerPage,
   tableOfContentsItemsPerPage,
 }: {
   chapters: NovelChapter[];
   images: ImageManifestRow[];
+  contentBlocks?: BookContentBlock[];
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
 }): ReaderPage[] {
@@ -102,19 +105,42 @@ export function buildReaderPages({
       .split(/\n{2,}/)
       .map((segment) => segment.trim());
     let paragraphs: string[] = [];
+    let paragraphSourceBlockIds: string[] = [];
     let cost = 0;
     let textPageIndex = 1;
 
+    const textBlocks = (contentBlocks || []).filter(
+      (block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text",
+    );
+    const sourceBlockIdsFor = (pageId: string, pageParagraphs: string[]) => {
+      const sourceIds = new Set<string>();
+      for (const sourceId of paragraphSourceBlockIds) sourceIds.add(sourceId);
+      for (const paragraph of pageParagraphs) {
+        const normalized = paragraph.trim();
+        if (!normalized) continue;
+        const source = textBlocks.find((block) => block.content.includes(normalized));
+        if (source) sourceIds.add(source.id);
+      }
+      // Keep the rendered page id as a stable, page-specific fallback. This
+      // preserves existing adjustments for legacy projects while exposing the
+      // underlying content block ids when they are available.
+      sourceIds.add(pageId);
+      return [...sourceIds];
+    };
+
     const flushTextPage = () => {
       if (!paragraphs.length) return;
+      const pageId = `${chapter.slug}-text-${textPageIndex}`;
       pages.push({
-        id: `${chapter.slug}-text-${textPageIndex}`,
+        id: pageId,
         kind: "text",
         chapterTitle: chapter.title,
         paragraphs,
+        sourceBlockIds: sourceBlockIdsFor(pageId, paragraphs),
       });
       textPageIndex += 1;
       paragraphs = [];
+      paragraphSourceBlockIds = [];
       cost = 0;
     };
 
@@ -138,6 +164,7 @@ export function buildReaderPages({
               missing: !image,
             }),
           );
+          paragraphSourceBlockIds.push(image?.image_id || image?.image_index || imageId);
           cost += inlineImageCost;
           continue;
         }
@@ -153,6 +180,7 @@ export function buildReaderPages({
           alt: image?.alt || `${chapter.title} image ${imageId}`,
           caption: image?.caption || imageMatch[2] || "",
           missing: !image,
+          sourceBlockIds: [image?.image_id || image?.image_index || imageId, `${chapter.slug}-image-${imageId}`],
         });
         continue;
       }

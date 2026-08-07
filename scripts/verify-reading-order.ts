@@ -150,6 +150,7 @@ if (!dynamicProjectResult.ok) {
   const dynamicPages = buildReaderPages({
     chapters: dynamicProject.chapters,
     images: dynamicProject.images,
+    contentBlocks: dynamicProject.contentBlocks,
     charactersPerPage: dynamicProject.config.charactersPerPage,
     tableOfContentsItemsPerPage: dynamicProject.config.tableOfContentsItemsPerPage,
   });
@@ -158,6 +159,9 @@ if (!dynamicProjectResult.ok) {
   }
   if (!dynamicPages.some((page) => page.kind === "image" && page.imageId === "missing-image" && page.missing)) {
     failures.push("不足画像IDのプレースホルダーが生成されていません");
+  }
+  if (!dynamicPages.some((page) => page.kind === "image" && page.imageId === "sample-image" && page.sourceBlockIds?.includes("sample-image"))) {
+    failures.push("画像ページにsourceBlockIdsが付与されていません");
   }
 }
 

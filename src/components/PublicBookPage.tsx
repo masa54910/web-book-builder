@@ -57,6 +57,7 @@ export default function PublicBookPage() {
       config={book.bookProject.config}
       chapters={book.bookProject.chapters}
       images={book.bookProject.images}
+      contentBlocks={book.bookProject.contentBlocks}
       displayMode="published"
       cloudBookId={book.id}
       shareUrl={publicBookUrl(decodeURIComponent(params.slug))}

@@ -2,9 +2,10 @@
 
 import dynamic from "next/dynamic";
 import type { BookConfig } from "@/config/bookConfig";
+import type { BookContentBlock } from "@/lib/bookProject";
 import type { CoverDesign } from "@/lib/coverDesign";
 import type { PageAdjustment } from "@/lib/pageAdjustments";
-import type { ImageManifestRow, NovelChapter } from "@/lib/types";
+import type { ImageManifestRow, NovelChapter, ReaderPage } from "@/lib/types";
 
 const BookReader = dynamic(() => import("./BookReader"), {
   ssr: false,
@@ -15,6 +16,7 @@ export default function BookReaderShell({
   config,
   chapters,
   images,
+  contentBlocks,
   displayMode = "published",
   editHref,
   cloudBookId,
@@ -31,6 +33,7 @@ export default function BookReaderShell({
   config: BookConfig;
   chapters: NovelChapter[];
   images: ImageManifestRow[];
+  contentBlocks?: BookContentBlock[];
   displayMode?: "preview" | "published";
   editHref?: string;
   cloudBookId?: string;
@@ -41,7 +44,7 @@ export default function BookReaderShell({
   onPageAdjustmentChange?: (blockId: string, patch: Partial<PageAdjustment>) => void;
   onPageAdjustmentReset?: (blockId: string) => void;
   onPageAdjustmentsResetAll?: () => void;
-  onPageImageAdd?: (file: File) => void;
+  onPageImageAdd?: (file: File, page: ReaderPage | null) => void;
   backLink?: {
     destination?: "auto" | "home" | "dashboard";
     href?: string;
@@ -53,6 +56,7 @@ export default function BookReaderShell({
       config={config}
       chapters={chapters}
       images={images}
+      contentBlocks={contentBlocks}
       displayMode={displayMode}
       editHref={editHref}
       cloudBookId={cloudBookId}
