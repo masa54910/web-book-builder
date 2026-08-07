@@ -5,7 +5,10 @@ export default function Ver2HowItWorks() {
   return (
     <section className={styles.section} id="samples">
       <div className={styles.container}>
-        <h2 className={styles.sectionTitle}>🌿 かんたん3ステップで、あなたの本が完成 🌿</h2>
+        <h2 className={`${styles.sectionTitle} ${styles.withBookmark}`}>
+          <span className={styles.bookmarkMark} aria-hidden="true">付箋</span>
+          かんたん3ステップで、あなたの本が完成
+        </h2>
         <p className={styles.sectionLead}>文章を貼り、表紙を選び、URLで届ける。迷わず進める制作フローです。</p>
         <div className={styles.steps}>
           <article className={styles.step}>
@@ -25,7 +28,7 @@ export default function Ver2HowItWorks() {
             <div className={styles.sharebox} aria-label="利用できる共有方法の紹介"><div className={styles.url}>https://webbookmaker.app/books/123456</div><div className={styles.socials}><span className={`${styles.social} ${styles.x}`} role="img" aria-label="Xで共有">𝕏</span><span className={`${styles.social} ${styles.note}`} role="img" aria-label="noteで共有">note</span><span className={`${styles.social} ${styles.line}`} role="img" aria-label="LINEで共有">LINE</span><span className={`${styles.social} ${styles.link}`} role="img" aria-label="URLを共有">🔗</span></div></div>
           </article>
           <article className={`${styles.step} ${styles.growCard}`}>
-            <div className={styles.stepHead}><span className={styles.stepNum}>4</span><h3>公開後も作品を分析</h3></div>
+            <div className={styles.stepHead}><span className={styles.stepNum}>4</span><h3>公開後も作品を分析・編集</h3></div>
             <div className={styles.growthPanel}>
               <div className={styles.growthMetric}><span className={styles.growthIcon}>◔</span><div><strong>読了率</strong><small>読者がどこまで読んだか確認</small></div></div>
               <div className={styles.growthMetric}><span className={styles.growthIcon}>↗</span><div><strong>アクセス数</strong><small>公開後の広がりを把握</small></div></div>

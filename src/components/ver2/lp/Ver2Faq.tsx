@@ -4,7 +4,10 @@ export default function Ver2Faq() {
   return (
     <section className={`${styles.section} ${styles.faqSection}`} id="faq">
       <div className={styles.container}>
-        <h2 className={styles.sectionTitle}>よくある質問</h2>
+        <h2 className={`${styles.sectionTitle} ${styles.withBookmark}`}>
+          <span className={styles.bookmarkMark} aria-hidden="true">付箋</span>
+          よくある質問
+        </h2>
         <p className={styles.sectionLead}>初めての方が気になるポイントを、短くわかりやすくまとめました。</p>
         <div className={styles.faqGrid}>
           <details className={styles.faqItem}><summary>パソコンが苦手でも使えますか？</summary><p>はい。文章を貼り付け、表紙とテーマを選ぶだけで作成できます。難しい設定はありません。</p></details>

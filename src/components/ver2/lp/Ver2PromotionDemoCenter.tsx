@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 
+import { SAMPLE_BOOK_COVER_IMAGE } from "@/lib/sampleBookConstants";
 import styles from "./Ver2Landing.module.css";
 import { NoteShareSampleCard, XShareSampleCard } from "./HomeShareSamples";
 
@@ -7,7 +9,10 @@ export default function Ver2PromotionDemoCenter() {
   return (
     <section className={styles.promotionSection} id="promotion">
       <div className={styles.container}>
-        <h2 className={styles.promoTitle}>公開したあと、作品をもっと広めよう</h2>
+        <h2 className={`${styles.promoTitle} ${styles.withBookmark}`}>
+          <span className={styles.bookmarkMark} aria-hidden="true">付箋</span>
+          公開後も、作品を編集・改善しながら広めよう
+        </h2>
         <p className={styles.sectionLead}>公開して終わりではなく、読者に届く導線までひとつの体験にまとめます。</p>
         <div className={styles.promoGrid}>
           <article className={`${styles.promo} ${styles.adjustmentCard}`}>
@@ -18,25 +23,33 @@ export default function Ver2PromotionDemoCenter() {
               <small className={styles.adjustmentSubcopy}>自動で作って、気になるところだけ整える。</small>
             </div>
             <div className={`${styles.promoPreview} ${styles.adjustmentPreview}`} aria-hidden="true">
-              <div className={styles.adjustmentPreviewBook}>
-                <span>WebBook</span>
-                <strong>Preview</strong>
-                <i />
+              <div className={styles.adjustmentPreviewToolbar}>
+                <span className={styles.adjustmentPreviewKicker}>Preview</span>
+                <span className={styles.adjustmentPreviewPageCount}>2 / 22</span>
               </div>
-              <div className={styles.adjustmentPreviewPanel}>
-                <span className={styles.adjustmentPreviewPanelTitle}>仕上げ調整</span>
-                <div className={styles.adjustmentPreviewActions}>
-                  <span>表紙を調整</span>
-                  <span>ページを調整</span>
+              <div className={styles.adjustmentPreviewSpread}>
+                <div className={`${styles.adjustmentPreviewPage} ${styles.adjustmentPreviewPageLeft}`}>
+                  <span className={styles.adjustmentPreviewBrand}>WebBookMaker</span>
+                  <strong>星降る街の<br />小さな記録</strong>
+                  <span className={styles.adjustmentPreviewRule} />
+                  <span className={styles.adjustmentPreviewLine} />
+                  <span className={styles.adjustmentPreviewLineShort} />
+                  <span className={styles.adjustmentPreviewFolio}>01</span>
                 </div>
-                <div className={styles.adjustmentPreviewOptions}>
-                  <span>レイアウト</span>
-                  <span>文字サイズ</span>
-                  <span>画像位置</span>
-                  <span>改ページ</span>
-                  <span>画像サイズ</span>
-                  <span>画像配置</span>
+                <span className={styles.adjustmentPreviewSpine} />
+                <div className={`${styles.adjustmentPreviewPage} ${styles.adjustmentPreviewPageRight}`}>
+                  <span className={styles.adjustmentPreviewPageKicker}>Chapter 1</span>
+                  <strong>夜の街で見つけた光</strong>
+                  <p>小さな出来事を、1冊のWebブックに。</p>
+                  <span className={styles.adjustmentPreviewImageFrame}>
+                    <Image src={SAMPLE_BOOK_COVER_IMAGE} alt="" fill sizes="220px" />
+                  </span>
+                  <span className={styles.adjustmentPreviewFolio}>02</span>
                 </div>
+              </div>
+              <div className={styles.adjustmentPreviewFooter}>
+                <span>表紙を調整</span>
+                <span>ページを調整</span>
               </div>
             </div>
           </article>
