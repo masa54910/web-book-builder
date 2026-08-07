@@ -1758,7 +1758,7 @@ button.reader-edit-link:disabled {
 
 .reader-preview-layout.is-editing {
   display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(520px, 620px) minmax(0, 1fr);
   grid-template-areas: "panel book";
   gap: 20px;
   align-items: start;
@@ -1990,17 +1990,6 @@ button.reader-edit-link:disabled {
   pointer-events: none;
 }
 
-.cover-series {
-  align-self: flex-start;
-  padding: 8px 10px 7px;
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  color: #f8e0c4;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-}
-
 .cover-copy {
   display: flex;
   flex-direction: column;
@@ -2014,9 +2003,10 @@ button.reader-edit-link:disabled {
   width: 100%;
   min-height: 180px;
   margin-top: 10px;
-  border-radius: 16px;
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 12px 24px rgba(9, 10, 14, 0.2);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .cover-copy h2 {
@@ -2064,7 +2054,6 @@ button.reader-edit-link:disabled {
   justify-content: center;
 }
 
-.cover-layout-layout-02 .cover-series,
 .cover-layout-layout-02 .cover-copy,
 .cover-layout-layout-02 .cover-author {
   align-self: center;
@@ -2104,15 +2093,12 @@ button.reader-edit-link:disabled {
   justify-content: initial;
 }
 
-.cover-layout-layout-04 .cover-series,
 .cover-layout-layout-04 .cover-image-slot,
 .cover-layout-layout-04 .cover-copy,
 .cover-layout-layout-04 .cover-author,
-.cover-layout-layout-05 .cover-series,
 .cover-layout-layout-05 .cover-image-slot,
 .cover-layout-layout-05 .cover-copy,
 .cover-layout-layout-05 .cover-author,
-.cover-layout-layout-10 .cover-series,
 .cover-layout-layout-10 .cover-image-slot,
 .cover-layout-layout-10 .cover-copy,
 .cover-layout-layout-10 .cover-author {
@@ -2565,14 +2551,6 @@ button.reader-edit-link:disabled {
   align-items: center;
   justify-content: center;
   text-align: center;
-}
-
-.back-cover-page p {
-  margin: 0;
-  font-family: Georgia, serif;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
 }
 
 .reader-controls {
@@ -3196,9 +3174,23 @@ button.reader-edit-link:disabled {
   border-top: 1px solid rgba(38, 117, 166, 0.14);
 }
 
-.cover-design-panel-heading + .cover-design-section {
+.cover-design-panel-body > .cover-design-panel-column > .cover-design-section:first-child {
   padding-top: 0;
   border-top: 0;
+}
+
+.cover-design-panel-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.cover-design-panel-column {
+  min-width: 0;
+}
+
+.cover-design-panel-column .cover-design-section + .cover-design-section {
+  margin-top: 14px;
 }
 
 .cover-design-section h4 {
@@ -3219,7 +3211,7 @@ button.reader-edit-link:disabled {
   min-width: 0;
   gap: 5px;
   justify-items: center;
-  padding: 10px 8px;
+  padding: 7px 6px;
   border: 1px solid rgba(46, 110, 160, 0.18);
   border-radius: 12px;
   color: var(--wb-text, #172537);
@@ -3271,8 +3263,8 @@ button.reader-edit-link:disabled {
 .cover-layout-thumb {
   position: relative;
   display: block;
-  width: 44px;
-  height: 58px;
+  width: 40px;
+  height: 50px;
   overflow: hidden;
   border: 1px solid rgba(18, 54, 91, 0.2);
   border-radius: 5px;
@@ -3291,18 +3283,18 @@ button.reader-edit-link:disabled {
 }
 
 .cover-layout-thumb-title {
-  top: 9px;
+  top: 8px;
   height: 4px;
 }
 
 .cover-layout-thumb-image {
-  top: 20px;
-  height: 22px;
+  top: 18px;
+  height: 19px;
   background: linear-gradient(135deg, #74bbd9, #dbeef7);
 }
 
 .cover-layout-thumb-author {
-  bottom: 8px;
+  bottom: 7px;
   height: 3px;
   opacity: 0.75;
 }
@@ -3760,11 +3752,6 @@ button.reader-edit-link:disabled {
   background: rgba(5, 8, 12, 0.3);
 }
 
-.book-cover-style-band .cover-series {
-  border-color: color-mix(in srgb, var(--book-accent-color) 62%, white);
-  color: color-mix(in srgb, var(--book-accent-color) 74%, #f9f3e4);
-}
-
 @media (min-width: 761px) and (max-width: 980px) {
   .reader-preview-layout.is-editing {
     grid-template-columns: 1fr;
@@ -3791,6 +3778,10 @@ button.reader-edit-link:disabled {
   }
 
   .cover-design-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .cover-design-panel-body {
     grid-template-columns: 1fr;
   }
 

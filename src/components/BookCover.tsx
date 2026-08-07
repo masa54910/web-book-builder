@@ -81,16 +81,13 @@ export default function BookCover({ back = false, data }: { back?: boolean; data
 
   if (back) {
     return (
-      <div className={`back-cover-page book-cover-style-${coverStyle} cover-layout-${design.layout}`} style={style}>
-        <p>WEBBOOKMAKER</p>
-      </div>
+      <div className={`back-cover-page book-cover-style-${coverStyle} cover-layout-${design.layout}`} style={style} />
     );
   }
 
   return (
     <div className={`cover-page book-cover-style-${coverStyle} cover-layout-${design.layout}`} style={style}>
       <span className="cover-design-overlay" aria-hidden="true" />
-      <span className="cover-series">Web Book Builder</span>
       <div
         className="cover-copy"
         style={{
