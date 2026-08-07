@@ -50,6 +50,7 @@ type PageFlipApi = {
   flipNext: (corner?: "top" | "bottom") => void;
   flipPrev: (corner?: "top" | "bottom") => void;
   turnToPage: (page: number) => void;
+  update: () => void;
 };
 
 type FlipBookHandle = {
@@ -375,6 +376,17 @@ export default function BookReader({
       document.body.style.overflow = previousOverflow;
     };
   }, [displayMode, isCoverDesignOpen]);
+
+  useEffect(() => {
+    if (displayMode !== "preview") return;
+    const frame = window.requestAnimationFrame(() => {
+      // Page adjustment changes the available width from a spread to a
+      // single-page column. Ask page-flip to recalculate its existing
+      // renderer after that layout transition, preserving its current page.
+      pageFlip()?.update();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [displayMode, isPageAdjustmentOpen, pageFlip]);
 
   const renderPage = (page: ReaderPage) => {
     let content: React.ReactNode;

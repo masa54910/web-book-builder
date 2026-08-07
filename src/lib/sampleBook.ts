@@ -3,8 +3,10 @@ import path from "node:path";
 
 import { bookConfig } from "@/config/bookConfig";
 import { importBook } from "@/lib/book/importBook";
+import type { CoverDesign } from "@/lib/coverDesign";
 import {
   SAMPLE_BOOK_AUTHOR,
+  SAMPLE_BOOK_COVER_IMAGE,
   SAMPLE_BOOK_DISPLAY_TITLE_LINES,
   SAMPLE_BOOK_SLUG,
   SAMPLE_BOOK_TITLE,
@@ -28,6 +30,18 @@ export function loadSampleBookProject() {
       title: SAMPLE_BOOK_TITLE,
       displayTitleLines: [...SAMPLE_BOOK_DISPLAY_TITLE_LINES],
       author: SAMPLE_BOOK_AUTHOR,
+      coverImage: SAMPLE_BOOK_COVER_IMAGE,
+      coverDesign: {
+        layout: "layout-10",
+        titleScale: 0.92,
+        titlePosition: "bottom-left",
+        authorScale: 0.92,
+        authorPosition: "bottom-right",
+        imageScale: 1,
+        imageFit: "cover",
+        imagePosition: "center",
+        overlayOpacity: 0,
+      } satisfies CoverDesign,
       description:
         "WebBookMakerの基本機能を体験できる公式サンプルです。ページめくり、目次、共有導線まで実際の公開導線で確認できます。",
     },
