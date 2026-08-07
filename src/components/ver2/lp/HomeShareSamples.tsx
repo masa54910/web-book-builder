@@ -10,6 +10,10 @@ import { SAMPLE_BOOK_DESCRIPTION, SAMPLE_NOTE_TEMPLATE, SAMPLE_X_TEMPLATE } from
 
 import styles from "./Ver2Landing.module.css";
 
+type SampleCardProps = {
+  compact?: boolean;
+};
+
 function SampleCover({ alt }: { alt: string }) {
   return (
     <div className={styles.shareSampleCover}>
@@ -23,9 +27,9 @@ function SampleCover({ alt }: { alt: string }) {
   );
 }
 
-export function XShareSampleCard() {
+export function XShareSampleCard({ compact = false }: SampleCardProps = {}) {
   return (
-    <div className={`${styles.shareSampleCard} ${styles.xShareSample}`} aria-label="X共有テンプレートの見本">
+    <div className={`${styles.shareSampleCard} ${styles.xShareSample} ${compact ? styles.shareSampleCardCompact : ""}`} aria-label="X共有テンプレートの見本">
       <div className={styles.shareSampleHeader}>
         <span className={`${styles.shareSampleServiceIcon} ${styles.shareSampleServiceIconX}`} aria-hidden="true">
           <ServiceIcon service="x" />
@@ -59,9 +63,9 @@ export function XShareSampleCard() {
   );
 }
 
-export function NoteShareSampleCard() {
+export function NoteShareSampleCard({ compact = false }: SampleCardProps = {}) {
   return (
-    <div className={`${styles.shareSampleCard} ${styles.noteShareSample}`} aria-label="note記事テンプレートの見本">
+    <div className={`${styles.shareSampleCard} ${styles.noteShareSample} ${compact ? styles.shareSampleCardCompact : ""}`} aria-label="note記事テンプレートの見本">
       <div className={styles.noteSampleTopbar}>
         <strong className={styles.noteSampleWordmark}>note</strong>
         <span>記事テンプレートの見本</span>

@@ -31,7 +31,7 @@ export default function DemoXPage() {
 
           <article className={styles.card}>
             <h2>Xカード / OGP</h2>
-            <XShareSampleCard />
+            <XShareSampleCard compact />
             <div className={styles.chips}>
               <span>#WebBookMaker</span>
               <span>#Webブック</span>

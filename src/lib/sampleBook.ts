@@ -43,7 +43,7 @@ export function loadSampleBookProject() {
         overlayOpacity: 0,
       } satisfies CoverDesign,
       description:
-        "WebBookMakerの基本機能を体験できる公式サンプルです。ページめくり、目次、共有導線まで実際の公開導線で確認できます。",
+        "Webブックを作りました。本物の本のようにページめくりができます。読んでいて気持ちが良い体験です。",
     },
     chapters: imported.chapters,
     images: imported.images,

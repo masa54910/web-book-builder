@@ -30,7 +30,7 @@ export default function DemoNotePage() {
           </article>
           <article className={styles.card}>
             <h2>note記事見本</h2>
-            <NoteShareSampleCard />
+            <NoteShareSampleCard compact />
           </article>
         </section>
 

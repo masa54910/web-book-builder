@@ -676,7 +676,7 @@
 }
 
 .x { background: #111; color: #fff; }
-.note { background: #fff; border: 1px solid #ddd; }
+.note { background: #fff; border: 1px solid #ddd; color: #111418; }
 .line { background: #35c95b; color: #fff; }
 .link { background: #fff3de; color: #8a6421; }
 
@@ -4239,6 +4239,31 @@
   line-height: 1.45;
 }
 
+/* Demo pages give the full posting mockup its own compact, intrinsic frame. */
+.shareSampleCardCompact {
+  height: auto;
+  min-height: 0;
+}
+
+.shareSampleCardCompact .shareSampleCover {
+  min-height: 0;
+  height: 92px;
+}
+
+.shareSampleCardCompact .noteSampleArticle > .shareSampleCover {
+  height: clamp(110px, 18vw, 160px);
+  min-height: 0;
+  aspect-ratio: auto;
+}
+
+.shareSampleCardCompact .shareSamplePostText {
+  max-height: 116px;
+}
+
+.shareSampleCardCompact .noteSampleTemplateText {
+  max-height: 112px;
+}
+
 .xShareSample {
   background: linear-gradient(155deg, #f7fbff 0%, #ffffff 55%, #f0f7fc 100%);
 }
@@ -4374,7 +4399,7 @@
 }
 
 .noteSampleWordmark {
-  color: #16a982;
+  color: #111418;
   font-size: 19px;
   letter-spacing: -.04em;
 }
@@ -4450,6 +4475,14 @@
 
   .shareSamplePostText {
     max-height: none;
+  }
+
+  .shareSampleCardCompact .shareSamplePostText {
+    max-height: 132px;
+  }
+
+  .shareSampleCardCompact .noteSampleArticle > .shareSampleCover {
+    height: min(36vw, 148px);
   }
 
   .noteSampleArticle h4 {
