@@ -168,6 +168,12 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
         ) : null}
         {error ? <StatusMessage variant="error" message={error} ariaLive="assertive" className="form-error" /> : null}
         {message ? <StatusMessage variant="success" message={message} /> : null}
+        {mode === "signup" ? (
+          <p className="auth-consent">
+            会員登録を行うことで、
+            <Link href="/terms">利用規約</Link>および<Link href="/privacy">プライバシーポリシー</Link>に同意したものとみなします。
+          </p>
+        ) : null}
         <Button variant="primary" fullWidth loading={isSubmitting} disabled={authMode === "blocked"} onClick={submit}>
           {title}
         </Button>

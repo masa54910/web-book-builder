@@ -652,6 +652,34 @@ try {
 }
 
 const globalsCss = fs.readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
+const termsPage = fs.readFileSync(path.join(process.cwd(), "src", "app", "terms", "page.tsx"), "utf8");
+const privacyPage = fs.readFileSync(path.join(process.cwd(), "src", "app", "privacy", "page.tsx"), "utf8");
+const commercePage = fs.readFileSync(path.join(process.cwd(), "src", "app", "commerce", "page.tsx"), "utf8");
+const legalShell = fs.readFileSync(path.join(process.cwd(), "src", "components", "legal", "LegalPageShell.tsx"), "utf8");
+const commercialTransactionsPage = fs.readFileSync(
+  path.join(process.cwd(), "src", "app", "commercial-transactions", "page.tsx"),
+  "utf8",
+);
+const signupForm = fs.readFileSync(path.join(process.cwd(), "src", "components", "AuthForm.tsx"), "utf8");
+const ver2Footer = fs.readFileSync(path.join(process.cwd(), "src", "components", "ver2", "lp", "Ver2Footer.tsx"), "utf8");
+const landingFooter = fs.readFileSync(path.join(process.cwd(), "src", "components", "ver2", "LandingFooter.tsx"), "utf8");
+assert.match(termsPage, /WebBookMaker 利用規約/);
+assert.match(termsPage, /第24条（準拠法）/);
+assert.match(legalShell, /制定日：2026年8月7日/);
+assert.doesNotMatch(termsPage, /ベータ版ドラフト/);
+assert.match(privacyPage, /WebBookMaker プライバシーポリシー/);
+assert.match(privacyPage, /取得する情報/);
+assert.match(privacyPage, /support@webbookmaker\.app/);
+assert.doesNotMatch(privacyPage, /ベータ版ドラフト/);
+assert.match(commercePage, /特定商取引法に基づく表記/);
+assert.match(commercePage, /現在、決済を伴う有料機能は提供していません/);
+assert.match(commercialTransactionsPage, /@\/app\/commerce\/page/);
+assert.match(signupForm, /会員登録を行うことで/);
+assert.match(signupForm, /href="\/terms"/);
+assert.match(signupForm, /href="\/privacy"/);
+assert.match(ver2Footer, /href="\/commercial-transactions"/);
+assert.match(ver2Footer, /プライバシーポリシー/);
+assert.match(landingFooter, /href="\/commercial-transactions"/);
 assert.match(
   globalsCss,
   /\.image-frame\s*\{[\s\S]*?border:\s*0;[\s\S]*?box-shadow:\s*none;[\s\S]*?\}/,

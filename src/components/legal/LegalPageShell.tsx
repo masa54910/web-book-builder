@@ -1,0 +1,29 @@
+import type { ReactNode } from "react";
+
+import AppHeader from "@/components/AppHeader";
+import HomeBackLink from "@/components/HomeBackLink";
+
+type Props = {
+  kicker: string;
+  title: string;
+  children: ReactNode;
+};
+
+export default function LegalPageShell({ kicker, title, children }: Props) {
+  return (
+    <main className="legal-page">
+      <AppHeader />
+      <article className="maker-card">
+        <p className="maker-kicker">{kicker}</p>
+        <HomeBackLink />
+        <h1>{title}</h1>
+        <p className="legal-effective-date">
+          制定日：2026年8月7日
+          <br />
+          最終更新日：2026年8月7日
+        </p>
+        {children}
+      </article>
+    </main>
+  );
+}

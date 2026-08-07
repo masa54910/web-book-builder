@@ -95,7 +95,7 @@ Preview/Productionでは `NEXT_PUBLIC_ENABLE_DEMO_MODE=false` とし、Supabase�
 - `/analytics/[bookId]` 作品分析詳細
 - `/settings` 登録情報管理
 - `/author` 作者ページ案内
-- `/terms` `/privacy` `/commerce` `/guidelines` `/refund` `/contact`
+- `/terms` `/privacy` `/commercial-transactions`（旧 `/commerce` 互換）`/guidelines` `/refund` `/contact`
 - `/help` ヘルプ
 - `/blog` 編集部ノート
 
