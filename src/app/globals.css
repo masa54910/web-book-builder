@@ -1700,8 +1700,55 @@ button.reader-edit-link:disabled {
 .reader-preview-tools {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px;
+  width: min(1080px, 100%);
+  margin: 0 auto 14px;
+}
+
+.reader-preview-action {
+  min-height: 38px;
+  padding: 8px 16px;
+  border: 1px solid rgba(17, 24, 39, 0.2);
+  border-radius: 999px;
+  color: #ffffff;
+  background: #111827;
+  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.16);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.reader-preview-action:hover:not(:disabled) {
+  background: #1f2937;
+  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.22);
+  transform: translateY(-1px);
+}
+
+.reader-preview-action:active:not(:disabled) {
+  box-shadow: 0 3px 9px rgba(17, 24, 39, 0.16);
+  transform: translateY(1px);
+}
+
+.reader-preview-action:focus-visible {
+  outline: 3px solid rgba(31, 139, 207, 0.34);
+  outline-offset: 3px;
+}
+
+.reader-preview-action.is-active {
+  background: #0b1220;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 8px 20px rgba(17, 24, 39, 0.22);
+}
+
+.reader-preview-action:disabled {
+  border-color: rgba(17, 24, 39, 0.2);
+  color: #334155;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 .reader-preview-layout {
@@ -1711,17 +1758,20 @@ button.reader-edit-link:disabled {
 
 .reader-preview-layout.is-editing {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  grid-template-areas: "panel book";
   gap: 20px;
   align-items: start;
 }
 
 .reader-preview-layout .book-viewport {
+  grid-area: book;
   width: 100%;
   margin: 0;
 }
 
 .reader-cover-design-drawer {
+  grid-area: panel;
   min-width: 0;
 }
 
@@ -1729,6 +1779,8 @@ button.reader-edit-link:disabled {
   position: sticky;
   top: 14px;
   margin: 0;
+  background: linear-gradient(145deg, #ffffff, #f4faff);
+  box-shadow: 0 12px 28px rgba(31, 78, 112, 0.12);
 }
 
 .reader-kicker {
@@ -3080,17 +3132,17 @@ button.reader-edit-link:disabled {
 
 .cover-design-panel {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   margin-bottom: 18px;
   padding: 16px;
   border: 1px solid rgba(38, 117, 166, 0.16);
   border-radius: 16px;
-  background: rgba(244, 249, 253, 0.72);
+  background: linear-gradient(145deg, #ffffff, #f4faff);
 }
 
 .cover-design-panel-heading {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
@@ -3103,12 +3155,63 @@ button.reader-edit-link:disabled {
 
 .cover-design-panel-heading .maker-note {
   margin: 4px 0 0;
+  max-width: 25ch;
+  line-height: 1.55;
+}
+
+.cover-design-close {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(18, 54, 91, 0.16);
+  border-radius: 999px;
+  color: var(--wb-navy, #12365b);
+  background: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.cover-design-close:hover {
+  background: #ffffff;
+  box-shadow: 0 5px 14px rgba(31, 78, 112, 0.14);
+  transform: translateY(-1px);
+}
+
+.cover-design-close:focus-visible,
+.cover-design-reset:focus-visible,
+.cover-scale-stepper button:focus-visible {
+  outline: 3px solid rgba(31, 139, 207, 0.22);
+  outline-offset: 2px;
+}
+
+.cover-design-section {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(38, 117, 166, 0.14);
+}
+
+.cover-design-panel-heading + .cover-design-section {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.cover-design-section h4 {
+  margin: 0;
+  color: var(--wb-navy, #12365b);
+  font-size: 12px;
+  letter-spacing: 0.08em;
 }
 
 .cover-layout-picker {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .cover-layout-option {
@@ -3116,7 +3219,7 @@ button.reader-edit-link:disabled {
   min-width: 0;
   gap: 5px;
   justify-items: center;
-  padding: 8px 6px;
+  padding: 10px 8px;
   border: 1px solid rgba(46, 110, 160, 0.18);
   border-radius: 12px;
   color: var(--wb-text, #172537);
@@ -3145,18 +3248,24 @@ button.reader-edit-link:disabled {
 }
 
 .cover-layout-option > span:not(.cover-layout-thumb) {
-  font-size: 11px;
+  max-width: 100%;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.35;
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
 .cover-layout-option small {
+  display: -webkit-box;
   overflow: hidden;
   max-width: 100%;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   color: #64788a;
   font-size: 9px;
+  line-height: 1.35;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .cover-layout-thumb {
@@ -3218,33 +3327,110 @@ button.reader-edit-link:disabled {
 
 .cover-design-controls {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
-.cover-design-controls label {
+.cover-design-control {
   display: grid;
-  grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-.cover-design-controls label > span {
+.cover-design-control > span {
   color: #2e4a63;
   font-size: 12px;
   font-weight: 700;
 }
 
-.cover-design-controls input[type="range"] {
+.cover-design-control select {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid rgba(46, 110, 160, 0.2);
+  border-radius: 10px;
+  color: var(--wb-text, #172537);
+  background: #ffffff;
+  font: inherit;
+  font-size: 12px;
+}
+
+.cover-design-control select:focus-visible {
+  outline: 3px solid rgba(31, 139, 207, 0.2);
+  outline-offset: 2px;
+  border-color: #218ac8;
+}
+
+.cover-scale-stepper {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 8px;
+}
+
+.cover-scale-stepper button {
+  display: grid;
+  width: 38px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(46, 110, 160, 0.22);
+  border-radius: 10px;
+  color: var(--wb-navy, #12365b);
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.cover-scale-stepper button:hover {
+  background: #eef8ff;
+  box-shadow: 0 4px 10px rgba(31, 116, 167, 0.12);
+  transform: translateY(-1px);
+}
+
+.cover-scale-stepper button:active {
+  transform: translateY(1px);
+}
+
+.cover-scale-stepper output,
+.cover-overlay-control output {
+  min-width: 48px;
+  color: #547088;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: center;
+}
+
+.cover-overlay-control {
+  grid-template-columns: minmax(90px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.cover-overlay-control input[type="range"] {
   width: 100%;
   accent-color: #218ac8;
 }
 
-.cover-design-controls output {
-  min-width: 38px;
-  color: #547088;
+.cover-design-reset {
+  justify-self: start;
+  padding: 8px 12px;
+  border: 1px solid rgba(46, 110, 160, 0.2);
+  border-radius: 999px;
+  color: var(--wb-navy, #12365b);
+  background: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  font: inherit;
   font-size: 11px;
-  text-align: right;
+  font-weight: 700;
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.cover-design-reset:hover {
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(31, 116, 167, 0.12);
+  transform: translateY(-1px);
 }
 
 .auto-flip-tools {
@@ -3579,9 +3765,21 @@ button.reader-edit-link:disabled {
   color: color-mix(in srgb, var(--book-accent-color) 74%, #f9f3e4);
 }
 
+@media (min-width: 761px) and (max-width: 980px) {
+  .reader-preview-layout.is-editing {
+    grid-template-columns: 1fr;
+    grid-template-areas: "panel" "book";
+  }
+
+  .reader-cover-design-drawer .cover-design-panel {
+    position: static;
+  }
+}
+
 @media (max-width: 760px) {
   .reader-preview-layout.is-editing {
     grid-template-columns: 1fr;
+    grid-template-areas: "book" "panel";
   }
 
   .reader-cover-design-drawer .cover-design-panel {
@@ -3594,10 +3792,6 @@ button.reader-edit-link:disabled {
 
   .cover-design-controls {
     grid-template-columns: 1fr;
-  }
-
-  .cover-design-panel-heading {
-    flex-direction: column;
   }
 
   .cover-layout-layout-03 .cover-copy {

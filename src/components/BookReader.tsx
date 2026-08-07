@@ -307,6 +307,10 @@ export default function BookReader({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && displayMode === "preview" && isCoverDesignOpen) {
+        setIsCoverDesignOpen(false);
+        return;
+      }
       const nextKey = config.bindingDirection === "rtl" ? "ArrowLeft" : "ArrowRight";
       const previousKey = config.bindingDirection === "rtl" ? "ArrowRight" : "ArrowLeft";
       if (event.key === nextKey) {
@@ -319,7 +323,7 @@ export default function BookReader({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [config.bindingDirection, pageFlip]);
+  }, [config.bindingDirection, displayMode, isCoverDesignOpen, pageFlip]);
 
   const renderPage = (page: ReaderPage) => {
     let content: React.ReactNode;
@@ -406,7 +410,7 @@ export default function BookReader({
           ) : null}
         </div>
         <div className="reader-masthead-actions">
-          {backLink?.href ? (
+          {displayMode !== "preview" && (backLink?.href ? (
             <Link className="reader-edit-link" href={backLink.href}>
               {backLink.label || "← 戻る"}
             </Link>
@@ -416,36 +420,38 @@ export default function BookReader({
               destination={backLink?.destination}
               label={backLink?.label}
             />
-          )}
-          {editHref ? (
+          ))}
+          {displayMode !== "preview" && editHref ? (
             <a className="reader-edit-link" href={editHref}>
               編集画面へ戻る
             </a>
           ) : null}
-          {displayMode === "preview" ? (
-            <div className="reader-preview-tools" aria-label="Previewの編集">
-              <button
-                className="reader-edit-link reader-preview-action"
-                type="button"
-                aria-expanded={isCoverDesignOpen}
-                onClick={() => setIsCoverDesignOpen((open) => !open)}
-              >
-                表紙を調整
-              </button>
-              <button
-                className="reader-edit-link reader-preview-action"
-                type="button"
-                disabled
-                aria-disabled="true"
-                title="ページ調整モードは準備中です"
-              >
-                ページを調整
-              </button>
-            </div>
-          ) : null}
           <span className="reader-direction">{directionLabel}</span>
         </div>
       </header>
+
+      {displayMode === "preview" ? (
+        <div className="reader-preview-tools" aria-label="Previewの編集">
+          <button
+            className={`reader-preview-action ${isCoverDesignOpen ? "is-active" : ""}`}
+            type="button"
+            aria-expanded={isCoverDesignOpen}
+            aria-pressed={isCoverDesignOpen}
+            onClick={() => setIsCoverDesignOpen((open) => !open)}
+          >
+            表紙を調整
+          </button>
+          <button
+            className="reader-preview-action"
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="ページ調整モードは準備中です"
+          >
+            ページを調整
+          </button>
+        </div>
+      ) : null}
 
       <div className={`reader-preview-layout ${displayMode === "preview" && isCoverDesignOpen ? "is-editing" : ""}`}>
         <section className="book-viewport" aria-label="デジタル書籍リーダー">
@@ -490,6 +496,7 @@ export default function BookReader({
               value={coverDesign}
               onChange={(patch) => onCoverDesignChange?.(patch)}
               onReset={() => onCoverDesignChange?.({ ...DEFAULT_COVER_DESIGN })}
+              onClose={() => setIsCoverDesignOpen(false)}
               heading="表紙デザイン"
               description="Previewを見ながら表紙を調整できます。"
             />
