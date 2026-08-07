@@ -33,6 +33,12 @@ type CoverAsset = {
   contentType: string;
 };
 
+function copyToArrayBuffer(value: Uint8Array) {
+  const copy = new Uint8Array(value.byteLength);
+  copy.set(value);
+  return copy.buffer;
+}
+
 function escapeXml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -94,7 +100,7 @@ async function readLocalCover(reference: Extract<CoverReference, { kind: "local"
   try {
     const body = await fs.readFile(filePath);
     return {
-      body: body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) as ArrayBuffer,
+      body: copyToArrayBuffer(body),
       contentType: mimeTypeForPath(filePath),
     };
   } catch {
@@ -164,7 +170,7 @@ async function formatOgCover(cover: CoverAsset) {
       .jpeg({ quality: 88, progressive: true })
       .toBuffer();
     return {
-      body: body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) as ArrayBuffer,
+      body: copyToArrayBuffer(body),
       contentType: "image/jpeg",
     };
   } catch {
