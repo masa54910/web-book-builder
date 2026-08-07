@@ -736,6 +736,13 @@ a {
   font-size: 16px;
 }
 
+.legal-title-commercial {
+  max-width: none;
+  font-size: clamp(1.7rem, 3vw, 2.5rem) !important;
+  letter-spacing: -0.035em !important;
+  white-space: nowrap;
+}
+
 .legal-page ul {
   margin: 8px 0 16px;
   padding-left: 1.4em;
@@ -785,6 +792,10 @@ a {
 }
 
 @media (max-width: 640px) {
+  .legal-title-commercial {
+    font-size: clamp(1.15rem, 6vw, 1.55rem) !important;
+  }
+
   .legal-definition-list > div {
     grid-template-columns: 1fr;
     gap: 4px;

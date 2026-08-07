@@ -6,17 +6,18 @@ import HomeBackLink from "@/components/HomeBackLink";
 type Props = {
   kicker: string;
   title: string;
+  titleClassName?: string;
   children: ReactNode;
 };
 
-export default function LegalPageShell({ kicker, title, children }: Props) {
+export default function LegalPageShell({ kicker, title, titleClassName, children }: Props) {
   return (
     <main className="legal-page">
       <AppHeader />
       <article className="maker-card">
         <p className="maker-kicker">{kicker}</p>
         <HomeBackLink />
-        <h1>{title}</h1>
+        <h1 className={titleClassName}>{title}</h1>
         <p className="legal-effective-date">
           制定日：2026年8月7日
           <br />

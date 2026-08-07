@@ -2,7 +2,7 @@ import LegalPageShell from "@/components/legal/LegalPageShell";
 
 export default function PrivacyPage() {
   return (
-    <LegalPageShell kicker="Privacy" title="WebBookMaker プライバシーポリシー">
+    <LegalPageShell kicker="Privacy" title="プライバシーポリシー">
       <p>WebBookMaker運営者は、本サービスの提供にあたり取得する利用者情報を適切に取り扱い、個人情報の保護に関する法令その他の関係法令を遵守するよう努めます。</p>
 
       <h2>1. 基本方針</h2>

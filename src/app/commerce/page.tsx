@@ -2,7 +2,7 @@ import LegalPageShell from "@/components/legal/LegalPageShell";
 
 export default function CommercePage() {
   return (
-    <LegalPageShell kicker="Commerce" title="特定商取引法に基づく表記">
+    <LegalPageShell kicker="Commerce" title="特定商取引法に基づく表記" titleClassName="legal-title-commercial">
       <p>WebBookMakerは、Web上で文章や画像からデジタルブックを作成・公開できるサービスです。</p>
       <p>現在はベータ版として無料機能を提供しており、有料プランおよび決済機能は正式提供前です。有料機能を開始する場合は、購入前の画面および本ページを更新し、条件を明示します。</p>
 

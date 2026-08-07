@@ -2,7 +2,7 @@ import LegalPageShell from "@/components/legal/LegalPageShell";
 
 export default function TermsPage() {
   return (
-    <LegalPageShell kicker="Terms" title="WebBookMaker 利用規約">
+    <LegalPageShell kicker="Terms" title="利用規約">
       <p>
         本利用規約（以下「本規約」といいます。）は、WebBookMaker運営者（以下「運営者」といいます。）が提供する「WebBookMaker」（以下「本サービス」といいます。）の利用条件を定めるものです。
       </p>
