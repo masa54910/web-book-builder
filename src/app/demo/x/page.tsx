@@ -1,8 +1,11 @@
 import CopyButton from "@/components/demo/CopyButton";
 import DemoTopActions from "@/components/demo/DemoTopActions";
+import ShareTemplateModalSample from "@/components/demo/ShareTemplateModalSample";
+import { XShareSampleCard } from "@/components/ver2/lp/HomeShareSamples";
+import { SAMPLE_X_TEMPLATE } from "@/lib/sampleShareTemplates";
 import styles from "@/components/demo/DemoPages.module.css";
 
-const xPost = `新作『星降る街の小さな記録』を公開しました。\n\n夜の灯りと流れ星を追いかける、ページめくり型のWebブックです。\nhttps://webbookmaker.app/books/hoshifuru-machi-no-chiisana-kiroku\n\n#WebBookMaker #Web小説 #星空 #読書`;
+const xPost = SAMPLE_X_TEMPLATE;
 
 export default function DemoXPage() {
   return (
@@ -28,18 +31,18 @@ export default function DemoXPage() {
 
           <article className={styles.card}>
             <h2>Xカード / OGP</h2>
-            <div className={styles.previewPanel}>
-              <p><strong>タイトル:</strong> 星降る街の小さな記録</p>
-              <p><strong>説明:</strong> 夜景と灯りの物語を、ページめくりで読むWebブック。</p>
-              <p className={styles.url}>https://webbookmaker.app/books/hoshifuru-machi-no-chiisana-kiroku</p>
-            </div>
+            <XShareSampleCard />
             <div className={styles.chips}>
               <span>#WebBookMaker</span>
-              <span>#Web小説</span>
-              <span>#星空</span>
-              <span>#流れ星</span>
+              <span>#Webブック</span>
+              <span>#星降る街の小さな記録</span>
             </div>
           </article>
+        </section>
+
+        <section className={styles.card}>
+          <h2>共有ボタン押下時のテンプレート表示</h2>
+          <ShareTemplateModalSample platform="x" />
         </section>
       </div>
     </main>

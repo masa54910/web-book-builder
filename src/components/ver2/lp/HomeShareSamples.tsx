@@ -4,29 +4,11 @@ import ServiceIcon from "@/components/ui/ServiceIcons";
 import {
   SAMPLE_BOOK_AUTHOR,
   SAMPLE_BOOK_COVER_IMAGE,
-  SAMPLE_BOOK_DESCRIPTION,
-  SAMPLE_BOOK_ROUTE,
   SAMPLE_BOOK_TITLE,
 } from "@/lib/sampleBookConstants";
-import { buildShareTemplate, buildXShareTemplate } from "@/lib/shareTemplates";
+import { SAMPLE_BOOK_DESCRIPTION, SAMPLE_NOTE_TEMPLATE, SAMPLE_X_TEMPLATE } from "@/lib/sampleShareTemplates";
 
 import styles from "./Ver2Landing.module.css";
-
-const SAMPLE_BOOK_URL = `https://webbookmaker.vercel.app${SAMPLE_BOOK_ROUTE}`;
-
-const SAMPLE_X_TEMPLATE = buildXShareTemplate({
-  title: SAMPLE_BOOK_TITLE,
-  description: SAMPLE_BOOK_DESCRIPTION,
-  url: SAMPLE_BOOK_URL,
-  hashtags: ["WebBookMaker", "Webブック", SAMPLE_BOOK_TITLE],
-});
-
-const SAMPLE_NOTE_TEMPLATE = buildShareTemplate({
-  platform: "note",
-  title: SAMPLE_BOOK_TITLE,
-  description: SAMPLE_BOOK_DESCRIPTION,
-  url: SAMPLE_BOOK_URL,
-});
 
 function SampleCover({ alt }: { alt: string }) {
   return (

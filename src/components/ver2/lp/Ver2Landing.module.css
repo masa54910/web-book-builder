@@ -4227,13 +4227,6 @@
   user-select: none;
 }
 
-.xCard .promoCta,
-.noteCard .promoCta {
-  cursor: default;
-  pointer-events: none;
-  user-select: none;
-}
-
 .shareSampleCard {
   box-sizing: border-box;
   width: 100%;
