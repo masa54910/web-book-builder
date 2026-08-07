@@ -552,8 +552,16 @@ export default function BookReader({
           ) : null}
         </div>
         <div className="reader-masthead-actions">
-          {displayMode !== "preview" && (backLink?.href ? (
-            <Link className="reader-edit-link" href={backLink.href}>
+          {displayMode === "preview" && backLink?.href ? (
+            <Link className="reader-edit-link reader-preview-return" href={backLink.href}>
+              {backLink.label || "← 戻る"}
+            </Link>
+          ) : null}
+          {displayMode !== "preview" ? (backLink?.href ? (
+            <Link
+              className={`reader-edit-link ${displayMode === "published" ? "reader-author-return" : ""}`}
+              href={backLink.href}
+            >
               {backLink.label || "← 戻る"}
             </Link>
           ) : (
@@ -562,7 +570,7 @@ export default function BookReader({
               destination={backLink?.destination}
               label={backLink?.label}
             />
-          ))}
+          )) : null}
           {displayMode !== "preview" && editHref ? (
             <a className="reader-edit-link" href={editHref}>
               編集画面へ戻る

@@ -325,11 +325,6 @@ export default function DynamicReaderPage() {
 
   return (
     <>
-      {isDashboardPreview ? (
-        <Link className="reader-preview-return" href={safeReturnTo}>
-          ← 戻る
-        </Link>
-      ) : null}
       {project.missingImageIds.length ? (
         <aside className="reader-warning" aria-live="polite">
           不足している画像ID：{project.missingImageIds.join("、")}

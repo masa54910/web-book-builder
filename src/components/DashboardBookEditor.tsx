@@ -1385,13 +1385,13 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
         <div className="maker-card">
           <h2>作者ページ</h2>
-          <p className="maker-note">公開作品は作者ページから一覧表示できます。例：/authors/mako</p>
+          <p className="maker-note">公開作品は作者ページから一覧表示できます。</p>
           <div className="maker-grid">
             <FormField
               id="book-author-handle"
               label="作者ハンドル"
               required
-              helpText="作者ページのURLに使用します。半角英数字とハイフンで入力してください。例：mako"
+              helpText="作者ページのURLに使用します。半角英数字とハイフンで入力してください。"
               error={errors.authorHandle}
             >
               <input
@@ -1399,7 +1399,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
                 ref={authorHandleInputRef}
                 value={state.authorHandle}
                 required
-                placeholder="mako"
                 aria-invalid={Boolean(errors.authorHandle)}
                 aria-describedby={errors.authorHandle ? "book-author-handle-error book-author-handle-help" : "book-author-handle-help"}
                 onChange={(event) => update("authorHandle", event.target.value.normalize("NFKC").replace(/^@+/, "").toLowerCase())}
@@ -1426,9 +1425,11 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
         <div className="maker-card">
           <h2>原稿</h2>
-          <label>
+          <label className="manuscript-file-picker" aria-label="原稿ファイルを選択">
             <span>TXT / Markdown / Word / PDF / ZIPを読み込む</span>
+            <span className="manuscript-file-button">ファイルを選択</span>
             <input
+              className="manuscript-file-input"
               ref={manuscriptInputRef}
               type="file"
               accept=".txt,.md,.markdown,.docx,.pdf,.zip"
