@@ -1490,11 +1490,10 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               )}
             </div>
             <div>
-              <label>
-                <span>表紙画像</span>
-                <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void handleCover(event.target.files?.[0])} />
+              <label className="cover-file-picker" aria-label="表紙画像を選択">
+                <span>ファイルを選択</span>
+                <input className="cover-file-input" ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void handleCover(event.target.files?.[0])} />
               </label>
-              {state.coverFileName ? <p className="maker-note">選択中：{state.coverFileName}</p> : null}
               <button className="maker-small-button" type="button" onClick={() => {
                 update("coverImage", undefined);
                 update("coverImageStoragePath", undefined);

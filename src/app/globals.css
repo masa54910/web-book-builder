@@ -1429,6 +1429,52 @@ a {
   align-items: start;
 }
 
+.maker-card label.cover-file-picker {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid rgba(54, 70, 65, 0.2);
+  border-radius: 999px;
+  color: #29423f;
+  background: rgba(255, 255, 255, 0.64);
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.maker-card label.cover-file-picker > span {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.maker-card label.cover-file-picker:hover {
+  background: rgba(241, 249, 254, 0.9);
+  box-shadow: 0 8px 20px rgba(31, 78, 112, 0.14);
+  transform: translateY(-1px);
+}
+
+.maker-card label.cover-file-picker:focus-within {
+  outline: 3px solid rgba(22, 141, 204, 0.2);
+  outline-offset: 2px;
+}
+
+.maker-card .cover-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .cover-preview {
   display: grid;
   width: 150px;
@@ -1758,11 +1804,15 @@ button.reader-edit-link:disabled {
 
 .reader-preview-layout.is-editing {
   display: grid;
-  grid-template-columns: minmax(480px, 620px) minmax(380px, 470px);
+  grid-template-columns: minmax(0, 620px) minmax(0, 470px);
   grid-template-areas: "panel book";
   justify-content: center;
   gap: 24px;
   align-items: start;
+}
+
+.reader-preview-layout.is-editing > * {
+  min-width: 0;
 }
 
 .reader-preview-layout .book-viewport {

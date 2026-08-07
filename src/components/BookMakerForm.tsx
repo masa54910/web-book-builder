@@ -490,9 +490,10 @@ export default function BookMakerForm() {
               )}
             </div>
             <div>
-              <label>
-                <span>表紙画像（JPEG / PNG / WebP、10MBまで）</span>
+              <label className="cover-file-picker" aria-label="表紙画像を選択">
+                <span>ファイルを選択</span>
                 <input
+                  className="cover-file-input"
                   ref={coverInputRef}
                   data-testid="maker-cover-input"
                   type="file"
@@ -500,7 +501,6 @@ export default function BookMakerForm() {
                   onChange={(event) => handleCoverImage(event.target.files?.[0])}
                 />
               </label>
-              {form.coverFileName ? <p className="maker-note">選択中：{form.coverFileName}</p> : null}
               {errors.coverImage ? <small className="form-error">{errors.coverImage}</small> : null}
               <button className="maker-small-button" type="button" onClick={clearCoverImage}>
                 表紙画像を解除

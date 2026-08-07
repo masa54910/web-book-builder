@@ -58,7 +58,7 @@ export default function ColophonPage({ config, cloudBookId }: { config: BookConf
       ) : null}
       {config.branding?.showCreatedWithWebBookMaker !== false ? (
         <div className="created-with">
-          <span>Created with WebBookMaker</span>
+          <span>Created with WebBook Maker</span>
           <a href="/" target="_blank" rel="noreferrer">
             あなたもWeb書籍を作る
           </a>
