@@ -58,8 +58,27 @@ export default function Ver2Hero({
               <br />
               <span className={styles.heroTitleLine}>そのまま<span>Webブック</span>に。</span>
             </h1>
-            <p className={styles.sub}>PDFを作る必要はありません。直接入力でも大丈夫です。（保存機能あり）</p>
-            <p className={styles.desc}>文章を貼り付けるだけで、表紙・目次・ページめくり付きのWebブックに。もちろん、PDF・Word・Markdown・TXTなどのファイル読み込みにも対応します。</p>
+            <div className={styles.heroInfoCard} aria-label="WebBookMakerの特徴">
+              <div className={styles.heroInfoRow}>
+                <span className={styles.heroInfoIcon} aria-hidden="true">▤</span>
+                <div>
+                  <strong>PDFを作る必要はありません。</strong>
+                  <span>直接入力でも大丈夫です。（保存機能あり）</span>
+                </div>
+              </div>
+              <div className={styles.heroInfoRow}>
+                <span className={styles.heroInfoIcon} aria-hidden="true">▥</span>
+                <div>
+                  <strong>文章を貼り付けるだけで、表紙・目次・ページめくり付きのWebブックに。</strong>
+                </div>
+              </div>
+              <div className={styles.heroInfoRow}>
+                <span className={styles.heroInfoIcon} aria-hidden="true">▰</span>
+                <div>
+                  <strong>もちろん、PDF・Word・Markdown・TXTなどのファイル読み込みにも対応します。</strong>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className={styles.heroBook}>
@@ -137,6 +156,7 @@ export default function Ver2Hero({
           </div>
         </div>
 
+        <div className={styles.recommendLabel}>こんな方におすすめ</div>
         <div className={styles.featureCards}>
           <div className={styles.featureCard}><div className={styles.featureIcon}>🔗</div><div><h3>すぐに公開</h3><p>URLですぐ読める</p></div></div>
           <div className={styles.featureCard}><div className={styles.featureIcon}>📖</div><div><h3>本らしい読書体験</h3><p>ページめくりに対応</p></div></div>
