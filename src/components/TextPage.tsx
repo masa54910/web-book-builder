@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import type { SyntheticEvent } from "react";
 
 import { INLINE_IMAGE_TOKEN_PREFIX } from "@/lib/paginateText";
+import type { PageAdjustment } from "@/lib/pageAdjustments";
 import ReferenceBlock, { extractUrls } from "./ReferenceBlock";
 
 const PREVIOUS_GUIDE_PATTERN =
@@ -45,15 +46,17 @@ export default function TextPage({
   paragraphs,
   previousChapterTitle,
   onJumpToPrevious,
+  adjustment,
 }: {
   bookTitle: string;
   chapterTitle: string;
   paragraphs: string[];
   previousChapterTitle?: string;
   onJumpToPrevious?: () => void;
+  adjustment?: PageAdjustment;
 }) {
   return (
-    <article className="text-page">
+    <article className={`text-page text-page-spacing-${adjustment?.paragraphSpacing || "normal"}`}>
       <header className="text-page-header">
         <span>{bookTitle}</span>
         <span>{chapterTitle}</span>

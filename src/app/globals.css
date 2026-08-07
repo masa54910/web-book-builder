@@ -1752,15 +1752,16 @@ button.reader-edit-link:disabled {
 }
 
 .reader-preview-layout {
-  width: min(1080px, 100%);
+  width: min(1120px, 100%);
   margin: 0 auto;
 }
 
 .reader-preview-layout.is-editing {
   display: grid;
-  grid-template-columns: minmax(520px, 620px) minmax(0, 1fr);
+  grid-template-columns: minmax(480px, 620px) minmax(380px, 470px);
   grid-template-areas: "panel book";
-  gap: 20px;
+  justify-content: center;
+  gap: 24px;
   align-items: start;
 }
 
@@ -1778,6 +1779,23 @@ button.reader-edit-link:disabled {
 .reader-cover-design-drawer .cover-design-panel {
   position: sticky;
   top: 14px;
+  max-height: calc(100vh - 28px);
+  overflow-y: auto;
+  margin: 0;
+  background: linear-gradient(145deg, #ffffff, #f4faff);
+  box-shadow: 0 12px 28px rgba(31, 78, 112, 0.12);
+}
+
+.reader-page-adjustment-drawer {
+  grid-area: panel;
+  min-width: 0;
+}
+
+.reader-page-adjustment-drawer .page-adjustment-panel {
+  position: sticky;
+  top: 14px;
+  max-height: calc(100vh - 28px);
+  overflow-y: auto;
   margin: 0;
   background: linear-gradient(145deg, #ffffff, #f4faff);
   box-shadow: 0 12px 28px rgba(31, 78, 112, 0.12);
@@ -2322,6 +2340,18 @@ button.reader-edit-link:disabled {
   letter-spacing: 0.025em;
 }
 
+.text-page-spacing-compact .text-paragraph {
+  margin-bottom: 0.5em;
+}
+
+.text-page-spacing-normal .text-paragraph {
+  margin-bottom: 1em;
+}
+
+.text-page-spacing-wide .text-paragraph {
+  margin-bottom: 1.65em;
+}
+
 .text-page-header {
   display: flex;
   margin-bottom: 22px;
@@ -2467,6 +2497,79 @@ button.reader-edit-link:disabled {
   align-items: center;
   justify-content: center;
   min-height: 0;
+}
+
+.image-page-hidden {
+  min-height: 0;
+}
+
+.image-page-size-small .image-frame {
+  width: 62%;
+}
+
+.image-page-size-medium .image-frame {
+  width: 80%;
+}
+
+.image-page-size-large .image-frame {
+  width: 92%;
+}
+
+.image-page-size-full-width .image-frame,
+.image-page-size-full-page .image-frame {
+  width: 100%;
+}
+
+.image-page-align-left {
+  justify-content: flex-start;
+}
+
+.image-page-align-right {
+  justify-content: flex-end;
+}
+
+.image-page-align-left .image-page-content {
+  align-items: flex-start;
+}
+
+.image-page-align-right .image-page-content {
+  align-items: flex-end;
+}
+
+.image-page-position-top .image-page-content {
+  justify-content: flex-start;
+}
+
+.image-page-position-bottom .image-page-content {
+  justify-content: flex-end;
+}
+
+.image-page-spacing-top-compact .image-page-content {
+  padding-top: 8px;
+}
+
+.image-page-spacing-top-normal .image-page-content {
+  padding-top: 24px;
+}
+
+.image-page-spacing-top-wide .image-page-content {
+  padding-top: 48px;
+}
+
+.image-page-spacing-bottom-compact .image-page-content {
+  padding-bottom: 8px;
+}
+
+.image-page-spacing-bottom-normal .image-page-content {
+  padding-bottom: 24px;
+}
+
+.image-page-spacing-bottom-wide .image-page-content {
+  padding-bottom: 48px;
+}
+
+.image-page-size-full-page .image-frame {
+  min-height: 100%;
 }
 
 .image-page-content {
@@ -3118,6 +3221,115 @@ button.reader-edit-link:disabled {
   background: linear-gradient(145deg, #ffffff, #f4faff);
 }
 
+.page-adjustment-panel {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid rgba(38, 117, 166, 0.16);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #ffffff, #f4faff);
+}
+
+.page-adjustment-panel-heading {
+  margin-bottom: 0;
+}
+
+.page-adjustment-panel .cover-design-section + .cover-design-section {
+  margin-top: 14px;
+}
+
+.page-adjustment-toggle {
+  min-width: 58px;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid rgba(38, 117, 166, 0.2);
+  border-radius: 999px;
+  color: var(--wb-navy, #12365b);
+  background: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.page-adjustment-toggle:hover,
+.page-adjustment-toggle:focus-visible,
+.page-adjustment-toggle.is-on {
+  border-color: #218ac8;
+  background: #eef8ff;
+}
+
+.page-adjustment-toggle:focus-visible,
+.page-adjustment-secondary-action:focus-visible {
+  outline: 3px solid rgba(31, 139, 207, 0.22);
+  outline-offset: 2px;
+}
+
+.page-adjustment-secondary-action {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid rgba(38, 117, 166, 0.18);
+  border-radius: 10px;
+  color: var(--wb-navy, #12365b);
+  background: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.page-adjustment-secondary-action:hover {
+  border-color: rgba(31, 139, 207, 0.48);
+  background: #f8fcff;
+  transform: translateY(-1px);
+}
+
+.page-adjustment-file-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.page-adjustment-file-action input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.page-adjustment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(38, 117, 166, 0.14);
+}
+
+.page-adjustment-empty {
+  padding: 14px;
+  border: 1px dashed rgba(38, 117, 166, 0.24);
+  border-radius: 12px;
+  background: rgba(248, 252, 255, 0.72);
+}
+
+.page-break-page {
+  display: grid;
+  height: 100%;
+  min-height: 220px;
+  place-items: center;
+  padding: 28px;
+  color: #56718a;
+  background: linear-gradient(145deg, #f7fbff, #eaf4fb);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
 .cover-design-panel-heading {
   display: flex;
   align-items: center;
@@ -3755,10 +3967,14 @@ button.reader-edit-link:disabled {
 @media (min-width: 761px) and (max-width: 980px) {
   .reader-preview-layout.is-editing {
     grid-template-columns: 1fr;
-    grid-template-areas: "panel" "book";
+    grid-template-areas: "book" "panel";
   }
 
   .reader-cover-design-drawer .cover-design-panel {
+    position: static;
+  }
+
+  .reader-page-adjustment-drawer .page-adjustment-panel {
     position: static;
   }
 }
@@ -3770,6 +3986,10 @@ button.reader-edit-link:disabled {
   }
 
   .reader-cover-design-drawer .cover-design-panel {
+    position: static;
+  }
+
+  .reader-page-adjustment-drawer .page-adjustment-panel {
     position: static;
   }
 

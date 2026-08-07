@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import type { BookConfig } from "@/config/bookConfig";
 import type { CoverDesign } from "@/lib/coverDesign";
+import type { PageAdjustment } from "@/lib/pageAdjustments";
 import type { ImageManifestRow, NovelChapter } from "@/lib/types";
 
 const BookReader = dynamic(() => import("./BookReader"), {
@@ -22,6 +23,10 @@ export default function BookReaderShell({
   shareDisabledReason,
   backLink,
   onCoverDesignChange,
+  onPageAdjustmentChange,
+  onPageAdjustmentReset,
+  onPageAdjustmentsResetAll,
+  onPageImageAdd,
 }: {
   config: BookConfig;
   chapters: NovelChapter[];
@@ -33,6 +38,10 @@ export default function BookReaderShell({
   shareDescription?: string;
   shareDisabledReason?: string;
   onCoverDesignChange?: (patch: Partial<CoverDesign>) => void;
+  onPageAdjustmentChange?: (blockId: string, patch: Partial<PageAdjustment>) => void;
+  onPageAdjustmentReset?: (blockId: string) => void;
+  onPageAdjustmentsResetAll?: () => void;
+  onPageImageAdd?: (file: File) => void;
   backLink?: {
     destination?: "auto" | "home" | "dashboard";
     href?: string;
@@ -52,6 +61,10 @@ export default function BookReaderShell({
       shareDisabledReason={shareDisabledReason}
       backLink={backLink}
       onCoverDesignChange={onCoverDesignChange}
+      onPageAdjustmentChange={onPageAdjustmentChange}
+      onPageAdjustmentReset={onPageAdjustmentReset}
+      onPageAdjustmentsResetAll={onPageAdjustmentsResetAll}
+      onPageImageAdd={onPageImageAdd}
     />
   );
 }

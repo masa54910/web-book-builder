@@ -21,6 +21,7 @@ import { validateRequiredBookFields } from "../src/lib/editorValidation";
 import { computeInlineImagePopoverLayout } from "../src/lib/inlineImagePopover";
 import { buildEditorDraftFields, seedFromDraftFields, type EditorDraftState } from "../src/lib/editorDraftState";
 import { DEFAULT_COVER_DESIGN, normalizeCoverDesign } from "../src/lib/coverDesign";
+import { normalizePageAdjustments, removePageAdjustment, upsertPageAdjustment } from "../src/lib/pageAdjustments";
 import {
   AUTOSAVE_MAX_AGE_MS,
   deleteAutosaveDraft,
@@ -449,6 +450,15 @@ const boundedCoverDesign = normalizeCoverDesign({ layout: "layout-10", titleScal
 assert.equal(boundedCoverDesign.layout, "layout-10");
 assert.equal(boundedCoverDesign.titleScale, 1.5);
 assert.equal(boundedCoverDesign.overlayOpacity, 0);
+
+const adjusted = upsertPageAdjustment([], "chapter-1-text-1", {
+  pageBreakAfter: true,
+  paragraphSpacing: "wide",
+});
+assert.equal(adjusted[0]?.blockId, "chapter-1-text-1");
+assert.equal(adjusted[0]?.pageBreakAfter, true);
+assert.equal(normalizePageAdjustments(adjusted)[0]?.paragraphSpacing, "wide");
+assert.deepEqual(removePageAdjustment(adjusted, "chapter-1-text-1"), []);
 
 const baseEditorState: EditorDraftState = {
   title: "",

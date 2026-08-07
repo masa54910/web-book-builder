@@ -67,5 +67,10 @@ export type ReaderPage =
       caption: string;
       missing?: boolean;
     }
+  | {
+      id: string;
+      kind: "pageBreak";
+      sourcePageId: string;
+    }
   | { id: "colophon"; kind: "colophon" }
   | { id: "back-cover"; kind: "backCover" };

@@ -8,6 +8,7 @@ import type { SupportedLocale } from "@/lib/localization";
 import type { ThemeId } from "@/lib/productTypes";
 import type { BookThemeSettings } from "@/lib/themeSystem";
 import { DEFAULT_COVER_DESIGN, normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
+import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
 
 export type EditorDraftState = {
   title: string;
@@ -35,6 +36,7 @@ export type EditorDraftState = {
   coverStyle: BookThemeSettings["coverStyle"];
   imageLayout: BookThemeSettings["imageLayout"];
   coverDesign?: CoverDesign;
+  pageAdjustments?: PageAdjustment[];
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
   visibility: "private" | "unlisted" | "public";
@@ -226,6 +228,7 @@ export function seedFromDraftFields(input: {
     coverStyle: asString(fields.coverStyle, input.initialState.coverStyle) as BookThemeSettings["coverStyle"],
     imageLayout: asString(fields.imageLayout, input.initialState.imageLayout) as BookThemeSettings["imageLayout"],
     coverDesign: storedCoverDesign,
+    pageAdjustments: normalizePageAdjustments(fields.pageAdjustments),
     charactersPerPage: asNumber(fields.charactersPerPage, input.initialState.charactersPerPage),
     tableOfContentsItemsPerPage: asNumber(fields.tableOfContentsItemsPerPage, input.initialState.tableOfContentsItemsPerPage),
     visibility: asString(fields.visibility, input.initialState.visibility) as EditorDraftState["visibility"],

@@ -12,6 +12,7 @@ import {
 } from "@/lib/bookProject";
 import type { BookThemeSettings } from "@/lib/themeSystem";
 import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
+import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
 
 export type CanonicalPublicationStatus = "draft" | "published" | "archived";
 export type CanonicalPublicationVisibility = "private" | "unlisted" | "public";
@@ -68,6 +69,7 @@ export type CanonicalBookPayload = {
   theme: ThemeId;
   themeSettings: Partial<BookThemeSettings>;
   coverDesign: CoverDesign;
+  pageAdjustments: PageAdjustment[];
   bindingDirection: BookConfig["bindingDirection"];
   readerMode: "book";
   charactersPerPage: number;
@@ -117,6 +119,7 @@ export type CanonicalEditorState = {
   coverStyle: BookThemeSettings["coverStyle"];
   imageLayout: BookThemeSettings["imageLayout"];
   coverDesign?: CoverDesign;
+  pageAdjustments?: PageAdjustment[];
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
   visibility: CanonicalPublicationVisibility;
@@ -294,6 +297,7 @@ export function buildCanonicalBookPayload(
       imageLayout: state.imageLayout,
     },
     coverDesign: normalizeCoverDesign(state.coverDesign),
+    pageAdjustments: normalizePageAdjustments(state.pageAdjustments),
     bindingDirection: state.bindingDirection,
     readerMode: "book",
     charactersPerPage: state.charactersPerPage,
@@ -381,6 +385,7 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
     language: payload.language,
     themeSettings: payload.themeSettings,
     coverDesign: normalizeCoverDesign(payload.coverDesign),
+    pageAdjustments: normalizePageAdjustments(payload.pageAdjustments),
     charactersPerPage: payload.charactersPerPage,
     tableOfContentsItemsPerPage: payload.tableOfContentsItemsPerPage,
     images,

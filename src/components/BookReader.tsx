@@ -7,6 +7,11 @@ import type { CSSProperties } from "react";
 
 import type { BookConfig } from "@/config/bookConfig";
 import { DEFAULT_COVER_DESIGN, normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
+import {
+  findPageAdjustment,
+  normalizePageAdjustments,
+  type PageAdjustment,
+} from "@/lib/pageAdjustments";
 import { buildReaderPages, toBoundPageOrder } from "@/lib/paginateText";
 import { recordReaderProgress } from "@/lib/readerAnalytics";
 import { themeClassNames } from "@/lib/themeSystem";
@@ -21,6 +26,7 @@ import type { ImageManifestRow, NovelChapter, ReaderPage } from "@/lib/types";
 import BookPage from "./BookPage";
 import ChapterTitlePage from "./ChapterTitlePage";
 import CoverDesignControls from "./CoverDesignControls";
+import PageAdjustmentControls from "./PageAdjustmentControls";
 import ColophonPage from "./ColophonPage";
 import ContentsPage from "./ContentsPage";
 import CoverPage from "./CoverPage";
@@ -62,6 +68,10 @@ export default function BookReader({
   shareDisabledReason,
   backLink,
   onCoverDesignChange,
+  onPageAdjustmentChange,
+  onPageAdjustmentReset,
+  onPageAdjustmentsResetAll,
+  onPageImageAdd,
 }: {
   config: BookConfig;
   chapters: NovelChapter[];
@@ -78,6 +88,10 @@ export default function BookReader({
     label?: string;
   };
   onCoverDesignChange?: (patch: Partial<CoverDesign>) => void;
+  onPageAdjustmentChange?: (blockId: string, patch: Partial<PageAdjustment>) => void;
+  onPageAdjustmentReset?: (blockId: string) => void;
+  onPageAdjustmentsResetAll?: () => void;
+  onPageImageAdd?: (file: File) => void;
 }) {
   const flipBookRef = useRef<FlipBookHandle | null>(null);
   const storage = useMemo(() => getSafeLocalStorage(), []);
@@ -96,7 +110,9 @@ export default function BookReader({
   const [autoFlipLoop, setAutoFlipLoop] = useState(false);
   const [autoFlipStartMode, setAutoFlipStartMode] = useState<"cover" | "current">("current");
   const [isCoverDesignOpen, setIsCoverDesignOpen] = useState(false);
+  const [isPageAdjustmentOpen, setIsPageAdjustmentOpen] = useState(false);
   const coverDesign = normalizeCoverDesign(config.coverDesign);
+  const pageAdjustments = normalizePageAdjustments(config.pageAdjustments);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 760px)");
@@ -128,10 +144,34 @@ export default function BookReader({
     () => new Map(logicalPages.map((page, index) => [page.id, index])),
     [logicalPages],
   );
+  const pagesWithAdjustments = useMemo(() => {
+    const adjustedPages: ReaderPage[] = [];
+    for (const page of pages) {
+      const adjustment = findPageAdjustment(pageAdjustments, page.id);
+      if (adjustment?.pageBreakBefore) {
+        adjustedPages.push({
+          id: `page-break-before-${page.id}`,
+          kind: "pageBreak",
+          sourcePageId: page.id,
+        });
+      }
+      adjustedPages.push(page);
+      if (adjustment?.pageBreakAfter) {
+        adjustedPages.push({
+          id: `page-break-after-${page.id}`,
+          kind: "pageBreak",
+          sourcePageId: page.id,
+        });
+      }
+    }
+    return adjustedPages;
+  }, [pageAdjustments, pages]);
+
+  const activePageIndex = Math.min(currentPage, Math.max(0, pagesWithAdjustments.length - 1));
 
   const pageDetails = useCallback(
     (pageIndex: number) => {
-      const page = pages[pageIndex];
+      const page = pagesWithAdjustments[pageIndex];
       if (!page) return null;
       const chapterTitle =
         "chapterTitle" in page
@@ -161,7 +201,7 @@ export default function BookReader({
         preview,
       };
     },
-    [logicalFolioById, pages],
+    [logicalFolioById, pagesWithAdjustments],
   );
 
   const saveLastReadAt = useCallback(
@@ -183,37 +223,37 @@ export default function BookReader({
   const pageFlip = useCallback(() => flipBookRef.current?.pageFlip(), []);
   const goToPage = useCallback(
     (pageIndex: number) => {
-      if (pageIndex < 0 || pageIndex >= pages.length) return;
+      if (pageIndex < 0 || pageIndex >= pagesWithAdjustments.length) return;
       pageFlip()?.turnToPage(pageIndex);
       saveLastReadAt(pageIndex);
     },
-    [pageFlip, pages.length, saveLastReadAt],
+    [pageFlip, pagesWithAdjustments.length, saveLastReadAt],
   );
   const jumpToId = useCallback(
     (id: string) => {
-      const pageIndex = pages.findIndex((page) => page.id === id);
+      const pageIndex = pagesWithAdjustments.findIndex((page) => page.id === id);
       if (pageIndex >= 0) goToPage(pageIndex);
     },
-    [goToPage, pages],
+    [goToPage, pagesWithAdjustments],
   );
   const jumpToPrintedPage = useCallback(
     (pageNumber: number) => {
       const pageIndex = isMobile
         ? pageNumber
         : Math.max(1, pageNumber % 2 === 0 ? pageNumber - 1 : pageNumber);
-      goToPage(Math.min(pageIndex, pages.length - 2));
+      goToPage(Math.min(pageIndex, pagesWithAdjustments.length - 2));
     },
-    [goToPage, isMobile, pages.length],
+    [goToPage, isMobile, pagesWithAdjustments.length],
   );
 
   const currentSpreadPageIds = useMemo(
     () =>
       new Set(
-        [currentPage - 1, currentPage, currentPage + 1]
-          .map((pageIndex) => pages[pageIndex]?.id)
+        [activePageIndex - 1, activePageIndex, activePageIndex + 1]
+          .map((pageIndex) => pagesWithAdjustments[pageIndex]?.id)
           .filter((pageId): pageId is string => Boolean(pageId)),
       ),
-    [currentPage, pages],
+    [activePageIndex, pagesWithAdjustments],
   );
   const hasBookmarkInCurrentSpread = useMemo(
     () => stickyNotes.some((note) => currentSpreadPageIds.has(note.pageId)),
@@ -221,7 +261,7 @@ export default function BookReader({
   );
 
   const toggleStickyNote = useCallback(() => {
-    const details = pageDetails(currentPage);
+    const details = pageDetails(activePageIndex);
     if (!details) return;
     setStickyNotes((current) => {
       const nearbyNote = current.find((note) => currentSpreadPageIds.has(note.pageId));
@@ -231,7 +271,7 @@ export default function BookReader({
       writeStickyNotes(storage, config.bookId, next);
       return next;
     });
-  }, [config.bookId, currentPage, currentSpreadPageIds, pageDetails, storage]);
+  }, [activePageIndex, config.bookId, currentSpreadPageIds, pageDetails, storage]);
 
   const removeStickyNote = useCallback(
     (note: StickyNote) => {
@@ -246,22 +286,22 @@ export default function BookReader({
 
   const jumpToStickyNote = useCallback(
     (note: StickyNote) => {
-      const stableIndex = pages.findIndex((page) => page.id === note.pageId);
-      goToPage(stableIndex >= 0 ? stableIndex : Math.min(note.pageIndex, pages.length - 1));
+      const stableIndex = pagesWithAdjustments.findIndex((page) => page.id === note.pageId);
+      goToPage(stableIndex >= 0 ? stableIndex : Math.min(note.pageIndex, pagesWithAdjustments.length - 1));
     },
-    [goToPage, pages],
+    [goToPage, pagesWithAdjustments],
   );
 
   const continueReading = useCallback(() => {
     if (!resumePosition) return;
-    const stableIndex = pages.findIndex((page) => page.id === resumePosition.pageId);
+    const stableIndex = pagesWithAdjustments.findIndex((page) => page.id === resumePosition.pageId);
     goToPage(
       stableIndex >= 0
         ? stableIndex
-        : Math.min(Math.max(resumePosition.pageIndex, 0), pages.length - 1),
+        : Math.min(Math.max(resumePosition.pageIndex, 0), pagesWithAdjustments.length - 1),
     );
     setResumePosition(null);
-  }, [goToPage, pages, resumePosition]);
+  }, [goToPage, pagesWithAdjustments, resumePosition]);
 
   const bookmarkedPageIds = useMemo(
     () => new Set(stickyNotes.map((note) => note.pageId)),
@@ -292,7 +332,7 @@ export default function BookReader({
   useEffect(() => {
     if (!autoFlipEnabled) return;
     const timer = window.setInterval(() => {
-      if (currentPage >= pages.length - 1) {
+      if (activePageIndex >= pagesWithAdjustments.length - 1) {
         if (autoFlipLoop) {
           goToPage(0);
         } else {
@@ -303,12 +343,13 @@ export default function BookReader({
       pageFlip()?.flipNext("top");
     }, Math.max(2, autoFlipSeconds) * 1000);
     return () => window.clearInterval(timer);
-  }, [autoFlipEnabled, autoFlipLoop, autoFlipSeconds, currentPage, goToPage, pageFlip, pages.length]);
+  }, [activePageIndex, autoFlipEnabled, autoFlipLoop, autoFlipSeconds, goToPage, pageFlip, pagesWithAdjustments.length]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && displayMode === "preview" && isCoverDesignOpen) {
+      if (event.key === "Escape" && displayMode === "preview" && (isCoverDesignOpen || isPageAdjustmentOpen)) {
         setIsCoverDesignOpen(false);
+        setIsPageAdjustmentOpen(false);
         return;
       }
       const nextKey = config.bindingDirection === "rtl" ? "ArrowLeft" : "ArrowRight";
@@ -323,7 +364,7 @@ export default function BookReader({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [config.bindingDirection, displayMode, isCoverDesignOpen, pageFlip]);
+  }, [config.bindingDirection, displayMode, isCoverDesignOpen, isPageAdjustmentOpen, pageFlip]);
 
   const renderPage = (page: ReaderPage) => {
     let content: React.ReactNode;
@@ -353,6 +394,7 @@ export default function BookReader({
           onJumpToPrevious={
             previousChapter ? () => jumpToId(`chapter-${previousChapter.slug}`) : undefined
           }
+          adjustment={findPageAdjustment(pageAdjustments, page.id)}
         />
       );
     } else if (page.kind === "image") {
@@ -362,8 +404,11 @@ export default function BookReader({
           alt={page.alt}
           caption={page.caption}
           missing={page.missing}
+          adjustment={findPageAdjustment(pageAdjustments, page.id)}
         />
       );
+    } else if (page.kind === "pageBreak") {
+      content = <div className="page-break-page" aria-label="手動改ページ">ここから新しいページ</div>;
     } else if (page.kind === "colophon") content = <ColophonPage config={config} cloudBookId={cloudBookId} />;
     else content = <CoverPage config={config} back />;
 
@@ -437,26 +482,32 @@ export default function BookReader({
             type="button"
             aria-expanded={isCoverDesignOpen}
             aria-pressed={isCoverDesignOpen}
-            onClick={() => setIsCoverDesignOpen((open) => !open)}
+            onClick={() => {
+              setIsPageAdjustmentOpen(false);
+              setIsCoverDesignOpen((open) => !open);
+            }}
           >
             表紙を調整
           </button>
           <button
-            className="reader-preview-action"
+            className={`reader-preview-action ${isPageAdjustmentOpen ? "is-active" : ""}`}
             type="button"
-            disabled
-            aria-disabled="true"
-            title="ページ調整モードは準備中です"
+            aria-expanded={isPageAdjustmentOpen}
+            aria-pressed={isPageAdjustmentOpen}
+            onClick={() => {
+              setIsCoverDesignOpen(false);
+              setIsPageAdjustmentOpen((open) => !open);
+            }}
           >
             ページを調整
           </button>
         </div>
       ) : null}
 
-      <div className={`reader-preview-layout ${displayMode === "preview" && isCoverDesignOpen ? "is-editing" : ""}`}>
+      <div className={`reader-preview-layout ${displayMode === "preview" && (isCoverDesignOpen || isPageAdjustmentOpen) ? "is-editing" : ""}`}>
         <section className="book-viewport" aria-label="デジタル書籍リーダー">
           <HTMLFlipBook
-            key={`${isMobile ? "mobile" : "desktop"}-${pages.length}`}
+            key={`${isMobile ? "mobile" : "desktop"}-${pagesWithAdjustments.length}`}
             ref={flipBookRef}
             className="flip-book"
             style={{}}
@@ -484,10 +535,10 @@ export default function BookReader({
             onFlip={(event: { data: number }) => {
               setCurrentPage(event.data);
               saveLastReadAt(event.data);
-              recordReaderProgress(config.bookId, pages[event.data], event.data, pages.length, cloudBookId);
+              recordReaderProgress(config.bookId, pagesWithAdjustments[event.data], event.data, pagesWithAdjustments.length, cloudBookId);
             }}
           >
-            {pages.map(renderPage)}
+            {pagesWithAdjustments.map(renderPage)}
           </HTMLFlipBook>
         </section>
         {displayMode === "preview" && isCoverDesignOpen ? (
@@ -502,12 +553,33 @@ export default function BookReader({
             />
           </aside>
         ) : null}
+        {displayMode === "preview" && isPageAdjustmentOpen ? (
+          <aside className="reader-page-adjustment-drawer" aria-label="ページ調整設定">
+            <PageAdjustmentControls
+              page={pagesWithAdjustments[activePageIndex] || null}
+              pageNumber={(logicalFolioById.get(pagesWithAdjustments[activePageIndex]?.id || "") ?? activePageIndex) + 1}
+              totalPages={pagesWithAdjustments.length}
+              value={findPageAdjustment(pageAdjustments, pagesWithAdjustments[activePageIndex]?.id || "")}
+              onChange={(patch) => {
+                const target = pagesWithAdjustments[activePageIndex];
+                if (target && target.kind !== "pageBreak") onPageAdjustmentChange?.(target.id, patch);
+              }}
+              onReset={() => {
+                const target = pagesWithAdjustments[activePageIndex];
+                if (target && target.kind !== "pageBreak") onPageAdjustmentReset?.(target.id);
+              }}
+              onResetAll={onPageAdjustmentsResetAll}
+              onImageAdd={onPageImageAdd}
+              onClose={() => setIsPageAdjustmentOpen(false)}
+            />
+          </aside>
+        ) : null}
       </div>
 
       <ReaderControls
         bindingDirection={config.bindingDirection}
-        current={currentPage}
-        total={pages.length}
+        current={activePageIndex}
+        total={pagesWithAdjustments.length}
         onFirst={() => pageFlip()?.turnToPage(0)}
         onContents={() => jumpToId("contents-1")}
         onPrevious={() => pageFlip()?.flipPrev("top")}

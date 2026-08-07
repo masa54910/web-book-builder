@@ -63,6 +63,7 @@ import {
   normalizeCoverDesign,
   type CoverDesign,
 } from "@/lib/coverDesign";
+import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
 import { validateRequiredBookFields, type RequiredBookFieldKey } from "@/lib/editorValidation";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
 import CharacterAssistant from "@/components/CharacterAssistant";
@@ -98,6 +99,7 @@ type EditorState = {
   coverStyle: BookThemeSettings["coverStyle"];
   imageLayout: BookThemeSettings["imageLayout"];
   coverDesign: CoverDesign;
+  pageAdjustments: PageAdjustment[];
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
   visibility: "private" | "unlisted" | "public";
@@ -149,6 +151,7 @@ const INITIAL_EDITOR: EditorState = {
   coverStyle: "overlay",
   imageLayout: "framed",
   coverDesign: { ...DEFAULT_COVER_DESIGN },
+  pageAdjustments: [],
   charactersPerPage: 380,
   tableOfContentsItemsPerPage: 6,
   visibility: "private",
@@ -172,6 +175,7 @@ function normalizeEditorDraftSeed(seed: ReturnType<typeof seedFromDraftFields>):
       ...INITIAL_EDITOR,
       ...seed.state,
       coverDesign: normalizeCoverDesign(seed.state.coverDesign),
+      pageAdjustments: normalizePageAdjustments(seed.state.pageAdjustments),
     },
   };
 }
@@ -300,6 +304,7 @@ function fromRecord(record: CloudBookRecord): EditorState {
     coverStyle: record.bookProject.config.themeSettings?.coverStyle || "overlay",
     imageLayout: record.bookProject.config.themeSettings?.imageLayout || "framed",
     coverDesign: normalizeCoverDesign(record.bookProject.config.coverDesign),
+    pageAdjustments: normalizePageAdjustments(record.bookProject.config.pageAdjustments),
     charactersPerPage: record.charactersPerPage,
     tableOfContentsItemsPerPage: record.tocItemsPerPage,
     visibility: record.visibility,
@@ -422,6 +427,7 @@ function stateFromPreviewProject(project: BookProject): EditorState {
     coverStyle: project.config.themeSettings?.coverStyle || "overlay",
     imageLayout: project.config.themeSettings?.imageLayout || "framed",
     coverDesign: normalizeCoverDesign(project.config.coverDesign),
+    pageAdjustments: normalizePageAdjustments(project.config.pageAdjustments),
     charactersPerPage: project.config.charactersPerPage,
     tableOfContentsItemsPerPage: project.config.tableOfContentsItemsPerPage,
     // Preserve the user-entered slug through a Preview round trip. Legacy
@@ -1069,6 +1075,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       coverStyle: payload.themeSettings.coverStyle || current.coverStyle,
       imageLayout: payload.themeSettings.imageLayout || current.imageLayout,
       coverDesign: normalizeCoverDesign(payload.coverDesign),
+      pageAdjustments: normalizePageAdjustments(payload.pageAdjustments),
       charactersPerPage: payload.charactersPerPage,
       tableOfContentsItemsPerPage: payload.tableOfContentsItemsPerPage,
       visibility: payload.publication.visibility,
