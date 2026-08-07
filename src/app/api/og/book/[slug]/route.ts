@@ -167,7 +167,7 @@ async function formatOgCover(cover: CoverAsset) {
         position: "attention",
         background: { r: 242, g: 248, b: 252, alpha: 1 },
       })
-      .jpeg({ quality: 88, progressive: true })
+      .jpeg({ quality: 88 })
       .toBuffer();
     return {
       body: copyToArrayBuffer(body),
@@ -178,6 +178,35 @@ async function formatOgCover(cover: CoverAsset) {
     // cover is still preferable to replacing it with a generic fallback.
     return cover;
   }
+}
+
+async function rasterizeFallback(svg: string) {
+  try {
+    const body = await sharp(Buffer.from(svg, "utf8"))
+      .jpeg({ quality: 88 })
+      .toBuffer();
+    return {
+      body: copyToArrayBuffer(body),
+      contentType: "image/jpeg",
+    } satisfies CoverAsset;
+  } catch {
+    return {
+      body: copyToArrayBuffer(Buffer.from(svg, "utf8")),
+      contentType: "image/svg+xml; charset=utf-8",
+    } satisfies CoverAsset;
+  }
+}
+
+function imageResponse(asset: CoverAsset) {
+  return new NextResponse(asset.body, {
+    headers: {
+      "Content-Type": asset.contentType,
+      "Content-Length": String(asset.body.byteLength),
+      "Cache-Control": CACHE_CONTROL,
+      "X-Content-Type-Options": "nosniff",
+      "Content-Disposition": "inline",
+    },
+  });
 }
 
 async function loadPublishedBook(slug: string) {
@@ -253,22 +282,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
 
     if (cover) {
       const ogCover = await formatOgCover(cover);
-      return new NextResponse(ogCover.body, {
-        headers: {
-          "Content-Type": ogCover.contentType,
-          "Cache-Control": CACHE_CONTROL,
-          "X-Content-Type-Options": "nosniff",
-        },
-      });
+      return imageResponse(ogCover);
     }
   }
 
   const svg = fallbackSvg({ title, description, author, slug: decodedSlug });
-  return new NextResponse(svg, {
-    headers: {
-      "Content-Type": "image/svg+xml; charset=utf-8",
-      "Cache-Control": CACHE_CONTROL,
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
+  return imageResponse(await rasterizeFallback(svg));
 }

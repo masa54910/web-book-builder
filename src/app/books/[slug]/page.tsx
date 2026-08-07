@@ -10,6 +10,10 @@ import { SAMPLE_BOOK_SLUG } from "@/lib/sampleBookConstants";
 
 export const dynamic = "force-dynamic";
 
+// Bump this when the server-side card renderer changes so X and other
+// crawlers do not keep using a previously cached image response.
+const OGP_IMAGE_FORMAT_VERSION = "2026-08-08-2";
+
 type PublicBookMetadataRow = {
   title: string;
   description: string;
@@ -59,7 +63,10 @@ export async function generateMetadata({
     book?.description || (book?.author_name ? `${book.author_name} のWebブックを公開しています。` : "ページをめくるように読めるWebブック。");
   const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://webbookmaker.vercel.app").replace(/\/$/, "");
   const publicUrl = `${baseUrl}/books/${encodeURIComponent(decodedSlug)}`;
-  const ogImageVersion = book?.updated_at ? `?v=${encodeURIComponent(book.updated_at)}` : "";
+  const ogImageVersion = `?v=${[OGP_IMAGE_FORMAT_VERSION, book?.updated_at]
+    .filter(Boolean)
+    .map((value) => encodeURIComponent(value as string))
+    .join("-")}`;
   const ogImageUrl = `${baseUrl}/api/og/book/${encodeURIComponent(decodedSlug)}${ogImageVersion}`;
 
   return {
@@ -79,6 +86,10 @@ export async function generateMetadata({
       title,
       description,
       images: [ogImageUrl],
+    },
+    other: {
+      "twitter:url": publicUrl,
+      "twitter:image:alt": title,
     },
     authors: book?.author_name ? [{ name: book.author_name }] : undefined,
   };
