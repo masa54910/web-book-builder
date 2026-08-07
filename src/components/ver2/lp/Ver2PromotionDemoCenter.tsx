@@ -32,20 +32,30 @@ export default function Ver2PromotionDemoCenter() {
                   <span className={styles.adjustmentPreviewBrand}>WebBookMaker</span>
                   <strong>星降る街の<br />小さな記録</strong>
                   <span className={styles.adjustmentPreviewRule} />
-                  <span className={styles.adjustmentPreviewLine} />
-                  <span className={styles.adjustmentPreviewLineShort} />
-                  <span className={styles.adjustmentPreviewFolio}>01</span>
-                </div>
-                <span className={styles.adjustmentPreviewSpine} />
-                <div className={`${styles.adjustmentPreviewPage} ${styles.adjustmentPreviewPageRight}`}>
-                  <span className={styles.adjustmentPreviewPageKicker}>Chapter 1</span>
-                  <strong>夜の街で見つけた光</strong>
-                  <p>小さな出来事を、1冊のWebブックに。</p>
+                  <div className={styles.adjustmentPreviewBody}>
+                    <span>夜の街で見つけた光を、</span>
+                    <span>小さな記録にまとめました。</span>
+                    <span>ページをめくるたび、</span>
+                    <span>物語がゆっくり広がります。</span>
+                  </div>
                   <span className={styles.adjustmentPreviewImageFrame}>
                     <Image src={SAMPLE_BOOK_COVER_IMAGE} alt="" fill sizes="220px" />
                   </span>
-                  <span className={styles.adjustmentPreviewFolio}>02</span>
+                  <span className={styles.adjustmentPreviewFolio}>01</span>
                 </div>
+                <aside className={styles.adjustmentPreviewModal}>
+                  <div className={styles.adjustmentPreviewModalHeader}>
+                    <strong>ページ調整</strong>
+                    <span aria-hidden="true">×</span>
+                  </div>
+                  <small className={styles.adjustmentPreviewModalMeta}>Page 2 / 22</small>
+                  <span className={styles.adjustmentPreviewModalSection}>本文レイアウト</span>
+                  <div className={styles.adjustmentPreviewModalControl}><span>改ページ</span><b>追加</b></div>
+                  <div className={styles.adjustmentPreviewModalControl}><span>画像サイズ</span><b>本文幅</b></div>
+                  <div className={styles.adjustmentPreviewModalControl}><span>画像配置</span><b>中央</b></div>
+                  <div className={styles.adjustmentPreviewModalControl}><span>余白</span><b>標準</b></div>
+                  <span className={styles.adjustmentPreviewModalReset}>自動に戻す</span>
+                </aside>
               </div>
               <div className={styles.adjustmentPreviewFooter}>
                 <span>表紙を調整</span>
