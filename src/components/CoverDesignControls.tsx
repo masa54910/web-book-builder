@@ -141,7 +141,7 @@ export default function CoverDesignControls({
                   Enterで改行できます。表紙の表示だけが変わります。
                 </small>
                 <small className="maker-note cover-title-line-hint">
-                  表紙上の1行目安：約{Math.round(12 / value.titleScale)}文字
+                  表紙の横幅に合わせて自動で折り返します。
                 </small>
               </label>
               {value.titleTextOverride !== undefined ? (

@@ -2246,13 +2246,11 @@ button.reader-edit-link:disabled {
 .cover-copy h2 {
   margin: 0;
   font-family: Georgia, "Yu Mincho", serif;
-  font-size: clamp(38px, 6vw, 61px);
+  font-size: calc(clamp(38px, 6vw, 61px) * var(--cover-title-scale, 1));
   font-weight: 400;
   line-height: 0.92;
   letter-spacing: -0.045em;
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
-  transform: scale(var(--cover-title-scale, 1));
-  transform-origin: var(--cover-title-origin, left center);
 }
 
 .cover-copy p {
@@ -2363,7 +2361,7 @@ button.reader-edit-link:disabled {
 }
 
 .cover-layout-layout-06 .cover-copy h2 {
-  font-size: clamp(46px, 8vw, 76px);
+  font-size: calc(clamp(46px, 8vw, 76px) * var(--cover-title-scale, 1));
 }
 
 .cover-layout-layout-07 .cover-copy {

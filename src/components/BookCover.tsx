@@ -75,7 +75,6 @@ export default function BookCover({ back = false, data }: { back?: boolean; data
   const style = {
     "--book-accent-color": coverTone,
     "--cover-title-scale": design.titleScale,
-    "--cover-title-origin": `${titlePosition} center`,
     "--cover-author-scale": design.authorScale,
     "--cover-author-origin": `${authorPosition} center`,
     "--cover-image-scale": design.imageScale,
