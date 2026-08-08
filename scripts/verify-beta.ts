@@ -20,7 +20,12 @@ import { resolveSafeInternalReturnPath } from "../src/lib/returnTo";
 import { validateRequiredBookFields } from "../src/lib/editorValidation";
 import { computeInlineImagePopoverLayout } from "../src/lib/inlineImagePopover";
 import { buildEditorDraftFields, seedFromDraftFields, type EditorDraftState } from "../src/lib/editorDraftState";
-import { DEFAULT_COVER_DESIGN, normalizeCoverDesign } from "../src/lib/coverDesign";
+import {
+  DEFAULT_COVER_DESIGN,
+  normalizeCoverDesign,
+  normalizeCoverTitleOverride,
+} from "../src/lib/coverDesign";
+import { buildCanonicalBookPayload, canonicalPayloadToBookProjectInput } from "../src/lib/canonicalBook";
 import { normalizePageAdjustments, removePageAdjustment, upsertPageAdjustment } from "../src/lib/pageAdjustments";
 import {
   AUTOSAVE_MAX_AGE_MS,
@@ -450,6 +455,9 @@ const boundedCoverDesign = normalizeCoverDesign({ layout: "layout-10", titleScal
 assert.equal(boundedCoverDesign.layout, "layout-10");
 assert.equal(boundedCoverDesign.titleScale, 1.5);
 assert.equal(boundedCoverDesign.overlayOpacity, 0);
+assert.equal(normalizeCoverTitleOverride("星降る街の\n小さな記録"), "星降る街の\n小さな記録");
+assert.equal(normalizeCoverTitleOverride("星\n\n\n降る\n街\n記録"), "星\n\n降る");
+assert.equal(normalizeCoverTitleOverride(""), undefined);
 
 const adjusted = upsertPageAdjustment([], "chapter-1-text-1", {
   pageBreakAfter: true,
@@ -497,6 +505,30 @@ const baseEditorState: EditorDraftState = {
   externalSalesUrl: "",
   externalSalesLabel: "",
 };
+
+const canonicalCoverResult = buildCanonicalBookPayload({
+  state: {
+    ...baseEditorState,
+    title: "正式タイトル",
+    author: "作者",
+    description: "説明",
+    coverDesign: {
+      ...DEFAULT_COVER_DESIGN,
+      titleTextOverride: "正式\n表紙タイトル",
+    },
+  },
+  contentBlocks: [{ id: "text-001", type: "text", content: "本文" }],
+  images: [],
+});
+assert.equal(canonicalCoverResult.ok, true, "Canonical payload should accept cover title override");
+if (canonicalCoverResult.ok) {
+  assert.equal(canonicalCoverResult.payload.title, "正式タイトル");
+  assert.equal(canonicalCoverResult.payload.coverDesign.titleTextOverride, "正式\n表紙タイトル");
+  assert.equal(
+    canonicalPayloadToBookProjectInput(canonicalCoverResult.payload).coverDesign?.titleTextOverride,
+    "正式\n表紙タイトル",
+  );
+}
 
 const draftBlocks: BookContentBlock[] = [
   { id: "text-001", type: "text", content: "長文テキスト" },

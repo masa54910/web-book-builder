@@ -65,7 +65,10 @@ export default function BookCover({ back = false, data }: { back?: boolean; data
   const design = normalizeCoverDesign(data.coverDesign);
   const coverStyle = data.coverStyle || "overlay";
   const coverTone = data.accentColor || "#6bb9ad";
-  const displayTitleLines = data.displayTitleLines?.filter((line) => line.trim().length > 0);
+  const coverTitle = design.titleTextOverride?.trim() || data.title;
+  const displayTitleLines = design.titleTextOverride?.trim()
+    ? design.titleTextOverride.split("\n").filter((line) => line.trim().length > 0)
+    : data.displayTitleLines?.filter((line) => line.trim().length > 0);
   const coverSrc = data.coverImageUrl || (isDisplayableImageUrl(data.coverImage) ? data.coverImage : "");
   const titlePosition = positionToTextAlign(design.titlePosition);
   const authorPosition = positionToTextAlign(design.authorPosition);
@@ -99,11 +102,11 @@ export default function BookCover({ back = false, data }: { back?: boolean; data
         }}
       >
         {displayTitleLines?.length ? (
-          <h2 className="fixed-title-lines fixed-title-lines-cover" aria-label={data.title}>
-            {displayTitleLines.map((line) => <span key={line}>{line}</span>)}
+          <h2 className="fixed-title-lines fixed-title-lines-cover" aria-label={coverTitle}>
+            {displayTitleLines.map((line, index) => <span key={`${line}-${index}`}>{line}</span>)}
           </h2>
         ) : (
-          <h2>{data.title}</h2>
+          <h2>{coverTitle}</h2>
         )}
         {data.subtitle ? <p>{data.subtitle}</p> : null}
       </div>

@@ -36,6 +36,7 @@ export default function CoverAdjustModal({
               value={value}
               onChange={onChange}
               onReset={onReset}
+              title={config.title}
               heading="表紙デザイン"
               description="表紙の見た目をPreviewで確認しながら調整できます。"
             />

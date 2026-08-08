@@ -25,6 +25,8 @@ export type CoverImageFit = "contain" | "cover";
 
 export type CoverDesign = {
   layout: CoverLayoutId;
+  /** Optional line-broken title used only by the cover renderer. */
+  titleTextOverride?: string;
   titleScale: number;
   titlePosition: CoverPosition;
   authorScale: number;
@@ -69,6 +71,7 @@ export const COVER_POSITIONS: CoverPosition[] = [
 export const DEFAULT_COVER_DESIGN: CoverDesign = {
   // Layout 01 intentionally mirrors the current cover renderer.
   layout: "layout-01",
+  titleTextOverride: undefined,
   titleScale: 1,
   titlePosition: "center-left",
   authorScale: 1,
@@ -96,11 +99,31 @@ function validPosition(value: unknown): value is CoverPosition {
   return COVER_POSITIONS.includes(value as CoverPosition);
 }
 
+export const MAX_COVER_TITLE_OVERRIDE_LINES = 4;
+export const MAX_COVER_TITLE_OVERRIDE_LENGTH = 120;
+
+/** Normalize user-entered cover-only title line breaks without changing book.title. */
+export function normalizeCoverTitleOverride(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+
+  const normalized = value.replace(/\r\n?/g, "\n").trim();
+  if (!normalized) return undefined;
+
+  const limitedLines = normalized
+    .split("\n")
+    .slice(0, MAX_COVER_TITLE_OVERRIDE_LINES)
+    .map((line) => line.trim());
+  const compact = limitedLines.join("\n").replace(/\n{3,}/g, "\n\n");
+  const limited = compact.slice(0, MAX_COVER_TITLE_OVERRIDE_LENGTH).trim();
+  return limited || undefined;
+}
+
 /** Normalize persisted/legacy values without changing existing cover defaults. */
 export function normalizeCoverDesign(value: unknown): CoverDesign {
   const source = isRecord(value) ? value : {};
   return {
     layout: validLayout(source.layout) ? source.layout : DEFAULT_COVER_DESIGN.layout,
+    titleTextOverride: normalizeCoverTitleOverride(source.titleTextOverride),
     titleScale: clamp(source.titleScale, 0.7, 1.5, DEFAULT_COVER_DESIGN.titleScale),
     titlePosition: validPosition(source.titlePosition)
       ? source.titlePosition

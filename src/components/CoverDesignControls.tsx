@@ -63,6 +63,7 @@ export default function CoverDesignControls({
   onChange,
   onReset,
   onClose,
+  title = "",
   heading = "表紙レイアウト",
   description = "10種類から選び、タイトル・作者名・画像を微調整できます。",
 }: {
@@ -70,6 +71,7 @@ export default function CoverDesignControls({
   onChange: (patch: Partial<CoverDesign>) => void;
   onReset?: () => void;
   onClose?: () => void;
+  title?: string;
   heading?: string;
   description?: string;
 }) {
@@ -118,6 +120,30 @@ export default function CoverDesignControls({
           <div className="cover-design-section">
             <h4>文字</h4>
             <div className="cover-design-controls">
+              <label className="cover-design-control cover-title-override-control">
+                <span>表紙タイトル</span>
+                <textarea
+                  value={value.titleTextOverride ?? ""}
+                  maxLength={120}
+                  rows={3}
+                  placeholder={title || "作品タイトル"}
+                  aria-label="表紙タイトルの改行"
+                  aria-describedby="cover-title-override-help"
+                  onChange={(event) => onChange({ titleTextOverride: event.target.value })}
+                />
+                <small id="cover-title-override-help" className="maker-note">
+                  Enterで改行できます。表紙の表示だけが変わります。
+                </small>
+                {value.titleTextOverride ? (
+                  <button
+                    className="cover-title-override-reset"
+                    type="button"
+                    onClick={() => onChange({ titleTextOverride: "" })}
+                  >
+                    元のタイトルに戻す
+                  </button>
+                ) : null}
+              </label>
               <ScaleStepper
                 label="タイトルサイズ"
                 value={value.titleScale}

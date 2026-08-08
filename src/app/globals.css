@@ -3806,6 +3806,55 @@ button.reader-edit-link:disabled {
   border-color: #218ac8;
 }
 
+.cover-design-control textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 78px;
+  resize: vertical;
+  padding: 9px 10px;
+  border: 1px solid rgba(46, 110, 160, 0.2);
+  border-radius: 10px;
+  color: var(--wb-text, #172537);
+  background: #ffffff;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.cover-design-control textarea:focus-visible {
+  outline: 3px solid rgba(31, 139, 207, 0.2);
+  outline-offset: 2px;
+  border-color: #218ac8;
+}
+
+.cover-title-override-control .maker-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.cover-title-override-reset {
+  justify-self: start;
+  padding: 6px 10px;
+  border: 1px solid rgba(46, 110, 160, 0.2);
+  border-radius: 999px;
+  color: var(--wb-navy, #12365b);
+  background: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cover-title-override-reset:hover {
+  background: #eef8ff;
+}
+
+.cover-title-override-reset:focus-visible {
+  outline: 3px solid rgba(31, 139, 207, 0.2);
+  outline-offset: 2px;
+}
+
 .cover-scale-stepper {
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr) 38px;
