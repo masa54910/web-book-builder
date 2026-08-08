@@ -166,15 +166,27 @@ export default function ProfileSettingsPage() {
     setErrorMessage("");
     setMessage("");
     setIsSaving(true);
+    let saveStage = "profile";
     try {
       const next = await saveOwnProfile(profile);
+      saveStage = "author_links";
       const socialLinks = buildSocialLinks(xUrl, noteUrl, instagramUrl, otherUrl);
       await saveOwnAuthorLinks(user.id, socialLinks);
+      saveStage = "profile_preferences";
       await saveOwnProfilePreferences(user.id, preferences);
       setProfile(next);
       setMessage("登録情報を保存しました。");
     } catch (error) {
-      console.error("settings.profile.save failed", error);
+      const details = error && typeof error === "object" ? (error as Record<string, unknown>) : {};
+      console.error("settings.profile.save failed", {
+        operation: "save-profile-settings",
+        stage: saveStage,
+        status: typeof details.status === "number" ? details.status : undefined,
+        code: typeof details.code === "string" ? details.code : undefined,
+        message: typeof details.message === "string" ? details.message : error instanceof Error ? error.message : undefined,
+        details: typeof details.details === "string" ? details.details : undefined,
+        hint: typeof details.hint === "string" ? details.hint : undefined,
+      });
       setErrorMessage(PROFILE_SAVE_ERROR_MESSAGE);
     } finally {
       setIsSaving(false);

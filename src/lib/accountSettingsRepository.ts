@@ -32,6 +32,18 @@ function defaultPrefs(): ProfilePreferences {
   };
 }
 
+function isMissingProfilePreferencesError(error: { code?: unknown; message?: unknown }) {
+  const code = String(error.code ?? "").toUpperCase();
+  const message = String(error.message ?? "").toLowerCase();
+
+  return (
+    code === "PGRST205" ||
+    code === "42P01" ||
+    (message.includes("profile_preferences") &&
+      (message.includes("schema cache") || message.includes("does not exist") || message.includes("not found")))
+  );
+}
+
 function mapLink(row: Record<string, unknown>): AuthorLinkRecord {
   const typeValue = String(row.link_type ?? "other");
   const linkType: AuthorLinkRecord["linkType"] =
@@ -142,8 +154,7 @@ export async function getOwnProfilePreferences(userId: string) {
     .maybeSingle();
 
   if (error) {
-    const message = error.message.toLowerCase();
-    if (message.includes("profile_preferences") && message.includes("does not exist")) {
+    if (isMissingProfilePreferencesError(error)) {
       return defaultPrefs();
     }
     throw error;
@@ -180,8 +191,7 @@ export async function saveOwnProfilePreferences(userId: string, preferences: Pro
   );
 
   if (error) {
-    const message = error.message.toLowerCase();
-    if (message.includes("profile_preferences") && message.includes("does not exist")) {
+    if (isMissingProfilePreferencesError(error)) {
       return normalized;
     }
     throw error;
