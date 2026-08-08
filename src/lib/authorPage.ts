@@ -27,7 +27,13 @@ export type PublicAuthorPageData = {
 };
 
 export function normalizeAuthorPageHandle(value: string) {
-  return decodeURIComponent(value || "")
+  let decoded = value || "";
+  try {
+    decoded = decodeURIComponent(decoded);
+  } catch {
+    // Malformed percent-encoding should resolve to a harmless non-match, not a 500.
+  }
+  return decoded
     .trim()
     .replace(/^@+/, "")
     .toLowerCase();
