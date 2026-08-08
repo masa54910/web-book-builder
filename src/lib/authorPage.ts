@@ -1,4 +1,4 @@
-export type PublicAuthorLinkType = "x" | "note" | "instagram" | "website" | "other";
+export type PublicAuthorLinkType = "x" | "note" | "instagram" | "facebook" | "line" | "website" | "other";
 
 export type PublicAuthorLink = {
   label: string;

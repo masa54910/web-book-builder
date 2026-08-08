@@ -1,6 +1,6 @@
 import type { SVGProps } from "react";
 
-export type ServiceIconName = "x" | "note" | "facebook" | "line";
+export type ServiceIconName = "x" | "note" | "instagram" | "facebook" | "line";
 
 type Props = SVGProps<SVGSVGElement> & {
   service: ServiceIconName;
@@ -29,6 +29,16 @@ export default function ServiceIcon({ service, className, ...props }: Props) {
     return (
       <svg {...common}>
         <path d="M13.5 21v-8h2.7l.4-3h-3.1V8.08c0-.87.24-1.46 1.5-1.46h1.7V3.94c-.3-.04-1.32-.13-2.51-.13-2.49 0-4.2 1.52-4.2 4.31V10H7.2v3h2.79v8h3.51Z" />
+      </svg>
+    );
+  }
+
+  if (service === "instagram") {
+    return (
+      <svg {...common}>
+        <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+        <circle cx="12" cy="12" r="4" fill="white" />
+        <circle cx="17.3" cy="6.7" r="1.1" fill="white" />
       </svg>
     );
   }

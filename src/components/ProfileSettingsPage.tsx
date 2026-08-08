@@ -30,7 +30,14 @@ function socialValue(links: AuthorLinkRecord[], type: AuthorLinkRecord["linkType
   return links.find((link) => link.linkType === type)?.url || "";
 }
 
-function buildSocialLinks(xUrl: string, noteUrl: string, instagramUrl: string, otherUrl: string) {
+function buildSocialLinks(
+  xUrl: string,
+  noteUrl: string,
+  instagramUrl: string,
+  facebookUrl: string,
+  lineUrl: string,
+  otherUrl: string,
+) {
   const links: AuthorLinkRecord[] = [];
   if (xUrl.trim()) {
     links.push({ id: "x", label: "X", url: xUrl, linkType: "x" });
@@ -40,6 +47,12 @@ function buildSocialLinks(xUrl: string, noteUrl: string, instagramUrl: string, o
   }
   if (instagramUrl.trim()) {
     links.push({ id: "instagram", label: "Instagram", url: instagramUrl, linkType: "instagram" });
+  }
+  if (facebookUrl.trim()) {
+    links.push({ id: "facebook", label: "Facebook", url: facebookUrl, linkType: "facebook" });
+  }
+  if (lineUrl.trim()) {
+    links.push({ id: "line", label: "LINE", url: lineUrl, linkType: "line" });
   }
   if (otherUrl.trim()) {
     links.push({ id: "other", label: "Webサイト", url: otherUrl, linkType: "other" });
@@ -58,6 +71,8 @@ export default function ProfileSettingsPage() {
   const [xUrl, setXUrl] = useState("");
   const [noteUrl, setNoteUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [lineUrl, setLineUrl] = useState("");
   const [otherUrl, setOtherUrl] = useState("");
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -105,12 +120,16 @@ export default function ProfileSettingsPage() {
           setXUrl(socialValue(linksResult.value, "x"));
           setNoteUrl(socialValue(linksResult.value, "note"));
           setInstagramUrl(socialValue(linksResult.value, "instagram"));
+          setFacebookUrl(socialValue(linksResult.value, "facebook"));
+          setLineUrl(socialValue(linksResult.value, "line"));
           setOtherUrl(socialValue(linksResult.value, "other") || socialValue(linksResult.value, "website"));
         } else {
           console.error("settings.authorLinks.load failed", linksResult.reason);
           setXUrl("");
           setNoteUrl("");
           setInstagramUrl("");
+          setFacebookUrl("");
+          setLineUrl("");
           setOtherUrl("");
         }
 
@@ -170,7 +189,7 @@ export default function ProfileSettingsPage() {
     try {
       const next = await saveOwnProfile(profile);
       saveStage = "author_links";
-      const socialLinks = buildSocialLinks(xUrl, noteUrl, instagramUrl, otherUrl);
+      const socialLinks = buildSocialLinks(xUrl, noteUrl, instagramUrl, facebookUrl, lineUrl, otherUrl);
       await saveOwnAuthorLinks(user.id, socialLinks);
       saveStage = "profile_preferences";
       await saveOwnProfilePreferences(user.id, preferences);
@@ -282,7 +301,8 @@ export default function ProfileSettingsPage() {
               </label>
               <label>
                 <span>プロフィール画像ファイル</span>
-                <input type="file" accept="image/jpeg,image/png,image/webp" disabled={isUploadingAvatar} onChange={(event) => void uploadAvatar(event.target.files?.[0])} />
+                <span className="maker-secondary-button profile-avatar-file-trigger">ファイルを選択</span>
+                <input className="profile-avatar-file-input" type="file" accept="image/jpeg,image/png,image/webp" disabled={isUploadingAvatar} onChange={(event) => void uploadAvatar(event.target.files?.[0])} />
               </label>
               <label>
                 <span>Webサイト</span>
@@ -299,6 +319,14 @@ export default function ProfileSettingsPage() {
               <label>
                 <span>Instagram</span>
                 <input value={instagramUrl} onChange={(event) => setInstagramUrl(event.target.value)} placeholder="https://instagram.com/your_account" />
+              </label>
+              <label>
+                <span>Facebook</span>
+                <input value={facebookUrl} onChange={(event) => setFacebookUrl(event.target.value)} placeholder="https://www.facebook.com/your_account" />
+              </label>
+              <label>
+                <span>LINE</span>
+                <input value={lineUrl} onChange={(event) => setLineUrl(event.target.value)} placeholder="https://line.me/ti/p/your_account" />
               </label>
               <label>
                 <span>その他SNS / Webサイト</span>

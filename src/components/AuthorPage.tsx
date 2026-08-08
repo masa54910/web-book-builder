@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AppHeader from "@/components/AppHeader";
 import HomeBackLink from "@/components/HomeBackLink";
+import ServiceIcon from "@/components/ui/ServiceIcons";
 import {
   normalizeAuthorPageHandle,
   type PublicAuthorBook,
@@ -65,6 +66,15 @@ function AuthorBookCover({ book, priority }: { book: PublicAuthorBook; priority:
 function estimateReadingMinutes(book: PublicAuthorBook) {
   const minutes = Math.max(1, Math.ceil((book.description.length + book.title.length) / 120));
   return `${minutes}分`;
+}
+
+type PublicAuthorLinkData = PublicAuthorPageData["links"][number];
+
+function serviceIconForLink(linkType: PublicAuthorLinkData["linkType"]) {
+  if (linkType === "x" || linkType === "note" || linkType === "instagram" || linkType === "facebook" || linkType === "line") {
+    return <ServiceIcon service={linkType} className={`author-link-icon author-link-icon-${linkType}`} />;
+  }
+  return null;
 }
 
 export default function AuthorPage({ initialData }: { initialData?: PublicAuthorPageData }) {
@@ -131,7 +141,8 @@ export default function AuthorPage({ initialData }: { initialData?: PublicAuthor
             <div className="author-links" aria-label="作者の外部リンク">
               {links.map((link) => (
                 <a key={`${link.linkType}-${link.url}`} href={link.url} target="_blank" rel="noopener noreferrer" aria-label={`${link.label}を開く`}>
-                  {link.label}
+                  {serviceIconForLink(link.linkType)}
+                  <span>{link.label}</span>
                 </a>
               ))}
             </div>

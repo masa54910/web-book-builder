@@ -87,7 +87,7 @@ function coverPathFromProject(value: unknown) {
 
 function normalizeLinkType(value: unknown): PublicAuthorLinkType {
   const type = String(value || "other");
-  if (type === "x" || type === "note" || type === "instagram" || type === "website") return type;
+  if (type === "x" || type === "note" || type === "instagram" || type === "facebook" || type === "line" || type === "website") return type;
   return "other";
 }
 
@@ -116,7 +116,6 @@ export async function loadPublicAuthorPage(handleInput: string): Promise<PublicA
       .from("books")
       .select("id,title,description,slug,cover_path,updated_at")
       .eq("owner_id", profileRow.id)
-      .eq("author_handle", handle)
       .eq("status", "published")
       .in("visibility", ["public", "unlisted"])
       .is("deleted_at", null)
