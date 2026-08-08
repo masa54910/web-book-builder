@@ -2023,12 +2023,21 @@ button.reader-edit-link:disabled {
 }
 
 .fixed-title-lines-cover {
+  width: 100%;
+  min-width: 0;
+  align-items: stretch;
   line-height: 1.08;
   letter-spacing: -0.03em;
 }
 
 .fixed-title-lines-cover span {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   white-space: pre-wrap;
+  text-wrap: wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .fixed-title-lines-inner {
@@ -2215,6 +2224,9 @@ button.reader-edit-link:disabled {
 .cover-copy {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 24px 0 18px;
   border-top: 1px solid rgba(255, 255, 255, 0.46);
   border-bottom: 1px solid rgba(255, 255, 255, 0.24);
@@ -2288,6 +2300,7 @@ button.reader-edit-link:disabled {
 .cover-layout-layout-03 .cover-copy {
   position: absolute;
   inset: 24% 34px auto;
+  width: auto;
   z-index: 3;
   border-color: rgba(255, 255, 255, 0.62);
 }
