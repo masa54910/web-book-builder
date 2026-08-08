@@ -67,9 +67,6 @@ export default function BookCover({ back = false, data }: { back?: boolean; data
   const coverTone = data.accentColor || "#6bb9ad";
   const hasTitleOverride = design.titleTextOverride !== undefined;
   const coverTitle = hasTitleOverride ? design.titleTextOverride ?? "" : data.title;
-  const displayTitleLines = hasTitleOverride
-    ? (design.titleTextOverride ?? "").split("\n")
-    : data.displayTitleLines?.filter((line) => line.trim().length > 0);
   const showTitle = design.titleVisible !== false;
   const showAuthor = design.authorVisible !== false;
   const coverSrc = data.coverImageUrl || (isDisplayableImageUrl(data.coverImage) ? data.coverImage : "");
@@ -105,13 +102,11 @@ export default function BookCover({ back = false, data }: { back?: boolean; data
             textAlign: titlePosition,
           }}
         >
-          {showTitle ? (displayTitleLines?.length ? (
+          {showTitle ? (
             <h2 className="fixed-title-lines fixed-title-lines-cover" aria-label={coverTitle}>
-              {displayTitleLines.map((line, index) => <span key={`${line}-${index}`}>{line}</span>)}
+              <span>{coverTitle}</span>
             </h2>
-          ) : (
-            <h2>{coverTitle}</h2>
-          )) : null}
+          ) : null}
           {data.subtitle ? <p>{data.subtitle}</p> : null}
         </div>
       ) : null}
