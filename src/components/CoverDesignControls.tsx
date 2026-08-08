@@ -148,7 +148,7 @@ export default function CoverDesignControls({
                 <button
                   className="cover-title-override-reset"
                   type="button"
-                  onClick={() => onChange({ titleTextOverride: "" })}
+                  onClick={() => onChange({ titleTextOverride: undefined })}
                 >
                   元のタイトルに戻す
                 </button>
