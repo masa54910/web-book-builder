@@ -4,6 +4,7 @@ import {
   COVER_LAYOUT_OPTIONS,
   COVER_POSITIONS,
   DEFAULT_COVER_DESIGN,
+  MAX_COVER_TITLE_OVERRIDE_LENGTH,
   type CoverDesign,
   type CoverPosition,
 } from "@/lib/coverDesign";
@@ -124,7 +125,7 @@ export default function CoverDesignControls({
                 <span>表紙タイトル</span>
                 <textarea
                   value={value.titleTextOverride ?? ""}
-                  maxLength={120}
+                  maxLength={MAX_COVER_TITLE_OVERRIDE_LENGTH}
                   rows={3}
                   placeholder={title || "作品タイトル"}
                   aria-label="表紙タイトルの改行"
@@ -134,16 +135,16 @@ export default function CoverDesignControls({
                 <small id="cover-title-override-help" className="maker-note">
                   Enterで改行できます。表紙の表示だけが変わります。
                 </small>
-                {value.titleTextOverride ? (
-                  <button
-                    className="cover-title-override-reset"
-                    type="button"
-                    onClick={() => onChange({ titleTextOverride: "" })}
-                  >
-                    元のタイトルに戻す
-                  </button>
-                ) : null}
               </label>
+              {value.titleTextOverride ? (
+                <button
+                  className="cover-title-override-reset"
+                  type="button"
+                  onClick={() => onChange({ titleTextOverride: "" })}
+                >
+                  元のタイトルに戻す
+                </button>
+              ) : null}
               <ScaleStepper
                 label="タイトルサイズ"
                 value={value.titleScale}
