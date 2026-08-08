@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
   const { handle: rawHandle } = await params;
-  if (!rawHandle.startsWith("@")) return { title: "ページが見つかりません | WebBookMaker" };
   const handle = normalizeAuthorPageHandle(rawHandle);
+  if (!handle) return { title: "ページが見つかりません | WebBookMaker" };
   const data = await loadPublicAuthorPage(handle);
   const displayName = data?.profile.displayName || (handle ? `@${handle}` : "作者ページ");
   const description = data?.profile.bio || `${displayName}のWebBookMaker公開作品一覧`;
@@ -40,8 +40,9 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
 
 export default async function AtAuthorRoute({ params }: { params: Promise<{ handle: string }> }) {
   const { handle: rawHandle } = await params;
-  if (!rawHandle.startsWith("@")) notFound();
-  const data = await loadPublicAuthorPage(rawHandle);
+  const handle = normalizeAuthorPageHandle(rawHandle);
+  if (!handle) notFound();
+  const data = await loadPublicAuthorPage(handle);
   if (!data) notFound();
   return <AuthorPage initialData={data} />;
 }
