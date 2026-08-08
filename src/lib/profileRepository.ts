@@ -1,6 +1,7 @@
 "use client";
 
 import { isDemoModeAllowed } from "@/lib/appEnv";
+import { normalizeAuthorPageHandle } from "@/lib/authorPage";
 import { normalizeHandle, safeExternalUrl } from "@/lib/productTypes";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -101,6 +102,31 @@ export async function getOwnProfile(userId: string, seedInput: ProfileSeed = {})
   }
 
   return fallbackProfile(userId, seed);
+}
+
+/**
+ * Resolve the public profile handle for a published book owner.
+ *
+ * Published book JSON can contain a historical handle, while the profile is
+ * the canonical owner identity. Keep the lookup narrow and public-safe so a
+ * reader never constructs an author URL from stale book data.
+ */
+export async function getPublicAuthorHandle(ownerId: string) {
+  const normalizedOwnerId = ownerId.trim();
+  if (!normalizedOwnerId) return "";
+
+  const supabase = getSupabaseClient();
+  if (!supabase) return "";
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("handle,is_public")
+    .eq("id", normalizedOwnerId)
+    .eq("is_public", true)
+    .maybeSingle<{ handle: string | null; is_public: boolean | null }>();
+
+  if (error || !data?.is_public || typeof data.handle !== "string") return "";
+  return normalizeAuthorPageHandle(data.handle);
 }
 
 export async function saveOwnProfile(profile: ProfileRecord) {

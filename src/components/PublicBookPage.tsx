@@ -6,16 +6,18 @@ import { useEffect, useState } from "react";
 
 import BookReaderShell from "@/components/BookReaderShell";
 import HomeBackLink from "@/components/HomeBackLink";
-import { authorPagePath } from "@/lib/authorPage";
+import { buildAuthorPagePath } from "@/lib/authorPage";
 import { canReadPublishedBook } from "@/lib/accessControl";
 import { materializeBookProjectAssets } from "@/lib/bookAssetStorage";
 import { getPublishedBookBySlug, type CloudBookRecord } from "@/lib/bookRepository";
+import { getPublicAuthorHandle } from "@/lib/profileRepository";
 import { publicBookUrl } from "@/lib/promotion";
 import { recordBookView } from "@/lib/readerAnalytics";
 
 export default function PublicBookPage() {
   const params = useParams<{ slug: string }>();
   const [book, setBook] = useState<CloudBookRecord | null>(null);
+  const [authorPageHandle, setAuthorPageHandle] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -24,9 +26,12 @@ export default function PublicBookPage() {
     getPublishedBookBySlug(decodeURIComponent(params.slug))
       .then(async (record) => {
         if (record) {
+          const canonicalAuthorHandle = await getPublicAuthorHandle(record.ownerId);
+          setAuthorPageHandle(canonicalAuthorHandle || null);
           setBook({ ...record, bookProject: await materializeBookProjectAssets(record.bookProject) });
           return;
         }
+        setAuthorPageHandle(null);
         setBook(record);
         if (!record) setMessage("公開中のWeb書籍が見つかりません。");
       })
@@ -63,11 +68,12 @@ export default function PublicBookPage() {
       cloudBookId={book.id}
       shareUrl={publicBookUrl(decodeURIComponent(params.slug))}
       shareDescription={book.description}
+      authorPageHandle={authorPageHandle}
       backLink={
-        book.authorHandle
+        authorPageHandle
           ? {
-              href: authorPagePath(book.authorHandle),
-              label: "← 作者ページへ戻る",
+              href: buildAuthorPagePath(authorPageHandle),
+              label: "作者のページに戻る",
             }
           : undefined
       }

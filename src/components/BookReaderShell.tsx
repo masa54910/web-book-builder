@@ -23,6 +23,7 @@ export default function BookReaderShell({
   shareUrl,
   shareDescription,
   shareDisabledReason,
+  authorPageHandle,
   backLink,
   onCoverDesignChange,
   onPageAdjustmentChange,
@@ -40,6 +41,7 @@ export default function BookReaderShell({
   shareUrl?: string;
   shareDescription?: string;
   shareDisabledReason?: string;
+  authorPageHandle?: string | null;
   onCoverDesignChange?: (patch: Partial<CoverDesign>) => void;
   onPageAdjustmentChange?: (blockId: string, patch: Partial<PageAdjustment>) => void;
   onPageAdjustmentReset?: (blockId: string) => void;
@@ -63,6 +65,7 @@ export default function BookReaderShell({
       shareUrl={shareUrl}
       shareDescription={shareDescription ?? config.description}
       shareDisabledReason={shareDisabledReason}
+      authorPageHandle={authorPageHandle}
       backLink={backLink}
       onCoverDesignChange={onCoverDesignChange}
       onPageAdjustmentChange={onPageAdjustmentChange}

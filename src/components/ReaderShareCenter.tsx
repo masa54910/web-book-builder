@@ -63,7 +63,8 @@ export default function ReaderShareCenter({
   const onShare = () => recordShare(bookId, cloudBookId);
 
   return (
-    <section className="reader-share-center promotion-center maker-card" aria-labelledby="reader-share-title">
+    <section className="reader-share-layout" aria-labelledby="reader-share-title">
+      <div className="reader-share-center promotion-center maker-card">
       <div className="promotion-heading">
         <div>
           <p className="maker-kicker">Share this Web Book</p>
@@ -141,18 +142,21 @@ export default function ReaderShareCenter({
           </div>
         </article>
 
-        <article className="promotion-card">
-          <div className="promotion-service-label">
-            <span className="promotion-service-icon promotion-service-icon-copy" aria-hidden="true">↗</span>
-            <strong>URLコピー</strong>
-          </div>
-          <h3>公開URLをコピー</h3>
-          <p className="promotion-url" title={shareUrl}>{shareUrl}</p>
-          <button className="maker-secondary-button" type="button" onClick={() => void copy("url", shareUrl)}>
-            <span>URLをコピー</span>
-          </button>
-        </article>
       </div>
+
+      </div>
+
+      <article className="reader-url-copy-card promotion-card">
+        <div className="promotion-service-label">
+          <span className="promotion-service-icon promotion-service-icon-copy" aria-hidden="true">↗</span>
+          <strong>URLコピー</strong>
+        </div>
+        <h3>公開URLをコピー</h3>
+        <p className="promotion-url" title={shareUrl}>{shareUrl}</p>
+        <button className="maker-secondary-button" type="button" onClick={() => void copy("url", shareUrl)}>
+          <span>URLをコピー</span>
+        </button>
+      </article>
 
       {status ? <p className="maker-status" role="status" aria-live="polite">{status}</p> : null}
     </section>

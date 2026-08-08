@@ -107,6 +107,7 @@ export default function BookReader({
   shareUrl,
   shareDescription,
   shareDisabledReason,
+  authorPageHandle,
   backLink,
   onCoverDesignChange,
   onPageAdjustmentChange,
@@ -124,6 +125,8 @@ export default function BookReader({
   shareUrl?: string;
   shareDescription?: string;
   shareDisabledReason?: string;
+  /** Canonical public profile handle for published-reader author links. */
+  authorPageHandle?: string | null;
   backLink?: {
     destination?: "auto" | "home" | "dashboard";
     href?: string;
@@ -156,6 +159,8 @@ export default function BookReader({
   const [isCoverDesignOpen, setIsCoverDesignOpen] = useState(false);
   const [isPageAdjustmentOpen, setIsPageAdjustmentOpen] = useState(false);
   const coverDesign = normalizeCoverDesign(config.coverDesign);
+  const resolvedAuthorPageHandle =
+    authorPageHandle === undefined ? config.authorProfile?.handle || "" : authorPageHandle || "";
   const pageAdjustments = useMemo(
     () => normalizePageAdjustments(config.pageAdjustments),
     [config.pageAdjustments],
@@ -546,9 +551,9 @@ export default function BookReader({
           ) : (
             <h1>{config.title}</h1>
           )}
-          {config.authorProfile?.handle ? (
-            <a className="reader-author-link" href={authorPagePath(config.authorProfile.handle)}>
-              @{config.authorProfile.handle} の作者ページ
+          {resolvedAuthorPageHandle ? (
+            <a className="reader-author-link" href={authorPagePath(resolvedAuthorPageHandle)}>
+              作者のページ
             </a>
           ) : null}
         </div>
@@ -569,7 +574,7 @@ export default function BookReader({
             <HomeBackLink
               className="reader-edit-link"
               destination={backLink?.destination}
-              label={backLink?.label}
+              label={backLink?.label || "ホームへ戻る"}
             />
           )) : null}
           {displayMode !== "preview" && editHref ? (

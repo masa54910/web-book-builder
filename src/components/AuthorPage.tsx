@@ -140,8 +140,7 @@ export default function AuthorPage({ initialData }: { initialData?: PublicAuthor
         <div className="author-profile-copy">
           <p className="maker-kicker">Author page</p>
           <HomeBackLink />
-          <h1 id="author-page-title">{profile?.displayName || (handle ? `@${handle}` : "作者ページ")}</h1>
-          {profile ? <p className="author-handle">@{profile.handle}</p> : null}
+          <h1 id="author-page-title">{profile?.displayName || "作者ページ"}</h1>
           {profile?.bio ? <p className="author-bio">{profile.bio}</p> : null}
           {links.length ? (
             <div className="author-links" aria-label="作者の外部リンク">

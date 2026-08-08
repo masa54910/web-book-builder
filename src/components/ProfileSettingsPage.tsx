@@ -18,7 +18,6 @@ import {
 } from "@/lib/accountSettingsRepository";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getOwnProfile, saveOwnProfile, type ProfileRecord } from "@/lib/profileRepository";
-import { normalizeHandle } from "@/lib/productTypes";
 import { resolveStorageUrl } from "@/lib/bookAssetStorage";
 import { uploadProfileAvatar } from "@/lib/profileAssetStorage";
 import { authorPagePath } from "@/lib/authorPage";
@@ -290,14 +289,6 @@ export default function ProfileSettingsPage() {
               <label>
                 <span>メールアドレス（変更不可）</span>
                 <input value={profile.email} readOnly aria-readonly="true" />
-              </label>
-              <label>
-                <span>作者ハンドル</span>
-                <input value={profile.handle} onChange={(event) => update("handle", normalizeHandle(event.target.value, ""))} />
-              </label>
-              <label>
-                <span>アイコンURL</span>
-                <input value={profile.avatarPath} onChange={(event) => update("avatarPath", event.target.value)} placeholder="https://example.com/avatar.png" />
               </label>
               <label>
                 <span>プロフィール画像ファイル</span>

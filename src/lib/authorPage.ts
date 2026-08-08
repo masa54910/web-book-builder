@@ -39,12 +39,16 @@ export function normalizeAuthorPageHandle(value: string) {
     .toLowerCase();
 }
 
-export function authorPagePath(handle: string) {
+export function buildAuthorPagePath(handle: string) {
   const normalized = normalizeAuthorPageHandle(handle);
   return `/@${encodeURIComponent(normalized)}`;
 }
 
+// Keep the existing export for callers that still use the original helper
+// name. All new public author links should use the canonical builder above.
+export const authorPagePath = buildAuthorPagePath;
+
 export function authorPageUrl(handle: string, origin?: string) {
   const base = (origin || process.env.NEXT_PUBLIC_SITE_URL || "https://webbookmaker.vercel.app").replace(/\/$/, "");
-  return `${base}${authorPagePath(handle)}`;
+  return `${base}${buildAuthorPagePath(handle)}`;
 }
