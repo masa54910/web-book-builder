@@ -90,7 +90,15 @@ export async function getOwnProfile(userId: string, seedInput: ProfileSeed = {})
     });
     throw new Error("PROFILE_FETCH_FAILED");
   }
-  if (data) return mapProfile(data);
+  if (data) {
+    const mapped = mapProfile(data);
+    return {
+      ...mapped,
+      // Email is owned by Supabase Auth. Keep the Auth seed for the
+      // read-only settings field when the public profile schema omits it.
+      email: mapped.email || seed.email?.trim() || "",
+    };
+  }
 
   return fallbackProfile(userId, seed);
 }
@@ -99,7 +107,6 @@ export async function saveOwnProfile(profile: ProfileRecord) {
   const supabase = getSupabaseClient();
   const payload = {
     id: profile.id,
-    email: profile.email,
     display_name: profile.displayName.trim(),
     handle: normalizeHandle(profile.handle, "author"),
     bio: profile.bio.trim(),
@@ -111,7 +118,7 @@ export async function saveOwnProfile(profile: ProfileRecord) {
 
   if (!supabase) {
     assertLocalFallbackAllowed();
-    const next = mapProfile(payload);
+    const next = { ...mapProfile(payload), email: profile.email };
     localStorage.setItem(`${LOCAL_PROFILE_KEY_PREFIX}${profile.id}`, JSON.stringify(next));
     return next;
   }
@@ -122,5 +129,5 @@ export async function saveOwnProfile(profile: ProfileRecord) {
     .select("*")
     .single();
   if (error) throw error;
-  return mapProfile(data);
+  return { ...mapProfile(data), email: profile.email };
 }
