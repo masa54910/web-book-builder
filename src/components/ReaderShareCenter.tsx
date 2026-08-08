@@ -78,7 +78,7 @@ export default function ReaderShareCenter({
           <strong>URLコピー</strong>
         </div>
         <div className="reader-url-copy-content">
-          <h3>公開URLをコピー</h3>
+          <h3>公開URLをコピーして、直接貼り付ける。</h3>
           <p className="promotion-url" title={shareUrl}>{shareUrl}</p>
         </div>
         <button className="maker-secondary-button" type="button" onClick={() => void copy("url", shareUrl)}>
