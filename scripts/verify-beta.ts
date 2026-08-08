@@ -22,6 +22,9 @@ import { computeInlineImagePopoverLayout } from "../src/lib/inlineImagePopover";
 import { buildEditorDraftFields, seedFromDraftFields, type EditorDraftState } from "../src/lib/editorDraftState";
 import {
   DEFAULT_COVER_DESIGN,
+  COVER_TITLE_IMAGE_SCALE_MIN,
+  COVER_TITLE_IMAGE_SCALE_MAX,
+  COVER_AUTHOR_SCALE_MAX,
   normalizeCoverDesign,
   normalizeCoverTitleOverride,
 } from "../src/lib/coverDesign";
@@ -451,11 +454,20 @@ assert.ok(mobilePopover.top + 170 <= 844 - 88 - 12, "Mobile popover should stay 
 
 const legacyCoverDesign = normalizeCoverDesign(undefined);
 assert.deepEqual(legacyCoverDesign, DEFAULT_COVER_DESIGN, "Legacy covers should use the standard layout");
-const boundedCoverDesign = normalizeCoverDesign({ layout: "layout-10", titleScale: 9, overlayOpacity: -1 });
+const boundedCoverDesign = normalizeCoverDesign({ layout: "layout-10", titleScale: 9, authorScale: 9, overlayOpacity: -1 });
 assert.equal(boundedCoverDesign.layout, "layout-10");
-assert.equal(boundedCoverDesign.titleScale, 1.5);
+assert.equal(boundedCoverDesign.titleScale, COVER_TITLE_IMAGE_SCALE_MAX);
+assert.equal(boundedCoverDesign.imageScale, COVER_TITLE_IMAGE_SCALE_MAX);
+assert.equal(boundedCoverDesign.authorScale, COVER_AUTHOR_SCALE_MAX);
+assert.equal(normalizeCoverDesign({ titleScale: 0, imageScale: 0 }).titleScale, COVER_TITLE_IMAGE_SCALE_MIN);
+assert.equal(normalizeCoverDesign({ titleScale: 0, imageScale: 0 }).imageScale, COVER_TITLE_IMAGE_SCALE_MIN);
+assert.equal(normalizeCoverDesign(undefined).titleVisible, true);
+assert.equal(normalizeCoverDesign(undefined).authorVisible, true);
+assert.equal(normalizeCoverDesign({ titleVisible: false, authorVisible: false }).titleVisible, false);
+assert.equal(normalizeCoverDesign({ titleVisible: false, authorVisible: false }).authorVisible, false);
 assert.equal(boundedCoverDesign.overlayOpacity, 0);
 assert.equal(normalizeCoverTitleOverride("星降る街の\n小さな記録"), "星降る街の\n小さな記録");
+assert.equal(normalizeCoverTitleOverride("星降る街の  \n　小さな記録 "), "星降る街の  \n　小さな記録 ");
 assert.equal(normalizeCoverTitleOverride("星\n\n\n降る\n街\n記録"), "星\n\n降る");
 assert.equal(normalizeCoverTitleOverride(""), undefined);
 
@@ -515,6 +527,8 @@ const canonicalCoverResult = buildCanonicalBookPayload({
     coverDesign: {
       ...DEFAULT_COVER_DESIGN,
       titleTextOverride: "正式\n表紙タイトル",
+      titleVisible: false,
+      authorVisible: false,
     },
   },
   contentBlocks: [{ id: "text-001", type: "text", content: "本文" }],
@@ -524,9 +538,19 @@ assert.equal(canonicalCoverResult.ok, true, "Canonical payload should accept cov
 if (canonicalCoverResult.ok) {
   assert.equal(canonicalCoverResult.payload.title, "正式タイトル");
   assert.equal(canonicalCoverResult.payload.coverDesign.titleTextOverride, "正式\n表紙タイトル");
+  assert.equal(canonicalCoverResult.payload.coverDesign.titleVisible, false);
+  assert.equal(canonicalCoverResult.payload.coverDesign.authorVisible, false);
   assert.equal(
     canonicalPayloadToBookProjectInput(canonicalCoverResult.payload).coverDesign?.titleTextOverride,
     "正式\n表紙タイトル",
+  );
+  assert.equal(
+    canonicalPayloadToBookProjectInput(canonicalCoverResult.payload).coverDesign?.titleVisible,
+    false,
+  );
+  assert.equal(
+    canonicalPayloadToBookProjectInput(canonicalCoverResult.payload).coverDesign?.authorVisible,
+    false,
   );
 }
 

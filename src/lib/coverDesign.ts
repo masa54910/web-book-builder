@@ -27,6 +27,10 @@ export type CoverDesign = {
   layout: CoverLayoutId;
   /** Optional line-broken title used only by the cover renderer. */
   titleTextOverride?: string;
+  /** Whether the formal title is visible on the cover (the book title is never removed). */
+  titleVisible?: boolean;
+  /** Whether the author name is visible on the cover (the formal author is never removed). */
+  authorVisible?: boolean;
   titleScale: number;
   titlePosition: CoverPosition;
   authorScale: number;
@@ -72,6 +76,8 @@ export const DEFAULT_COVER_DESIGN: CoverDesign = {
   // Layout 01 intentionally mirrors the current cover renderer.
   layout: "layout-01",
   titleTextOverride: undefined,
+  titleVisible: true,
+  authorVisible: true,
   titleScale: 1,
   titlePosition: "center-left",
   authorScale: 1,
@@ -101,21 +107,24 @@ function validPosition(value: unknown): value is CoverPosition {
 
 export const MAX_COVER_TITLE_OVERRIDE_LINES = 4;
 export const MAX_COVER_TITLE_OVERRIDE_LENGTH = 120;
+export const COVER_TITLE_IMAGE_SCALE_MIN = 0.3;
+export const COVER_TITLE_IMAGE_SCALE_MAX = 1;
+export const COVER_AUTHOR_SCALE_MIN = 0.7;
+export const COVER_AUTHOR_SCALE_MAX = 1.5;
 
 /** Normalize user-entered cover-only title line breaks without changing book.title. */
 export function normalizeCoverTitleOverride(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
 
-  const normalized = value.replace(/\r\n?/g, "\n").trim();
-  if (!normalized) return undefined;
+  const normalized = value.replace(/\r\n?/g, "\n");
+  if (!normalized.trim()) return undefined;
 
   const limitedLines = normalized
     .split("\n")
-    .slice(0, MAX_COVER_TITLE_OVERRIDE_LINES)
-    .map((line) => line.trim());
+    .slice(0, MAX_COVER_TITLE_OVERRIDE_LINES);
   const compact = limitedLines.join("\n").replace(/\n{3,}/g, "\n\n");
-  const limited = compact.slice(0, MAX_COVER_TITLE_OVERRIDE_LENGTH).trim();
-  return limited || undefined;
+  const limited = compact.slice(0, MAX_COVER_TITLE_OVERRIDE_LENGTH);
+  return limited.trim() ? limited : undefined;
 }
 
 /** Normalize persisted/legacy values without changing existing cover defaults. */
@@ -124,15 +133,32 @@ export function normalizeCoverDesign(value: unknown): CoverDesign {
   return {
     layout: validLayout(source.layout) ? source.layout : DEFAULT_COVER_DESIGN.layout,
     titleTextOverride: normalizeCoverTitleOverride(source.titleTextOverride),
-    titleScale: clamp(source.titleScale, 0.7, 1.5, DEFAULT_COVER_DESIGN.titleScale),
+    titleVisible: source.titleVisible !== false,
+    authorVisible: source.authorVisible !== false,
+    titleScale: clamp(
+      source.titleScale,
+      COVER_TITLE_IMAGE_SCALE_MIN,
+      COVER_TITLE_IMAGE_SCALE_MAX,
+      DEFAULT_COVER_DESIGN.titleScale,
+    ),
     titlePosition: validPosition(source.titlePosition)
       ? source.titlePosition
       : DEFAULT_COVER_DESIGN.titlePosition,
-    authorScale: clamp(source.authorScale, 0.7, 1.5, DEFAULT_COVER_DESIGN.authorScale),
+    authorScale: clamp(
+      source.authorScale,
+      COVER_AUTHOR_SCALE_MIN,
+      COVER_AUTHOR_SCALE_MAX,
+      DEFAULT_COVER_DESIGN.authorScale,
+    ),
     authorPosition: validPosition(source.authorPosition)
       ? source.authorPosition
       : DEFAULT_COVER_DESIGN.authorPosition,
-    imageScale: clamp(source.imageScale, 0.7, 1.5, DEFAULT_COVER_DESIGN.imageScale),
+    imageScale: clamp(
+      source.imageScale,
+      COVER_TITLE_IMAGE_SCALE_MIN,
+      COVER_TITLE_IMAGE_SCALE_MAX,
+      DEFAULT_COVER_DESIGN.imageScale,
+    ),
     imageFit: source.imageFit === "cover" ? "cover" : DEFAULT_COVER_DESIGN.imageFit,
     imagePosition: validPosition(source.imagePosition)
       ? source.imagePosition

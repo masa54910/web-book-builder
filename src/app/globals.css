@@ -2027,6 +2027,10 @@ button.reader-edit-link:disabled {
   letter-spacing: -0.03em;
 }
 
+.fixed-title-lines-cover span {
+  white-space: pre-wrap;
+}
+
 .fixed-title-lines-inner {
   line-height: 1.24;
 }
@@ -3851,6 +3855,28 @@ button.reader-edit-link:disabled {
 }
 
 .cover-title-override-reset:focus-visible {
+  outline: 3px solid rgba(31, 139, 207, 0.2);
+  outline-offset: 2px;
+}
+
+.cover-design-toggle {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 8px;
+  color: var(--wb-text, #172537);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cover-design-toggle input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: #218ac8;
+}
+
+.cover-design-toggle input:focus-visible {
   outline: 3px solid rgba(31, 139, 207, 0.2);
   outline-offset: 2px;
 }

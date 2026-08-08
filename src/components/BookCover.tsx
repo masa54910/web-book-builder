@@ -67,8 +67,10 @@ export default function BookCover({ back = false, data }: { back?: boolean; data
   const coverTone = data.accentColor || "#6bb9ad";
   const coverTitle = design.titleTextOverride?.trim() || data.title;
   const displayTitleLines = design.titleTextOverride?.trim()
-    ? design.titleTextOverride.split("\n").filter((line) => line.trim().length > 0)
+    ? design.titleTextOverride.split("\n")
     : data.displayTitleLines?.filter((line) => line.trim().length > 0);
+  const showTitle = design.titleVisible !== false;
+  const showAuthor = design.authorVisible !== false;
   const coverSrc = data.coverImageUrl || (isDisplayableImageUrl(data.coverImage) ? data.coverImage : "");
   const titlePosition = positionToTextAlign(design.titlePosition);
   const authorPosition = positionToTextAlign(design.authorPosition);
@@ -93,23 +95,25 @@ export default function BookCover({ back = false, data }: { back?: boolean; data
   return (
     <div className={`cover-page book-cover-style-${coverStyle} cover-layout-${design.layout}`} style={style}>
       <span className="cover-design-overlay" aria-hidden="true" />
-      <div
-        className="cover-copy"
-        style={{
-          alignItems: positionToAlignItems(design.titlePosition),
-          justifyContent: positionToJustifyContent(design.titlePosition),
-          textAlign: titlePosition,
-        }}
-      >
-        {displayTitleLines?.length ? (
-          <h2 className="fixed-title-lines fixed-title-lines-cover" aria-label={coverTitle}>
-            {displayTitleLines.map((line, index) => <span key={`${line}-${index}`}>{line}</span>)}
-          </h2>
-        ) : (
-          <h2>{coverTitle}</h2>
-        )}
-        {data.subtitle ? <p>{data.subtitle}</p> : null}
-      </div>
+      {showTitle || data.subtitle ? (
+        <div
+          className="cover-copy"
+          style={{
+            alignItems: positionToAlignItems(design.titlePosition),
+            justifyContent: positionToJustifyContent(design.titlePosition),
+            textAlign: titlePosition,
+          }}
+        >
+          {showTitle ? (displayTitleLines?.length ? (
+            <h2 className="fixed-title-lines fixed-title-lines-cover" aria-label={coverTitle}>
+              {displayTitleLines.map((line, index) => <span key={`${line}-${index}`}>{line}</span>)}
+            </h2>
+          ) : (
+            <h2>{coverTitle}</h2>
+          )) : null}
+          {data.subtitle ? <p>{data.subtitle}</p> : null}
+        </div>
+      ) : null}
       {coverSrc ? (
         <div className="cover-image-slot" aria-hidden="true">
           <CoverImage
@@ -121,16 +125,18 @@ export default function BookCover({ back = false, data }: { back?: boolean; data
           />
         </div>
       ) : null}
-      <span
-        className="cover-author"
-        style={{
-          alignItems: positionToAlignItems(design.authorPosition),
-          justifyContent: positionToJustifyContent(design.authorPosition),
-          textAlign: authorPosition,
-        }}
-      >
-        {data.author}
-      </span>
+      {showAuthor ? (
+        <span
+          className="cover-author"
+          style={{
+            alignItems: positionToAlignItems(design.authorPosition),
+            justifyContent: positionToJustifyContent(design.authorPosition),
+            textAlign: authorPosition,
+          }}
+        >
+          {data.author}
+        </span>
+      ) : null}
     </div>
   );
 }

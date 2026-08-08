@@ -3,6 +3,10 @@
 import {
   COVER_LAYOUT_OPTIONS,
   COVER_POSITIONS,
+  COVER_AUTHOR_SCALE_MAX,
+  COVER_AUTHOR_SCALE_MIN,
+  COVER_TITLE_IMAGE_SCALE_MAX,
+  COVER_TITLE_IMAGE_SCALE_MIN,
   DEFAULT_COVER_DESIGN,
   MAX_COVER_TITLE_OVERRIDE_LENGTH,
   type CoverDesign,
@@ -21,13 +25,11 @@ const COVER_POSITION_LABELS: Record<CoverPosition, string> = {
   "bottom-right": "右下",
 };
 
-const SCALE_MIN = 0.7;
-const SCALE_MAX = 1.5;
 const SCALE_STEP = 0.05;
 
-function stepScale(value: number, delta: number) {
+function stepScale(value: number, delta: number, min: number, max: number) {
   const next = value + delta * SCALE_STEP;
-  return Math.min(SCALE_MAX, Math.max(SCALE_MIN, Number(next.toFixed(2))));
+  return Math.min(max, Math.max(min, Number(next.toFixed(2))));
 }
 
 function ScaleStepper({
@@ -36,22 +38,26 @@ function ScaleStepper({
   onChange,
   decreaseLabel,
   increaseLabel,
+  min,
+  max,
 }: {
   label: string;
   value: number;
   onChange: (value: number) => void;
   decreaseLabel: string;
   increaseLabel: string;
+  min: number;
+  max: number;
 }) {
   return (
     <div className="cover-design-control">
       <span>{label}</span>
       <div className="cover-scale-stepper">
-        <button type="button" aria-label={decreaseLabel} onClick={() => onChange(stepScale(value, -1))}>
+        <button type="button" aria-label={decreaseLabel} onClick={() => onChange(stepScale(value, -1, min, max))}>
           −
         </button>
         <output aria-live="polite">{Math.round(value * 100)}%</output>
-        <button type="button" aria-label={increaseLabel} onClick={() => onChange(stepScale(value, 1))}>
+        <button type="button" aria-label={increaseLabel} onClick={() => onChange(stepScale(value, 1, min, max))}>
           ＋
         </button>
       </div>
@@ -124,10 +130,9 @@ export default function CoverDesignControls({
               <label className="cover-design-control cover-title-override-control">
                 <span>表紙タイトル</span>
                 <textarea
-                  value={value.titleTextOverride ?? ""}
+                  value={value.titleTextOverride ?? title}
                   maxLength={MAX_COVER_TITLE_OVERRIDE_LENGTH}
                   rows={3}
-                  placeholder={title || "作品タイトル"}
                   aria-label="表紙タイトルの改行"
                   aria-describedby="cover-title-override-help"
                   onChange={(event) => onChange({ titleTextOverride: event.target.value })}
@@ -145,10 +150,20 @@ export default function CoverDesignControls({
                   元のタイトルに戻す
                 </button>
               ) : null}
+              <label className="cover-design-toggle">
+                <input
+                  type="checkbox"
+                  checked={value.titleVisible !== false}
+                  onChange={(event) => onChange({ titleVisible: event.target.checked })}
+                />
+                <span>タイトルを表示</span>
+              </label>
               <ScaleStepper
                 label="タイトルサイズ"
                 value={value.titleScale}
                 onChange={(titleScale) => onChange({ titleScale })}
+                min={COVER_TITLE_IMAGE_SCALE_MIN}
+                max={COVER_TITLE_IMAGE_SCALE_MAX}
                 decreaseLabel="タイトルサイズを小さくする"
                 increaseLabel="タイトルサイズを大きくする"
               />
@@ -169,6 +184,8 @@ export default function CoverDesignControls({
                 label="作者名サイズ"
                 value={value.authorScale}
                 onChange={(authorScale) => onChange({ authorScale })}
+                min={COVER_AUTHOR_SCALE_MIN}
+                max={COVER_AUTHOR_SCALE_MAX}
                 decreaseLabel="作者名サイズを小さくする"
                 increaseLabel="作者名サイズを大きくする"
               />
@@ -185,6 +202,14 @@ export default function CoverDesignControls({
                   ))}
                 </select>
               </label>
+              <label className="cover-design-toggle">
+                <input
+                  type="checkbox"
+                  checked={value.authorVisible !== false}
+                  onChange={(event) => onChange({ authorVisible: event.target.checked })}
+                />
+                <span>作者名を表示</span>
+              </label>
             </div>
           </div>
 
@@ -195,6 +220,8 @@ export default function CoverDesignControls({
                 label="画像サイズ"
                 value={value.imageScale}
                 onChange={(imageScale) => onChange({ imageScale })}
+                min={COVER_TITLE_IMAGE_SCALE_MIN}
+                max={COVER_TITLE_IMAGE_SCALE_MAX}
                 decreaseLabel="画像サイズを小さくする"
                 increaseLabel="画像サイズを大きくする"
               />
