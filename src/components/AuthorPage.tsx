@@ -68,6 +68,12 @@ function estimateReadingMinutes(book: PublicAuthorBook) {
   return `${minutes}分`;
 }
 
+function formatPublishedDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getUTCFullYear()}/${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+}
+
 type PublicAuthorLinkData = PublicAuthorPageData["links"][number];
 
 function serviceIconForLink(linkType: PublicAuthorLinkData["linkType"]) {
@@ -178,7 +184,7 @@ export default function AuthorPage({ initialData }: { initialData?: PublicAuthor
               <div className="author-book-card-copy">
                 <h3>{book.title || "無題のWebブック"}</h3>
                 <p>{book.description || "WebBookMakerで公開されている作品です。"}</p>
-                {book.updatedAt ? <small>更新：{new Date(book.updatedAt).toLocaleDateString("ja-JP")} / 読了目安：{estimateReadingMinutes(book)}</small> : null}
+                {book.updatedAt ? <small>更新：{formatPublishedDate(book.updatedAt)} / 読了目安：{estimateReadingMinutes(book)}</small> : null}
                 <Link className="maker-secondary-link" href={`/books/${encodeURIComponent(book.slug)}`}>
                   Webブックを読む
                 </Link>
