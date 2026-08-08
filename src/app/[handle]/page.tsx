@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import AuthorPage from "@/components/AuthorPage";
+import { authorPageUrl, normalizeAuthorPageHandle } from "@/lib/authorPage";
 import { loadPublicAuthorPage } from "@/lib/authorPageRepository.server";
-import { normalizeAuthorPageHandle, authorPageUrl } from "@/lib/authorPage";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
   const { handle: rawHandle } = await params;
+  if (!rawHandle.startsWith("@")) return { title: "ページが見つかりません | WebBookMaker" };
   const handle = normalizeAuthorPageHandle(rawHandle);
   const data = await loadPublicAuthorPage(handle);
   const displayName = data?.profile.displayName || (handle ? `@${handle}` : "作者ページ");
@@ -37,9 +38,10 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
   };
 }
 
-export default async function AuthorRoute({ params }: { params: Promise<{ handle: string }> }) {
-  const { handle } = await params;
-  const data = await loadPublicAuthorPage(handle);
+export default async function AtAuthorRoute({ params }: { params: Promise<{ handle: string }> }) {
+  const { handle: rawHandle } = await params;
+  if (!rawHandle.startsWith("@")) notFound();
+  const data = await loadPublicAuthorPage(rawHandle);
   if (!data) notFound();
   return <AuthorPage initialData={data} />;
 }

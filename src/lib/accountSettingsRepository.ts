@@ -8,7 +8,7 @@ export type AuthorLinkRecord = {
   id: string;
   label: string;
   url: string;
-  linkType: "x" | "note" | "website" | "other";
+  linkType: "x" | "note" | "instagram" | "website" | "other";
 };
 
 export type ProfilePreferences = {
@@ -35,7 +35,7 @@ function defaultPrefs(): ProfilePreferences {
 function mapLink(row: Record<string, unknown>): AuthorLinkRecord {
   const typeValue = String(row.link_type ?? "other");
   const linkType: AuthorLinkRecord["linkType"] =
-    typeValue === "x" || typeValue === "note" || typeValue === "website" ? typeValue : "other";
+    typeValue === "x" || typeValue === "note" || typeValue === "instagram" || typeValue === "website" ? typeValue : "other";
   return {
     id: String(row.id),
     label: String(row.label ?? ""),

@@ -19,6 +19,9 @@ import {
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getOwnProfile, saveOwnProfile, type ProfileRecord } from "@/lib/profileRepository";
 import { normalizeHandle } from "@/lib/productTypes";
+import { resolveStorageUrl } from "@/lib/bookAssetStorage";
+import { uploadProfileAvatar } from "@/lib/profileAssetStorage";
+import { authorPagePath } from "@/lib/authorPage";
 
 const PROFILE_LOAD_ERROR_MESSAGE = "プロフィール情報を読み込めませんでした。時間をおいて再度お試しください。";
 const PROFILE_SAVE_ERROR_MESSAGE = "登録情報を保存できませんでした。時間をおいて再度お試しください。";
@@ -27,13 +30,16 @@ function socialValue(links: AuthorLinkRecord[], type: AuthorLinkRecord["linkType
   return links.find((link) => link.linkType === type)?.url || "";
 }
 
-function buildSocialLinks(xUrl: string, noteUrl: string, otherUrl: string) {
+function buildSocialLinks(xUrl: string, noteUrl: string, instagramUrl: string, otherUrl: string) {
   const links: AuthorLinkRecord[] = [];
   if (xUrl.trim()) {
     links.push({ id: "x", label: "X", url: xUrl, linkType: "x" });
   }
   if (noteUrl.trim()) {
     links.push({ id: "note", label: "note", url: noteUrl, linkType: "note" });
+  }
+  if (instagramUrl.trim()) {
+    links.push({ id: "instagram", label: "Instagram", url: instagramUrl, linkType: "instagram" });
   }
   if (otherUrl.trim()) {
     links.push({ id: "other", label: "Webサイト", url: otherUrl, linkType: "other" });
@@ -51,7 +57,10 @@ export default function ProfileSettingsPage() {
   });
   const [xUrl, setXUrl] = useState("");
   const [noteUrl, setNoteUrl] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
   const [otherUrl, setOtherUrl] = useState("");
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -80,6 +89,11 @@ export default function ProfileSettingsPage() {
 
         if (profileResult.status === "fulfilled") {
           setProfile(profileResult.value);
+          if (/^https?:\/\//i.test(profileResult.value.avatarPath)) {
+            setAvatarPreviewUrl(profileResult.value.avatarPath);
+          } else if (profileResult.value.avatarPath) {
+            void resolveStorageUrl(profileResult.value.avatarPath).then(setAvatarPreviewUrl);
+          }
         } else {
           console.error("settings.profile.load failed", profileResult.reason);
           setErrorMessage(PROFILE_LOAD_ERROR_MESSAGE);
@@ -90,11 +104,13 @@ export default function ProfileSettingsPage() {
         if (linksResult.status === "fulfilled") {
           setXUrl(socialValue(linksResult.value, "x"));
           setNoteUrl(socialValue(linksResult.value, "note"));
+          setInstagramUrl(socialValue(linksResult.value, "instagram"));
           setOtherUrl(socialValue(linksResult.value, "other") || socialValue(linksResult.value, "website"));
         } else {
           console.error("settings.authorLinks.load failed", linksResult.reason);
           setXUrl("");
           setNoteUrl("");
+          setInstagramUrl("");
           setOtherUrl("");
         }
 
@@ -126,6 +142,25 @@ export default function ProfileSettingsPage() {
     setProfile((current) => (current ? { ...current, [key]: value } : current));
   };
 
+  const uploadAvatar = async (file?: File) => {
+    if (!file || !user) return;
+    setErrorMessage("");
+    setMessage("");
+    setIsUploadingAvatar(true);
+    try {
+      const storagePath = await uploadProfileAvatar(file, user.id);
+      update("avatarPath", storagePath);
+      const displayUrl = await resolveStorageUrl(storagePath);
+      setAvatarPreviewUrl(displayUrl || storagePath);
+      setMessage("プロフィール画像を読み込みました。保存すると反映されます。");
+    } catch (error) {
+      console.error("settings.profile.avatarUpload failed", error);
+      setErrorMessage(error instanceof Error ? error.message : PROFILE_SAVE_ERROR_MESSAGE);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   const save = async () => {
     if (!profile || !user) return;
     setErrorMessage("");
@@ -133,7 +168,7 @@ export default function ProfileSettingsPage() {
     setIsSaving(true);
     try {
       const next = await saveOwnProfile(profile);
-      const socialLinks = buildSocialLinks(xUrl, noteUrl, otherUrl);
+      const socialLinks = buildSocialLinks(xUrl, noteUrl, instagramUrl, otherUrl);
       await saveOwnAuthorLinks(user.id, socialLinks);
       await saveOwnProfilePreferences(user.id, preferences);
       setProfile(next);
@@ -234,6 +269,10 @@ export default function ProfileSettingsPage() {
                 <input value={profile.avatarPath} onChange={(event) => update("avatarPath", event.target.value)} placeholder="https://example.com/avatar.png" />
               </label>
               <label>
+                <span>プロフィール画像ファイル</span>
+                <input type="file" accept="image/jpeg,image/png,image/webp" disabled={isUploadingAvatar} onChange={(event) => void uploadAvatar(event.target.files?.[0])} />
+              </label>
+              <label>
                 <span>Webサイト</span>
                 <input value={profile.websiteUrl} onChange={(event) => update("websiteUrl", event.target.value)} placeholder="https://example.com" />
               </label>
@@ -244,6 +283,10 @@ export default function ProfileSettingsPage() {
               <label>
                 <span>note</span>
                 <input value={noteUrl} onChange={(event) => setNoteUrl(event.target.value)} placeholder="https://note.com/your_account" />
+              </label>
+              <label>
+                <span>Instagram</span>
+                <input value={instagramUrl} onChange={(event) => setInstagramUrl(event.target.value)} placeholder="https://instagram.com/your_account" />
               </label>
               <label>
                 <span>その他SNS / Webサイト</span>
@@ -262,6 +305,12 @@ export default function ProfileSettingsPage() {
                 <span>キャンペーン情報を受け取る</span>
               </label>
               </div>
+              {avatarPreviewUrl ? (
+                <div className="profile-avatar-preview-wrap">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img className="profile-avatar-preview" src={avatarPreviewUrl} alt="プロフィール画像のプレビュー" />
+                </div>
+              ) : null}
               <label className="maker-full">
                 <span>自己紹介</span>
                 <textarea rows={4} value={profile.bio} onChange={(event) => update("bio", event.target.value)} />
@@ -270,6 +319,11 @@ export default function ProfileSettingsPage() {
                 <Button loading={isSaving} onClick={() => void save()}>
                   登録情報を保存
                 </Button>
+                {profile.handle ? (
+                  <Button variant="secondary" href={authorPagePath(profile.handle)} openInNewTab>
+                    公開ページを見る
+                  </Button>
+                ) : null}
                 <LogoutButton />
               </div>
               <p className="maker-note">メールアドレス変更は現在未対応です。必要な場合はお問い合わせからご連絡ください。</p>

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import BookReaderShell from "@/components/BookReaderShell";
 import HomeBackLink from "@/components/HomeBackLink";
+import { authorPagePath } from "@/lib/authorPage";
 import { canReadPublishedBook } from "@/lib/accessControl";
 import { materializeBookProjectAssets } from "@/lib/bookAssetStorage";
 import { getPublishedBookBySlug, type CloudBookRecord } from "@/lib/bookRepository";
@@ -65,7 +66,7 @@ export default function PublicBookPage() {
       backLink={
         book.authorHandle
           ? {
-              href: `/authors/${book.authorHandle}`,
+              href: authorPagePath(book.authorHandle),
               label: "← 作者ページへ戻る",
             }
           : undefined

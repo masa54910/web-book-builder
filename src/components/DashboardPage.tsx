@@ -112,7 +112,12 @@ export default function DashboardPage() {
           <h1>マイライブラリ</h1>
           <p>作成したWeb書籍の保存、編集、公開URL管理を行います。</p>
         </div>
-        <Button href="/books/new">新しい作品を作る</Button>
+        <div className="dashboard-heading-actions">
+          <Button variant="secondary" href="/settings">
+            プロフィール / 作者ページ
+          </Button>
+          <Button href="/books/new">新しい作品を作る</Button>
+        </div>
       </div>
 
       <section className="maker-card dashboard-toolbar">

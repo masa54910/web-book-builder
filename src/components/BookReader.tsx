@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import type { BookConfig } from "@/config/bookConfig";
+import { authorPagePath } from "@/lib/authorPage";
 import { DEFAULT_COVER_DESIGN, normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import {
   findPageAdjustment,
@@ -546,7 +547,7 @@ export default function BookReader({
             <h1>{config.title}</h1>
           )}
           {config.authorProfile?.handle ? (
-            <a className="reader-author-link" href={`/authors/${config.authorProfile.handle}`}>
+            <a className="reader-author-link" href={authorPagePath(config.authorProfile.handle)}>
               @{config.authorProfile.handle} の作者ページ
             </a>
           ) : null}
