@@ -4058,6 +4058,34 @@ button.reader-edit-link:disabled {
   margin-top: auto;
 }
 
+/* The public-reader URL action lives inside the share card, so keep it compact. */
+.promotion-card.reader-url-copy-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 0;
+  padding: 10px 14px;
+}
+
+.promotion-card.reader-url-copy-card > .maker-secondary-button {
+  width: auto;
+  min-height: 38px;
+  margin-top: 0;
+  padding-inline: 14px;
+}
+
+@media (max-width: 640px) {
+  .promotion-card.reader-url-copy-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .promotion-card.reader-url-copy-card > .maker-secondary-button {
+    width: 100%;
+    grid-column: 1 / -1;
+  }
+}
+
 .promotion-url {
   min-width: 0;
   margin: 0;
