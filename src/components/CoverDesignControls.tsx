@@ -140,8 +140,11 @@ export default function CoverDesignControls({
                 <small id="cover-title-override-help" className="maker-note">
                   Enterで改行できます。表紙の表示だけが変わります。
                 </small>
+                <small className="maker-note cover-title-line-hint">
+                  表紙上の1行目安：約{Math.round(12 / value.titleScale)}文字
+                </small>
               </label>
-              {value.titleTextOverride ? (
+              {value.titleTextOverride !== undefined ? (
                 <button
                   className="cover-title-override-reset"
                   type="button"

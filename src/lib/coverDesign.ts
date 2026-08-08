@@ -117,14 +117,13 @@ export function normalizeCoverTitleOverride(value: unknown): string | undefined 
   if (typeof value !== "string") return undefined;
 
   const normalized = value.replace(/\r\n?/g, "\n");
-  if (!normalized.trim()) return undefined;
 
   const limitedLines = normalized
     .split("\n")
     .slice(0, MAX_COVER_TITLE_OVERRIDE_LINES);
   const compact = limitedLines.join("\n").replace(/\n{3,}/g, "\n\n");
   const limited = compact.slice(0, MAX_COVER_TITLE_OVERRIDE_LENGTH);
-  return limited.trim() ? limited : undefined;
+  return limited;
 }
 
 /** Normalize persisted/legacy values without changing existing cover defaults. */

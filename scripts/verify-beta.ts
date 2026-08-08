@@ -469,7 +469,8 @@ assert.equal(boundedCoverDesign.overlayOpacity, 0);
 assert.equal(normalizeCoverTitleOverride("星降る街の\n小さな記録"), "星降る街の\n小さな記録");
 assert.equal(normalizeCoverTitleOverride("星降る街の  \n　小さな記録 "), "星降る街の  \n　小さな記録 ");
 assert.equal(normalizeCoverTitleOverride("星\n\n\n降る\n街\n記録"), "星\n\n降る");
-assert.equal(normalizeCoverTitleOverride(""), undefined);
+assert.equal(normalizeCoverTitleOverride(""), "");
+assert.equal(normalizeCoverTitleOverride("  　"), "  　");
 
 const adjusted = upsertPageAdjustment([], "chapter-1-text-1", {
   pageBreakAfter: true,
@@ -551,6 +552,30 @@ if (canonicalCoverResult.ok) {
   assert.equal(
     canonicalPayloadToBookProjectInput(canonicalCoverResult.payload).coverDesign?.authorVisible,
     false,
+  );
+}
+
+const emptyCoverResult = buildCanonicalBookPayload({
+  state: {
+    ...baseEditorState,
+    title: "正式タイトル",
+    author: "作者",
+    description: "説明",
+    coverDesign: {
+      ...DEFAULT_COVER_DESIGN,
+      titleTextOverride: "",
+    },
+  },
+  contentBlocks: [{ id: "text-002", type: "text", content: "本文" }],
+  images: [],
+});
+assert.equal(emptyCoverResult.ok, true, "Canonical payload should accept an intentional empty cover title");
+if (emptyCoverResult.ok) {
+  assert.equal(emptyCoverResult.payload.title, "正式タイトル");
+  assert.equal(emptyCoverResult.payload.coverDesign.titleTextOverride, "");
+  assert.equal(
+    canonicalPayloadToBookProjectInput(emptyCoverResult.payload).coverDesign?.titleTextOverride,
+    "",
   );
 }
 

@@ -3640,7 +3640,7 @@ button.reader-edit-link:disabled {
 
 .cover-design-panel-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 0.72fr) minmax(360px, 1.28fr);
   gap: 16px;
 }
 
@@ -3812,6 +3812,7 @@ button.reader-edit-link:disabled {
 
 .cover-design-control textarea {
   width: 100%;
+  max-width: none;
   min-width: 0;
   min-height: 78px;
   resize: vertical;
@@ -3835,6 +3836,15 @@ button.reader-edit-link:disabled {
   margin: 0;
   font-size: 11px;
   line-height: 1.45;
+}
+
+.cover-title-override-control {
+  width: 100%;
+  min-width: 0;
+}
+
+.cover-title-line-hint {
+  color: #64788a;
 }
 
 .cover-title-override-reset {
@@ -4308,6 +4318,11 @@ button.reader-edit-link:disabled {
   padding: 18px;
   border-left: 3px solid var(--book-accent-color);
   background: rgba(5, 8, 12, 0.3);
+}
+
+/* Layout 03 is an image-first cover. Only the user-controlled overlay may darken it. */
+.cover-page.cover-layout-layout-03::before {
+  background: transparent;
 }
 
 @media (max-width: 1100px) {

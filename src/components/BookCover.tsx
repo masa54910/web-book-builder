@@ -65,9 +65,10 @@ export default function BookCover({ back = false, data }: { back?: boolean; data
   const design = normalizeCoverDesign(data.coverDesign);
   const coverStyle = data.coverStyle || "overlay";
   const coverTone = data.accentColor || "#6bb9ad";
-  const coverTitle = design.titleTextOverride?.trim() || data.title;
-  const displayTitleLines = design.titleTextOverride?.trim()
-    ? design.titleTextOverride.split("\n")
+  const hasTitleOverride = design.titleTextOverride !== undefined;
+  const coverTitle = hasTitleOverride ? design.titleTextOverride ?? "" : data.title;
+  const displayTitleLines = hasTitleOverride
+    ? (design.titleTextOverride ?? "").split("\n")
     : data.displayTitleLines?.filter((line) => line.trim().length > 0);
   const showTitle = design.titleVisible !== false;
   const showAuthor = design.authorVisible !== false;
