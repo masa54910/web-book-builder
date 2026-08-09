@@ -238,6 +238,7 @@
   display: grid;
   gap: 6px;
   flex: 1;
+  min-height: 162px;
   margin: 8px 0 6px;
   padding: 12px 0 0;
   border-top: 1px solid rgba(64, 145, 199, 0.18);
@@ -272,6 +273,8 @@
   display: flex;
   align-items: center;
   gap: 7px;
+  box-sizing: border-box;
+  min-height: 32px;
   margin: 0;
   padding: 8px 10px;
   border-radius: 9px;
@@ -290,6 +293,7 @@
   flex-direction: column;
   align-items: stretch;
   gap: 7px;
+  min-height: 83px;
   margin-top: auto;
 }
 
@@ -334,7 +338,10 @@
 }
 
 .planNote {
-  min-height: 16px;
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
   color: #70859a;
   font-size: 11px;
   text-align: center;
