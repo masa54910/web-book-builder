@@ -184,7 +184,7 @@ export default function ReaderShareCenter({
   </body>
 </html>`;
     const printUrl = URL.createObjectURL(new Blob([printMarkup], { type: "text/html" }));
-    const printWindow = window.open(printUrl, "_blank", "noopener,noreferrer,width=760,height=900");
+    const printWindow = window.open(printUrl, "_blank", "width=760,height=900");
     if (!printWindow) {
       URL.revokeObjectURL(printUrl);
       announceQr("印刷画面を開けませんでした。ブラウザのポップアップ設定を確認してください。");
