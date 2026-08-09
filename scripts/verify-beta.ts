@@ -196,6 +196,8 @@ assert.equal(
 assert.equal(pageBreakTextPages.length, 2, "A forced break should start the next block on a new text page");
 assert.equal(pageBreakTextPages[0]?.paragraphs.join(""), "First paragraph");
 assert.equal(pageBreakTextPages[1]?.paragraphs.join(""), "Second paragraph");
+assert.ok(pageBreakTextPages[0]?.sourceBlockIds?.includes("text-first"), "Text pages should expose their source block IDs");
+assert.ok(pageBreakTextPages[1]?.sourceBlockIds?.includes("text-second"), "The page after a break should expose its source block ID");
 
 const folioPages = buildReaderPages({
   chapters: [{ id: "chapter-01", order: 1, title: "番号", slug: "folio", source: "test", body: "本文" }],
