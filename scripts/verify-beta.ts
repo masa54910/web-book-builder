@@ -15,6 +15,7 @@ import { BETA_LIMITS } from "../src/lib/limits";
 import { createSlugCandidate, validateSlug } from "../src/lib/slug";
 import { validateImportFile, validateZipPath } from "../src/lib/fileImport";
 import { buildReaderPages } from "../src/lib/paginateText";
+import { buildReaderFolioById, readerPageNumberLabel } from "../src/lib/readerFolio";
 import { countContentCharacters, countUserCharacters } from "../src/lib/characterCount";
 import { createPendingImageBlock, insertImageBlocksAtCursor } from "../src/lib/inlineContentBlocks";
 import { resolveSafeInternalReturnPath } from "../src/lib/returnTo";
@@ -174,6 +175,31 @@ assert.equal(
   "夜の街を歩くと\n窓の灯りが静かに\n路地を照らしていた。",
   "Paragraph display override should preserve original characters and apply line breaks",
 );
+
+const folioPages = buildReaderPages({
+  chapters: [{ id: "chapter-01", order: 1, title: "番号", slug: "folio", source: "test", body: "本文" }],
+  images: [],
+  charactersPerPage: 380,
+  tableOfContentsItemsPerPage: 6,
+});
+const folioById = buildReaderFolioById(folioPages);
+assert.equal(readerPageNumberLabel(folioPages[0], folioById), "表紙", "Mini Preview should label the cover separately");
+assert.equal(readerPageNumberLabel(folioPages[1], folioById), "01", "Mini Preview should share the Reader folio numbering");
+assert.equal(readerPageNumberLabel({ id: "manual-break", kind: "pageBreak", sourcePageId: "title" }, folioById), "改ページ");
+assert.equal(readerPageNumberLabel(folioPages.at(-2)!, folioById), String(folioPages.length - 2).padStart(2, "0"), "Colophon should retain its Reader folio");
+
+const longText = "長文本文".repeat(7500);
+const longTextPages = buildReaderPages({
+  chapters: [{ id: "chapter-01", order: 1, title: "長文", slug: "long", source: "test", body: longText }],
+  images: [],
+  charactersPerPage: 380,
+  tableOfContentsItemsPerPage: 6,
+});
+const renderedLongText = longTextPages
+  .filter((page) => page.kind === "text")
+  .flatMap((page) => page.paragraphs)
+  .join("");
+assert.equal(renderedLongText, longText, "Long Mini Preview input should retain all paginated text");
 
 const insertionSource: BookContentBlock[] = [{ id: "text-001", type: "text", content: "冒頭本文" }];
 const pendingNodes = [

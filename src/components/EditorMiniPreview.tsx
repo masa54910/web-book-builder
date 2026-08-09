@@ -1,6 +1,9 @@
 "use client";
 
 import type { ReaderPage } from "@/lib/types";
+import { useMemo } from "react";
+import { INLINE_IMAGE_TOKEN_PREFIX } from "@/lib/paginateText";
+import { buildReaderFolioById, readerPageNumberLabel } from "@/lib/readerFolio";
 
 function pageLabel(page: ReaderPage) {
   switch (page.kind) {
@@ -27,16 +30,21 @@ function pageLabel(page: ReaderPage) {
   }
 }
 
+function isInlineImageToken(value: string) {
+  return value.startsWith(INLINE_IMAGE_TOKEN_PREFIX) && value.endsWith("]]");
+}
+
+function MiniImageMarker({ inline = false }: { inline?: boolean }) {
+  return (
+    <span className={`editor-mini-image-marker ${inline ? "is-inline" : ""}`} role="img" aria-label="画像">
+      <span aria-hidden="true">▧</span>画像
+    </span>
+  );
+}
+
 function MiniPageContent({ page }: { page: ReaderPage }) {
   if (page.kind === "image") {
-    return (
-      <div className="editor-mini-page-image">
-        {page.src ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={page.src} alt="" loading="lazy" />
-        ) : <span>画像</span>}
-      </div>
-    );
+    return <div className="editor-mini-page-image"><MiniImageMarker /></div>;
   }
   if (page.kind === "cover" || page.kind === "backCover") {
     return <div className="editor-mini-page-cover"><span>{page.kind === "cover" ? "WebBook" : ""}</span></div>;
@@ -53,25 +61,39 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
   if (page.kind === "title") {
     return <div className="editor-mini-page-heading"><strong>タイトル</strong><i /><i /></div>;
   }
+
   return (
-    <div className="editor-mini-page-lines">
-      {page.paragraphs.slice(0, 6).map((paragraph, index) => (
-        <span key={`${page.id}-${index}`}>
-          {paragraph.replace(/\s+/g, " ").slice(0, 46) || "本文"}
-        </span>
+    <div className="editor-mini-page-text">
+      {page.paragraphs.map((paragraph, index) => (
+        isInlineImageToken(paragraph) ? (
+          <MiniImageMarker inline key={`${page.id}-${index}`} />
+        ) : (
+          <p className={paragraph.startsWith("## ") ? "is-heading" : ""} key={`${page.id}-${index}`}>
+            {paragraph.startsWith("## ") ? paragraph.slice(3) : paragraph}
+          </p>
+        )
       ))}
-      {!page.paragraphs.length ? <i /> : null}
+      {!page.paragraphs.length ? <p className="is-empty">本文</p> : null}
     </div>
   );
 }
 
 export default function EditorMiniPreview({
   pages,
+  logicalPages,
   activePageId,
+  onPageClick,
 }: {
   pages: ReaderPage[];
+  logicalPages?: ReaderPage[];
   activePageId?: string | null;
+  onPageClick?: (page: ReaderPage) => void;
 }) {
+  const logicalFolioById = useMemo(() => {
+    const folioPages = logicalPages?.length ? logicalPages : pages.filter((page) => page.kind !== "pageBreak");
+    return buildReaderFolioById(folioPages);
+  }, [logicalPages, pages]);
+
   return (
     <section className="editor-mini-preview" aria-label="ページ一覧ミニプレビュー">
       <div className="editor-mini-preview-heading">
@@ -81,21 +103,33 @@ export default function EditorMiniPreview({
         </div>
         <strong>{pages.length}ページ</strong>
       </div>
-      <p className="maker-note editor-mini-preview-note">本文の全体構成を確認できます。正式Previewとは分離した簡易表示です。</p>
+      <p className="maker-note editor-mini-preview-note">本文の構成を確認できます。クリックするとそのページに移動できます。</p>
       <div className="editor-mini-preview-list">
-        {pages.map((page, index) => (
-          <article
-            className={`editor-mini-page ${activePageId === page.id ? "is-active" : ""}`}
-            key={page.id}
-            aria-current={activePageId === page.id ? "page" : undefined}
-          >
-            <div className="editor-mini-page-frame"><MiniPageContent page={page} /></div>
-            <div className="editor-mini-page-meta">
-              <strong>Page {index + 1}</strong>
-              <span>{pageLabel(page)}</span>
-            </div>
-          </article>
-        ))}
+        {pages.map((page) => {
+          const pageNumber = readerPageNumberLabel(page, logicalFolioById);
+          const clickable = Boolean(onPageClick);
+          return (
+            <article
+              className={`editor-mini-page ${activePageId === page.id ? "is-active" : ""} ${clickable ? "is-clickable" : ""}`}
+              key={page.id}
+              role={clickable ? "button" : undefined}
+              tabIndex={clickable ? 0 : undefined}
+              aria-current={activePageId === page.id ? "page" : undefined}
+              aria-label={clickable ? `${pageNumber || pageLabel(page)} ${pageLabel(page)}へ移動` : undefined}
+              onClick={clickable ? () => onPageClick?.(page) : undefined}
+              onKeyDown={clickable ? (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onPageClick?.(page);
+                }
+              } : undefined}
+            >
+              <div className="editor-mini-page-number">{pageNumber || pageLabel(page)}</div>
+              <div className="editor-mini-page-frame"><MiniPageContent page={page} /></div>
+              <div className="editor-mini-page-meta"><span>{pageLabel(page)}</span></div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );

@@ -15,6 +15,7 @@ import {
 } from "@/lib/pageAdjustments";
 import { buildReaderPages, toBoundPageOrder } from "@/lib/paginateText";
 import { recordReaderProgress } from "@/lib/readerAnalytics";
+import { buildReaderFolioById } from "@/lib/readerFolio";
 import { themeClassNames } from "@/lib/themeSystem";
 import type { BookContentBlock } from "@/lib/bookProject";
 import {
@@ -216,7 +217,7 @@ export default function BookReader({
     [config.bindingDirection, logicalPages, isMobile],
   );
   const logicalFolioById = useMemo(
-    () => new Map(logicalPages.map((page, index) => [page.id, index])),
+    () => buildReaderFolioById(logicalPages),
     [logicalPages],
   );
   const pagesWithAdjustments = useMemo(() => {

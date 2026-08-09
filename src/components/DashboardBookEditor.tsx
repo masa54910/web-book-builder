@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { BETA_LIMITS } from "@/lib/limits";
 import { publicBookBaseUrl } from "@/lib/promotion";
@@ -518,6 +518,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [pendingImageCount, setPendingImageCount] = useState(0);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [editorScrollRequest, setEditorScrollRequest] = useState<{ blockId: string; nonce: number } | null>(null);
+  const miniJumpNonceRef = useRef(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [warnings, setWarnings] = useState<string[]>([]);
   const [statusMessage, setStatusMessage] = useState(
@@ -779,7 +781,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const publicBooksBaseUrl = useMemo(() => publicBookBaseUrl(), []);
 
   const deferredContentBlocks = useDeferredValue(contentBlocks);
-  const miniPreviewPages = useMemo(() => {
+  const miniPreviewModel = useMemo(() => {
     const rawText = contentBlocksToRawText(deferredContentBlocks);
     const chapters = extractChaptersFromText(rawText, state.title || "本文");
     const imageRows: ImageManifestRow[] = deferredContentBlocks
@@ -809,7 +811,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       const ids = [...(page.sourceBlockIds || []), page.id];
       return ids.map((id) => findPageAdjustment(state.pageAdjustments, id)).find(Boolean);
     };
-    return logicalPages.flatMap((page) => {
+    const pages = logicalPages.flatMap((page) => {
       const adjustment = pageAdjustmentFor(page);
       return [
         ...(adjustment?.pageBreakBefore ? [{ id: `page-break-before-${page.id}`, kind: "pageBreak", sourcePageId: page.id } as const] : []),
@@ -817,7 +819,47 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         ...(adjustment?.pageBreakAfter ? [{ id: `page-break-after-${page.id}`, kind: "pageBreak", sourcePageId: page.id } as const] : []),
       ];
     });
+    return { logicalPages, pages };
   }, [deferredContentBlocks, state.charactersPerPage, state.pageAdjustments, state.tableOfContentsItemsPerPage, state.title]);
+  const miniPreviewPages = miniPreviewModel.pages;
+  const miniPreviewLogicalPages = miniPreviewModel.logicalPages;
+
+  const handleMiniPageClick = useCallback((page: ReaderPage) => {
+    const pageIndex = miniPreviewPages.findIndex((candidate) => candidate.id === page.id);
+    const pageForSources = page.kind === "pageBreak"
+      ? miniPreviewPages.find((candidate) => candidate.id === page.sourcePageId) || page
+      : page;
+    const sourceIds = "sourceBlockIds" in pageForSources ? pageForSources.sourceBlockIds || [] : [];
+    const directTarget = sourceIds.find((sourceId) => contentBlocks.some((block) => block.id === sourceId));
+    let targetBlockId = directTarget;
+
+    if (!targetBlockId && pageIndex >= 0) {
+      for (let index = pageIndex + 1; index < miniPreviewPages.length; index += 1) {
+        const candidate = miniPreviewPages[index];
+        if (!("sourceBlockIds" in candidate)) continue;
+        const nextTarget = candidate.sourceBlockIds?.find((sourceId) => contentBlocks.some((block) => block.id === sourceId));
+        if (nextTarget) {
+          targetBlockId = nextTarget;
+          break;
+        }
+      }
+    }
+
+    if (!targetBlockId) {
+      const fallbackBlocks = page.kind === "backCover" || page.kind === "colophon"
+        ? [...contentBlocks].reverse()
+        : contentBlocks;
+      targetBlockId = fallbackBlocks[0]?.id;
+    }
+    if (!targetBlockId) return;
+    miniJumpNonceRef.current += 1;
+    setEditorScrollRequest({ blockId: targetBlockId, nonce: miniJumpNonceRef.current });
+  }, [contentBlocks, miniPreviewPages]);
+
+  const handleCursorChange = useCallback((position: number, blockId: string | null) => {
+    setCursorPosition(position);
+    setActiveBlockId(blockId);
+  }, []);
 
   const activeMiniPageId = useMemo(() => {
     if (!activeBlockId) return null;
@@ -1499,10 +1541,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             onChange={syncContentBlocks}
             onStatus={setStatusMessage}
             onPendingChange={setPendingImageCount}
-            onCursorChange={(position, blockId) => {
-              setCursorPosition(position);
-              setActiveBlockId(blockId);
-            }}
+            onCursorChange={handleCursorChange}
+            scrollRequest={editorScrollRequest}
           />
           <p className="inline-manuscript-character-count" aria-live="polite">
             <strong>{Math.min(cursorPosition, bodyCharacterCount).toLocaleString("ja-JP")}</strong>
@@ -1545,7 +1585,12 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             </div>
           </section>
 
-          <EditorMiniPreview pages={miniPreviewPages} activePageId={activeMiniPageId} />
+          <EditorMiniPreview
+            pages={miniPreviewPages}
+            logicalPages={miniPreviewLogicalPages}
+            activePageId={activeMiniPageId}
+            onPageClick={handleMiniPageClick}
+          />
 
         <div className="maker-card">
           <h2>表紙画像</h2>

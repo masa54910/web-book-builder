@@ -245,6 +245,7 @@ type Props = {
   onStatus: (message: string) => void;
   onPendingChange: (count: number) => void;
   onCursorChange?: (position: number, blockId: string | null) => void;
+  scrollRequest?: { blockId: string; nonce: number } | null;
 };
 
 function PhotoIcon() {
@@ -257,7 +258,7 @@ function PhotoIcon() {
   );
 }
 
-export default function InlineManuscriptEditor({ value, revision, onChange, onStatus, onPendingChange, onCursorChange }: Props) {
+export default function InlineManuscriptEditor({ value, revision, onChange, onStatus, onPendingChange, onCursorChange, scrollRequest }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
@@ -354,6 +355,37 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
       node.classList.toggle("is-selected", node.dataset.nodeId === selectedImageId);
     });
   }, [selectedImageId]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || !scrollRequest) return;
+    const target = Array.from(root.children).find(
+      (node): node is HTMLElement => node instanceof HTMLElement && node.dataset.nodeId === scrollRequest.blockId,
+    );
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (target.dataset.nodeType === "paragraph") {
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      range.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      savedRangeRef.current = range.cloneRange();
+      root.focus();
+      reportCursor();
+      return;
+    }
+
+    let position = 0;
+    for (const node of nodesRef.current) {
+      if (node.id === scrollRequest.blockId) break;
+      if (node.type === "text") position += countUserCharacters(node.content);
+    }
+    root.focus();
+    onCursorChange?.(position, scrollRequest.blockId);
+  }, [onCursorChange, reportCursor, scrollRequest]);
 
   const removeNode = (nodeId: string) => {
     const next = nodesRef.current.filter((node) => node.id !== nodeId);
