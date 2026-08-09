@@ -29,7 +29,6 @@ import type { ImageManifestRow, NovelChapter, ReaderPage } from "@/lib/types";
 import BookPage from "./BookPage";
 import ChapterTitlePage from "./ChapterTitlePage";
 import CoverAdjustModal from "./CoverAdjustModal";
-import PageAdjustmentControls from "./PageAdjustmentControls";
 import ColophonPage from "./ColophonPage";
 import ContentsPage from "./ContentsPage";
 import CoverPage from "./CoverPage";
@@ -89,50 +88,6 @@ function adjustmentForPage(adjustments: PageAdjustment[], page: ReaderPage | und
   return undefined;
 }
 
-function adjustmentBlockIdForPage(adjustments: PageAdjustment[], page: ReaderPage) {
-  for (const id of adjustmentTargetIds(page)) {
-    if (findPageAdjustment(adjustments, id)) return id;
-  }
-  const ids = sourceBlockIdsForPage(page).filter((id) => id !== page.id);
-  return ids.at(-1) || page.id;
-}
-
-function paragraphBlockForPage(page: ReaderPage | undefined, contentBlocks?: BookContentBlock[]) {
-  if (!page || page.kind !== "text" || !contentBlocks?.length) return null;
-  const textBlocks = contentBlocks.filter(
-    (block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text",
-  );
-  const textBlockIds = new Set(textBlocks.map((block) => block.id));
-  const sourceIds = sourceBlockIdsForPage(page);
-  const bySource = textBlocks.filter((block) => sourceIds.includes(block.id));
-  const byRenderedText = textBlocks.filter((block) =>
-    page.paragraphs.some((paragraph) => {
-      const rendered = paragraph.replace(/\s+/g, "");
-      const source = block.content.replace(/\s+/g, "");
-      return Boolean(rendered && source && (source.includes(rendered) || rendered.includes(source.slice(0, rendered.length))));
-    }),
-  );
-  const id = (bySource.length ? bySource : byRenderedText).at(-1)?.id;
-  if (!id || !textBlockIds.has(id)) return null;
-  const block = textBlocks.find((candidate) => candidate.id === id);
-  return block?.type === "text" ? { id, originalText: block.content } : null;
-}
-
-function paragraphBlocksForPage(page: ReaderPage | undefined, contentBlocks?: BookContentBlock[]) {
-  if (!page || page.kind !== "text" || !contentBlocks?.length) return [];
-  const sourceIds = new Set(sourceBlockIdsForPage(page));
-  const textBlocks = contentBlocks
-    .filter((block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text" && sourceIds.has(block.id))
-  if (textBlocks.length) {
-    return textBlocks.map((block) => ({ id: block.id, label: block.content.replace(/\s+/g, " ").trim().slice(0, 24) || "本文" }));
-  }
-  return contentBlocks
-    .filter((block): block is Extract<BookContentBlock, { type: "text" }> =>
-      block.type === "text" && page.paragraphs.some((paragraph) => block.content.includes(paragraph.trim())),
-    )
-    .map((block) => ({ id: block.id, label: block.content.replace(/\s+/g, " ").trim().slice(0, 24) || "本文" }));
-}
-
 export default function BookReader({
   config,
   chapters,
@@ -147,10 +102,6 @@ export default function BookReader({
   authorPageHandle,
   backLink,
   onCoverDesignChange,
-  onPageAdjustmentChange,
-  onPageAdjustmentReset,
-  onPageAdjustmentsResetAll,
-  onPageImageAdd,
 }: {
   config: BookConfig;
   chapters: NovelChapter[];
@@ -170,10 +121,6 @@ export default function BookReader({
     label?: string;
   };
   onCoverDesignChange?: (patch: Partial<CoverDesign>) => void;
-  onPageAdjustmentChange?: (blockId: string, patch: Partial<PageAdjustment>) => void;
-  onPageAdjustmentReset?: (blockId: string) => void;
-  onPageAdjustmentsResetAll?: () => void;
-  onPageImageAdd?: (file: File, page: ReaderPage | null, afterBlockId?: string) => void;
 }) {
   const flipBookRef = useRef<FlipBookHandle | null>(null);
   const activePageIdRef = useRef<string | null>(null);
@@ -194,7 +141,6 @@ export default function BookReader({
   const [autoFlipLoop, setAutoFlipLoop] = useState(false);
   const [autoFlipStartMode, setAutoFlipStartMode] = useState<"cover" | "current">("current");
   const [isCoverDesignOpen, setIsCoverDesignOpen] = useState(false);
-  const [isPageAdjustmentOpen, setIsPageAdjustmentOpen] = useState(false);
   const coverDesign = normalizeCoverDesign(config.coverDesign);
   const resolvedAuthorPageHandle =
     authorPageHandle === undefined ? config.authorProfile?.handle || "" : authorPageHandle || "";
@@ -237,18 +183,10 @@ export default function BookReader({
   );
   // Page breaks are applied by buildReaderPages so the next content starts on
   // the following page without rendering a synthetic blank page. Keep this
-  // alias for the reader controls and adjustment drawer, which operate on the
-  // same canonical page list.
+  // alias so reader controls and page rendering share the same canonical list.
   const pagesWithAdjustments = pages;
 
   const activePageIndex = Math.min(currentPage, Math.max(0, pagesWithAdjustments.length - 1));
-  const activePage = pagesWithAdjustments[activePageIndex];
-  const activeParagraphBlock = paragraphBlockForPage(activePage, contentBlocks);
-  const activeParagraphBlocks = paragraphBlocksForPage(activePage, contentBlocks);
-  const activeParagraphAdjustment = activeParagraphBlock
-    ? findPageAdjustment(pageAdjustments, activeParagraphBlock.id)
-    : undefined;
-
   useEffect(() => {
     if (!activePageIdRef.current) {
       const activePage = pagesWithAdjustments[activePageIndex];
@@ -435,9 +373,8 @@ export default function BookReader({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && displayMode === "preview" && (isCoverDesignOpen || isPageAdjustmentOpen)) {
+      if (event.key === "Escape" && displayMode === "preview" && isCoverDesignOpen) {
         setIsCoverDesignOpen(false);
-        setIsPageAdjustmentOpen(false);
         return;
       }
       if (displayMode === "preview" && isCoverDesignOpen) return;
@@ -453,7 +390,7 @@ export default function BookReader({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [config.bindingDirection, displayMode, isCoverDesignOpen, isPageAdjustmentOpen, pageFlip]);
+  }, [config.bindingDirection, displayMode, isCoverDesignOpen, pageFlip]);
 
   useEffect(() => {
     if (displayMode !== "preview" || !isCoverDesignOpen) return;
@@ -463,17 +400,6 @@ export default function BookReader({
       document.body.style.overflow = previousOverflow;
     };
   }, [displayMode, isCoverDesignOpen]);
-
-  useEffect(() => {
-    if (displayMode !== "preview") return;
-    const frame = window.requestAnimationFrame(() => {
-      // Page adjustment changes the available width from a spread to a
-      // single-page column. Ask page-flip to recalculate its existing
-      // renderer after that layout transition, preserving its current page.
-      pageFlip()?.update();
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [displayMode, isPageAdjustmentOpen, pageFlip]);
 
   useEffect(() => {
     if (displayMode !== "preview") return;
@@ -621,28 +547,15 @@ export default function BookReader({
             aria-expanded={isCoverDesignOpen}
             aria-pressed={isCoverDesignOpen}
             onClick={() => {
-              setIsPageAdjustmentOpen(false);
               setIsCoverDesignOpen((open) => !open);
             }}
           >
             表紙を調整
           </button>
-          <button
-            className={`reader-preview-action ${isPageAdjustmentOpen ? "is-active" : ""}`}
-            type="button"
-            aria-expanded={isPageAdjustmentOpen}
-            aria-pressed={isPageAdjustmentOpen}
-            onClick={() => {
-              setIsCoverDesignOpen(false);
-              setIsPageAdjustmentOpen((open) => !open);
-            }}
-          >
-            ページを調整
-          </button>
         </div>
       ) : null}
 
-      <div className={`reader-preview-layout ${displayMode === "preview" && isPageAdjustmentOpen ? "is-editing" : ""}`}>
+      <div className="reader-preview-layout">
         <section className="book-viewport" aria-label="デジタル書籍リーダー">
           <HTMLFlipBook
             key={`${isMobile ? "mobile" : "desktop"}-${pagesWithAdjustments.length}`}
@@ -682,58 +595,6 @@ export default function BookReader({
             {pagesWithAdjustments.map(renderPage)}
           </HTMLFlipBook>
         </section>
-        {displayMode === "preview" && isPageAdjustmentOpen ? (
-          <aside className="reader-page-adjustment-drawer" aria-label="ページ調整設定">
-            <PageAdjustmentControls
-              page={activePage || null}
-              pageNumber={(logicalFolioById.get(pagesWithAdjustments[activePageIndex]?.id || "") ?? activePageIndex) + 1}
-              totalPages={pagesWithAdjustments.length}
-              value={adjustmentForPage(pageAdjustments, pagesWithAdjustments[activePageIndex])}
-              onChange={(patch) => {
-                const target = pagesWithAdjustments[activePageIndex];
-                if (target && target.kind !== "pageBreak") {
-                  onPageAdjustmentChange?.(adjustmentBlockIdForPage(pageAdjustments, target), patch);
-                }
-              }}
-              onReset={() => {
-                const target = pagesWithAdjustments[activePageIndex];
-                if (target && target.kind !== "pageBreak") {
-                  onPageAdjustmentReset?.(adjustmentBlockIdForPage(pageAdjustments, target));
-                }
-              }}
-              onResetAll={onPageAdjustmentsResetAll}
-              onImageAdd={(file) => {
-                const target = pagesWithAdjustments[activePageIndex];
-                onPageImageAdd?.(file, target?.kind === "text" || target?.kind === "image" ? target : null);
-              }}
-              imageInsertAnchors={activeParagraphBlocks}
-              onImageAddAtBlock={(file, afterBlockId) => {
-                const target = pagesWithAdjustments[activePageIndex];
-                onPageImageAdd?.(file, target?.kind === "text" || target?.kind === "image" ? target : null, afterBlockId);
-              }}
-              paragraphBlockId={activeParagraphBlock?.id}
-              paragraphOriginalText={activeParagraphBlock?.originalText}
-              paragraphValue={activeParagraphAdjustment?.displayTextOverride}
-              onParagraphChange={(value) => {
-                if (activeParagraphBlock) {
-                  onPageAdjustmentChange?.(activeParagraphBlock.id, { displayTextOverride: value });
-                }
-              }}
-              onParagraphReset={() => {
-                if (!activeParagraphBlock) return;
-                const hasOtherAdjustment = activeParagraphAdjustment
-                  ? Object.keys(activeParagraphAdjustment).some((key) => key !== "blockId" && key !== "displayTextOverride")
-                  : false;
-                if (hasOtherAdjustment) {
-                  onPageAdjustmentChange?.(activeParagraphBlock.id, { displayTextOverride: undefined });
-                } else {
-                  onPageAdjustmentReset?.(activeParagraphBlock.id);
-                }
-              }}
-              onClose={() => setIsPageAdjustmentOpen(false)}
-            />
-          </aside>
-        ) : null}
       </div>
 
       {displayMode === "preview" && isCoverDesignOpen ? (

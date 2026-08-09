@@ -1930,25 +1930,6 @@ button.reader-edit-link:disabled {
   margin: 0 auto;
 }
 
-.reader-preview-layout.is-editing {
-  display: grid;
-  grid-template-columns: minmax(0, 620px) minmax(0, 470px);
-  grid-template-areas: "panel book";
-  justify-content: center;
-  gap: 24px;
-  align-items: start;
-}
-
-.reader-preview-layout.is-editing > * {
-  min-width: 0;
-}
-
-.reader-preview-layout .book-viewport {
-  grid-area: book;
-  width: 100%;
-  margin: 0;
-}
-
 .cover-adjust-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -2051,21 +2032,6 @@ button.reader-edit-link:disabled {
 
 .cover-adjust-controls .cover-design-panel {
   margin: 0;
-}
-
-.reader-page-adjustment-drawer {
-  grid-area: panel;
-  min-width: 0;
-}
-
-.reader-page-adjustment-drawer .page-adjustment-panel {
-  position: sticky;
-  top: 14px;
-  max-height: calc(100vh - 28px);
-  overflow-y: auto;
-  margin: 0;
-  background: linear-gradient(145deg, #ffffff, #f4faff);
-  box-shadow: 0 12px 28px rgba(31, 78, 112, 0.12);
 }
 
 .reader-kicker {
@@ -2185,17 +2151,6 @@ button.reader-edit-link:disabled {
   opacity: 0.72;
   background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.34), rgba(255, 255, 255, 0.09), rgba(0, 0, 0, 0.34), transparent);
   transform: translateX(-50%);
-}
-
-/* Page adjustment is a single-page editing canvas. Hide the decorative
- * center seam and page-flip shadows only while that mode is active; the
- * normal Preview and published Reader retain their book depth. */
-.reader-preview-layout.is-editing .book-viewport::after,
-.reader-preview-layout.is-editing .book-viewport .stf__outerShadow,
-.reader-preview-layout.is-editing .book-viewport .stf__innerShadow,
-.reader-preview-layout.is-editing .book-viewport .stf__hardShadow,
-.reader-preview-layout.is-editing .book-viewport .stf__hardInnerShadow {
-  display: none !important;
 }
 
 .flip-book {
@@ -2434,7 +2389,9 @@ button.reader-edit-link:disabled {
 
 .cover-layout-layout-05 .cover-image-slot {
   grid-row: 4;
-  min-height: 0;
+  /* The image is absolutely positioned, so an auto-sized grid row has no
+   * intrinsic height. Keep a real row for the image instead of collapsing it. */
+  min-height: 180px;
   margin-top: 12px;
 }
 
@@ -2463,6 +2420,12 @@ button.reader-edit-link:disabled {
   text-align: left;
 }
 
+.cover-layout-layout-08 .cover-image-slot {
+  width: min(78%, 100%);
+  margin-right: auto;
+  margin-left: 0;
+}
+
 .cover-layout-layout-09 {
   align-items: flex-end;
 }
@@ -2471,6 +2434,12 @@ button.reader-edit-link:disabled {
 .cover-layout-layout-09 .cover-author {
   align-self: flex-end;
   text-align: right;
+}
+
+.cover-layout-layout-09 .cover-image-slot {
+  width: min(78%, 100%);
+  margin-right: 0;
+  margin-left: auto;
 }
 
 .cover-layout-layout-10 .cover-image-slot {
@@ -3787,131 +3756,6 @@ button.reader-edit-link:disabled {
   background: linear-gradient(145deg, #ffffff, #f4faff);
 }
 
-.page-adjustment-panel {
-  display: grid;
-  gap: 18px;
-  margin-bottom: 18px;
-  padding: 16px;
-  border: 1px solid rgba(38, 117, 166, 0.16);
-  border-radius: 16px;
-  background: linear-gradient(145deg, #ffffff, #f4faff);
-}
-
-.page-adjustment-panel-heading {
-  margin-bottom: 0;
-}
-
-.page-adjustment-panel .cover-design-section + .cover-design-section {
-  margin-top: 14px;
-}
-
-.page-adjustment-paragraph-editor {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 14px;
-  padding: 12px;
-  border: 1px solid rgba(38,117,166,.14);
-  border-radius: 12px;
-  background: rgba(226,243,252,.56);
-}
-
-.page-adjustment-paragraph-editor textarea {
-  width: 100%;
-  min-height: 112px;
-  resize: vertical;
-  color: var(--wbm-ui-text, #16334f);
-  background: #fff;
-}
-
-.page-adjustment-insert-points {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed rgba(38,117,166,.22);
-}
-
-.page-adjustment-insert-points p {
-  margin: 0;
-}
-
-.page-adjustment-toggle {
-  min-width: 58px;
-  min-height: 34px;
-  padding: 6px 12px;
-  border: 1px solid rgba(38, 117, 166, 0.2);
-  border-radius: 999px;
-  color: var(--wb-navy, #12365b);
-  background: #ffffff;
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.page-adjustment-toggle:hover,
-.page-adjustment-toggle:focus-visible,
-.page-adjustment-toggle.is-on {
-  border-color: #218ac8;
-  background: #eef8ff;
-}
-
-.page-adjustment-toggle:focus-visible,
-.page-adjustment-secondary-action:focus-visible {
-  outline: 3px solid rgba(31, 139, 207, 0.22);
-  outline-offset: 2px;
-}
-
-.page-adjustment-secondary-action {
-  min-height: 34px;
-  padding: 7px 12px;
-  border: 1px solid rgba(38, 117, 166, 0.18);
-  border-radius: 10px;
-  color: var(--wb-navy, #12365b);
-  background: rgba(255, 255, 255, 0.88);
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.page-adjustment-secondary-action:hover {
-  border-color: rgba(31, 139, 207, 0.48);
-  background: #f8fcff;
-  transform: translateY(-1px);
-}
-
-.page-adjustment-file-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.page-adjustment-file-action input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-.page-adjustment-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(38, 117, 166, 0.14);
-}
-
-.page-adjustment-empty {
-  padding: 14px;
-  border: 1px dashed rgba(38, 117, 166, 0.24);
-  border-radius: 12px;
-  background: rgba(248, 252, 255, 0.72);
-}
-
 .page-break-page {
   display: grid;
   height: 100%;
@@ -4692,27 +4536,7 @@ button.reader-edit-link:disabled {
   }
 }
 
-@media (min-width: 761px) and (max-width: 980px) {
-  .reader-preview-layout.is-editing {
-    grid-template-columns: 1fr;
-    grid-template-areas: "book" "panel";
-  }
-
-  .reader-page-adjustment-drawer .page-adjustment-panel {
-    position: static;
-  }
-}
-
 @media (max-width: 760px) {
-  .reader-preview-layout.is-editing {
-    grid-template-columns: 1fr;
-    grid-template-areas: "book" "panel";
-  }
-
-  .reader-page-adjustment-drawer .page-adjustment-panel {
-    position: static;
-  }
-
   .cover-layout-picker {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
