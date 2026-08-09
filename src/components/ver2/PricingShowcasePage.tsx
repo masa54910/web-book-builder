@@ -60,6 +60,7 @@ type PlanCard = {
   lead: string;
   features: string[];
   note?: string;
+  paymentNote?: string;
   actionLabel: string;
   href: string;
 };
@@ -102,6 +103,7 @@ export default function PricingShowcasePage() {
       actionLabel: "出版プランではじめる",
       href: "/signup?plan=publish",
       note: "買い切り・月額料金なし",
+      paymentNote: "PayPay払いO.K！",
     },
     {
       id: "operation",
@@ -121,7 +123,7 @@ export default function PricingShowcasePage() {
     <main className={styles.page}>
       <div className={styles.shell}>
         <div className={styles.topBar}>
-          <HomeBackLink />
+          <HomeBackLink label="ホームへ戻る" />
         </div>
 
         <section className={styles.hero} aria-labelledby="pricing-heading">
@@ -153,7 +155,7 @@ export default function PricingShowcasePage() {
               </ul>
               <div className={styles.cardActions}>
                 <Link className={`maker-primary-link ${styles.planAction}`} href={plan.href}>{plan.actionLabel}</Link>
-                {plan.id === "publish" ? <p className={styles.planTag}><PricingIcon name="tag" size={16} />{plan.note}</p> : <small className={styles.planNote}>{plan.note}</small>}
+                {plan.id === "publish" ? <p className={styles.planTag}><PricingIcon name="tag" size={16} /><span>{plan.note}</span><span className={styles.paymentNote}>{plan.paymentNote}</span></p> : <small className={styles.planNote}>{plan.note}</small>}
               </div>
             </article>
           ))}

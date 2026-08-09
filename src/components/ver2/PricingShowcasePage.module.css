@@ -58,7 +58,7 @@
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.16em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .brandMaker {
@@ -272,6 +272,7 @@
 .planTag {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   box-sizing: border-box;
   min-height: 32px;
@@ -286,6 +287,12 @@
 
 .planTag svg {
   flex: 0 0 auto;
+}
+
+.paymentNote {
+  color: #1579be;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .cardActions {
@@ -549,6 +556,11 @@
 
   .guide {
     padding: 15px;
+  }
+
+  .planTag {
+    gap: 4px;
+    font-size: 10px;
   }
 }
 
