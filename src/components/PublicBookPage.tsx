@@ -73,7 +73,7 @@ export default function PublicBookPage() {
         authorPageHandle
           ? {
               href: buildAuthorPagePath(authorPageHandle),
-              label: "作者のページに戻る",
+              label: "作者プロフィールを見る",
             }
           : undefined
       }

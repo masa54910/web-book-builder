@@ -8,7 +8,13 @@ import { getAppEnv } from "@/lib/appEnv";
 import { safeExternalUrl } from "@/lib/productTypes";
 import styles from "@/components/ver2/lp/Ver2Landing.module.css";
 
-export default function AppHeader() {
+export default function AppHeader({
+  publicAuthor = false,
+  authorIsOwner = false,
+}: {
+  publicAuthor?: boolean;
+  authorIsOwner?: boolean;
+}) {
   const { user, isLoading } = useAuth();
   const isPreview = getAppEnv() === "preview";
   const feedbackUrl = safeExternalUrl(process.env.NEXT_PUBLIC_FEEDBACK_URL ?? "");
@@ -33,7 +39,16 @@ export default function AppHeader() {
           taglineClassName={styles.logoTagline}
         />
         <nav aria-label="主要ナビゲーション">
-          {isLoading ? null : user ? (
+          {publicAuthor ? (
+            authorIsOwner ? (
+              <div className="author-owner-nav">
+                <Link className="nav-cta" href="/dashboard">
+                  管理画面へ
+                </Link>
+                <small>このボタンは読者のページには表示されません。</small>
+              </div>
+            ) : null
+          ) : isLoading ? null : user ? (
             <>
               <Link href="/dashboard">作品一覧</Link>
               <Link href="/analytics">分析</Link>

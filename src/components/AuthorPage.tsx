@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import HomeBackLink from "@/components/HomeBackLink";
 import ServiceIcon from "@/components/ui/ServiceIcons";
+import { useAuth } from "@/lib/auth/AuthContext";
 import {
   normalizeAuthorPageHandle,
   type PublicAuthorBook,
@@ -84,6 +85,7 @@ function serviceIconForLink(linkType: PublicAuthorLinkData["linkType"]) {
 
 export default function AuthorPage({ initialData }: { initialData?: PublicAuthorPageData }) {
   const params = useParams<{ handle: string }>();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const handle = normalizeAuthorPageHandle(params.handle || "");
   const [data, setData] = useState<PublicAuthorPageData | null>(initialData || null);
   const [isLoading, setIsLoading] = useState(Boolean(!initialData && handle));
@@ -123,6 +125,7 @@ export default function AuthorPage({ initialData }: { initialData?: PublicAuthor
   }, [handle, initialData]);
 
   const profile = data?.profile;
+  const authorIsOwner = Boolean(!isAuthLoading && user && data?.ownerId && user.id === data.ownerId);
   const links = useMemo(() => {
     if (!profile) return data?.links || [];
     const profileWebsite = profile.websiteUrl && !data?.links.some((link) => link.url === profile.websiteUrl)
@@ -133,7 +136,7 @@ export default function AuthorPage({ initialData }: { initialData?: PublicAuthor
 
   return (
     <main className="author-page">
-      <AppHeader />
+      <AppHeader publicAuthor authorIsOwner={authorIsOwner} />
       <section className="author-hero" aria-labelledby="author-page-title">
         {profile ? <AuthorAvatar displayName={profile.displayName} avatarUrl={profile.avatarUrl} /> : null}
         <div className="author-profile-copy">

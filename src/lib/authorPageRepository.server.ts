@@ -160,6 +160,7 @@ export async function loadPublicAuthorPage(handleInput: string): Promise<PublicA
     .filter((link) => link.label && link.url);
 
   return {
+    ownerId: profileRow.id,
     profile: {
       displayName: asText(profileRow.display_name) || `@${handle}`,
       handle: asText(profileRow.handle) || handle,

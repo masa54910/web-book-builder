@@ -137,6 +137,29 @@ a {
   font-weight: 800;
 }
 
+.author-owner-nav {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
+.author-owner-nav small {
+  max-width: 230px;
+  color: var(--wbm-ui-muted, #60748a);
+  font-size: 10px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .author-owner-nav small {
+    max-width: 190px;
+    white-space: normal;
+  }
+}
+
 .app-user-chip {
   max-width: 220px;
   padding: 8px 14px;

@@ -15,6 +15,8 @@ export type PublicAuthorBook = {
 };
 
 export type PublicAuthorPageData = {
+  /** Supabase profile id used only for an authenticated owner comparison. */
+  ownerId: string;
   profile: {
     displayName: string;
     handle: string;
