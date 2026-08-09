@@ -12,6 +12,7 @@ type SceneIconKind = "teacher" | "cooking" | "writer" | "research" | "author" | 
 const points: Array<{
   number: string;
   title: string;
+  titleLines?: string[];
   body: string;
   takeaway: string;
   icon: PointIconKind;
@@ -26,6 +27,7 @@ const points: Array<{
   {
     number: "02",
     title: "個人でも使える安心の価格",
+    titleLines: ["個人でも使える", "安心の価格"],
     body: "出版プランは1作品980円から。サブスクでも月額1,980円と続けやすい価格で、気軽にWebブックを公開できます。",
     takeaway: "価格を気にせず、あなたの作品をカタチに！",
     icon: "price",
@@ -33,6 +35,7 @@ const points: Array<{
   {
     number: "03",
     title: "PDFや特別なファイルはいりません",
+    titleLines: ["PDFや特別なファイルは", "いりません"],
     body: "PDF変換や入稿の手間は不要。文章を貼る・入力するだけで、すぐにWebブックが完成します。",
     takeaway: "シンプルな3ステップで、サクッと完成！",
     icon: "files",
@@ -40,6 +43,7 @@ const points: Array<{
   {
     number: "04",
     title: "公開後も編集・改善できる",
+    titleLines: ["公開後もいつでも", "編集・改善できる"],
     body: "出版プランは公開後7日間、運用プランは公開後もいつでも編集可能。公開して終わりではなく、作品を育てていけます。",
     takeaway: "公開して終わりじゃないから、ずっと役立つ一冊に！",
     icon: "update",
@@ -163,7 +167,7 @@ export default function UseCasesPage() {
             {points.map((point) => (
               <article className={styles.pointCard} key={point.number}>
                 <div className={styles.pointNumber}>{point.number}</div>
-                <h3>{point.title}</h3>
+                <h3>{point.titleLines ? point.titleLines.map((line, index) => <span key={line}>{index > 0 ? <br /> : null}{line}</span>) : point.title}</h3>
                 <div className={styles.pointIcon}><PointIcon kind={point.icon} /></div>
                 <p>{point.body}</p>
                 <div className={styles.pointTakeaway}><span aria-hidden="true">✓</span>{point.takeaway}</div>
