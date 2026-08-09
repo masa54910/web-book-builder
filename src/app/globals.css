@@ -4546,6 +4546,13 @@ button.reader-edit-link:disabled {
   flex-basis: 100% !important;
 }
 
+.qr-print-hint {
+  margin: 0;
+  color: #6a8195;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
 .qr-share-modal-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.55;

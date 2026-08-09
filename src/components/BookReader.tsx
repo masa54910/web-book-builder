@@ -639,6 +639,7 @@ export default function BookReader({
           bookId={config.bookId}
           cloudBookId={cloudBookId}
           title={config.title}
+          author={config.author}
           description={shareDescription}
           shareUrl={shareUrl}
           shareDisabledReason={shareDisabledReason}

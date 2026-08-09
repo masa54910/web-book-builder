@@ -22,6 +22,7 @@ type Props = {
   bookId: string;
   cloudBookId?: string;
   title: string;
+  author?: string;
   description?: string;
   shareUrl: string;
 };
@@ -55,6 +56,7 @@ export default function ReaderShareCenter({
   bookId,
   cloudBookId,
   title,
+  author,
   description,
   shareUrl,
 }: Props) {
@@ -155,24 +157,37 @@ export default function ReaderShareCenter({
     <meta charset="utf-8" />
     <title>${escapeHtml(title)} | WebBookMaker</title>
     <style>
-      @page { size: A4; margin: 20mm; }
+      @page { size: A4 portrait; margin: 12mm; }
       :root { color-scheme: light; }
       * { box-sizing: border-box; }
-      body { margin: 0; color: #111827; background: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-      main { min-height: 240mm; display: grid; place-items: center; padding: 16mm; text-align: center; }
-      .card { width: min(100%, 150mm); display: grid; justify-items: center; gap: 7mm; }
-      h1 { margin: 0; font-size: 22pt; line-height: 1.35; overflow-wrap: anywhere; }
-      img { display: block; width: 60mm; height: 60mm; image-rendering: pixelated; }
-      p { margin: 0; font-size: 12pt; line-height: 1.7; }
-      .brand { margin-top: 4mm; color: #123e68; font-size: 12pt; font-weight: 700; letter-spacing: .04em; }
+      body { margin: 0; color: #111827; background: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; }
+      main { height: 273mm; display: grid; place-items: center; padding: 8mm 12mm; text-align: center; }
+      .pop { width: min(100%, 168mm); display: grid; justify-items: center; gap: 5mm; page-break-inside: avoid; break-inside: avoid; }
+      .label { margin: 0; color: #55708a; font-size: 10pt; font-weight: 800; letter-spacing: .14em; }
+      h1 { max-width: 168mm; margin: 0; color: #12365b; font-size: 27pt; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+      .author { margin: -1mm 0 0; color: #294c6d; font-size: 13pt; }
+      .rule { width: 54mm; height: 0; margin: 1mm 0; border: 0; border-top: 1px solid #9fc8e5; }
+      .intro { margin: 0; color: #294c6d; font-size: 16pt; font-weight: 700; line-height: 1.5; white-space: pre-line; }
+      img { display: block; width: 62mm; height: 62mm; image-rendering: pixelated; }
+      .cta { margin: 0; color: #123e68; font-size: 18pt; font-weight: 800; line-height: 1.35; white-space: pre-line; }
+      .scan { margin: -2mm 0 0; color: #55708a; font-size: 10pt; }
+      .brand { margin-top: 2mm; color: #55708a; font-size: 9pt; font-weight: 700; line-height: 1.4; letter-spacing: .04em; white-space: pre-line; }
     </style>
   </head>
   <body>
-    <main><section class="card">
+    <main><section class="pop">
+      <p class="label">WEB BOOK</p>
       <h1>${escapeHtml(title)}</h1>
+      ${author?.trim() ? `<p class="author">著者：${escapeHtml(author.trim())}</p>` : ""}
+      <hr class="rule" />
+      <p class="intro">ページをめくって読める
+Webブックです。</p>
       <img src="${escapeHtml(qrPngDataUrl)}" alt="${escapeHtml(title)}の公開URL QRコード" />
-      <p>スマートフォンで読み取って<br />Webブックを読む</p>
-      <p class="brand">WebBookMaker</p>
+      <p class="cta">スマホをかざして
+今すぐ読んでみる</p>
+      <p class="scan">スマホで読み取り</p>
+      <p class="brand">Created with
+WebBookMaker</p>
     </section></main>
     <script>
       window.addEventListener("load", function () {
@@ -346,6 +361,7 @@ export default function ReaderShareCenter({
                 {qrPngDataUrl ? <a className="maker-secondary-button qr-share-modal-action" href={qrPngDataUrl} download={qrDownloadName(shareUrl)}>PNG保存</a> : <button className="maker-secondary-button qr-share-modal-action" type="button" disabled>PNG保存</button>}
                 <button className="maker-secondary-button qr-share-modal-url-action" type="button" onClick={() => void copy("url", shareUrl)}>URLをコピー</button>
               </div>
+              <p className="qr-print-hint">きれいに印刷するには、印刷設定の「ヘッダーとフッター」をOFFにしてください。</p>
             </div>
           </section>
         </div>

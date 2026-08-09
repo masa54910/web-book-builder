@@ -6,6 +6,7 @@ export default function ShareTools({
   bookId,
   cloudBookId,
   title,
+  author,
   description,
   shareUrl,
   shareDisabledReason,
@@ -13,6 +14,7 @@ export default function ShareTools({
   bookId: string;
   cloudBookId?: string;
   title: string;
+  author?: string;
   description?: string;
   shareUrl?: string;
   shareDisabledReason?: string;
@@ -32,6 +34,7 @@ export default function ShareTools({
       bookId={bookId}
       cloudBookId={cloudBookId}
       title={title}
+      author={author}
       description={description}
       shareUrl={shareUrl}
     />
