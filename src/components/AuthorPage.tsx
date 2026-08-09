@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -184,9 +183,14 @@ export default function AuthorPage({ initialData }: { initialData?: PublicAuthor
                 <h3>{book.title || "無題のWebブック"}</h3>
                 <p>{book.description || "WebBookMakerで公開されている作品です。"}</p>
                 {book.updatedAt ? <small>更新：{formatPublishedDate(book.updatedAt)} / 読了目安：{estimateReadingMinutes(book)}</small> : null}
-                <Link className="maker-secondary-link" href={`/books/${encodeURIComponent(book.slug)}`}>
+                <a
+                  className="maker-secondary-link"
+                  href={`/books/${encodeURIComponent(book.slug)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Webブックを読む
-                </Link>
+                </a>
               </div>
             </article>
           ))}

@@ -73,7 +73,9 @@ export default function AnalyticsOverviewPage() {
               <Button href={`/analytics/${book.id}`} size="sm">分析を見る</Button>
               <Button href={`/dashboard/books/${book.id}`} variant="secondary" size="sm">管理へ</Button>
               {book.status === "published" ? (
-                <Button href={`/books/${book.slug}`} variant="secondary" size="sm">公開ページ</Button>
+                <Button href={`/books/${book.slug}`} variant="secondary" size="sm" openInNewTab>
+                  公開ページ
+                </Button>
               ) : null}
             </div>
           </article>

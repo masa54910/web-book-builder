@@ -185,9 +185,14 @@ export default function DashboardPage() {
                 編集
               </Link>
               {book.status === "published" ? (
-                <Link className="maker-secondary-link" href={`/books/${book.slug}`}>
+                <a
+                  className="maker-secondary-link"
+                  href={`/books/${book.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   公開ページ
-                </Link>
+                </a>
               ) : null}
               <Button variant="ghost" size="sm" onClick={() => void duplicate(book)}>
                 複製

@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import type { BookConfig } from "@/config/bookConfig";
-import { authorPagePath } from "@/lib/authorPage";
 import { DEFAULT_COVER_DESIGN, normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import {
   findPageAdjustment,
@@ -99,7 +98,6 @@ export default function BookReader({
   shareUrl,
   shareDescription,
   shareDisabledReason,
-  authorPageHandle,
   backLink,
   onCoverDesignChange,
 }: {
@@ -142,8 +140,6 @@ export default function BookReader({
   const [autoFlipStartMode, setAutoFlipStartMode] = useState<"cover" | "current">("current");
   const [isCoverDesignOpen, setIsCoverDesignOpen] = useState(false);
   const coverDesign = normalizeCoverDesign(config.coverDesign);
-  const resolvedAuthorPageHandle =
-    authorPageHandle === undefined ? config.authorProfile?.handle || "" : authorPageHandle || "";
   const pageAdjustments = useMemo(
     () => normalizePageAdjustments(config.pageAdjustments),
     [config.pageAdjustments],
@@ -504,11 +500,6 @@ export default function BookReader({
           ) : (
             <h1>{config.title}</h1>
           )}
-          {resolvedAuthorPageHandle ? (
-            <a className="reader-author-link" href={authorPagePath(resolvedAuthorPageHandle)}>
-              作者のページ
-            </a>
-          ) : null}
         </div>
         <div className="reader-masthead-actions">
           {displayMode === "preview" && backLink?.href ? (

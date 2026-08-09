@@ -2092,26 +2092,6 @@ button.reader-edit-link:disabled {
   line-height: 1.2;
 }
 
-.reader-author-link {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  margin-top: 6px;
-  padding: 4px 0;
-  color: #1f2b30;
-  font-size: 15px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.reader-author-link:hover,
-.reader-author-link:focus-visible {
-  color: #0f6f5d;
-  outline: none;
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
-}
-
 .reader-direction {
   color: #a9b0b9;
   font-size: 11px;
@@ -5515,15 +5495,12 @@ body {
 }
 
 .reader-masthead h1,
-.reader-author-link,
 .page-progress,
 .page-jump-label {
   color: var(--wbm-blue-900);
 }
 
 .reader-kicker,
-.reader-author-link:hover,
-.reader-author-link:focus-visible,
 .external-links a,
 .created-with a {
   color: var(--wbm-blue-700);

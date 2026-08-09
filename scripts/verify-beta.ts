@@ -830,6 +830,7 @@ try {
 }
 
 const globalsCss = fs.readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
+const bookReaderSource = fs.readFileSync(path.join(process.cwd(), "src", "components", "BookReader.tsx"), "utf8");
 const termsPage = fs.readFileSync(path.join(process.cwd(), "src", "app", "terms", "page.tsx"), "utf8");
 const privacyPage = fs.readFileSync(path.join(process.cwd(), "src", "app", "privacy", "page.tsx"), "utf8");
 const commercePage = fs.readFileSync(path.join(process.cwd(), "src", "app", "commerce", "page.tsx"), "utf8");
@@ -887,10 +888,6 @@ assert.match(
   /\.reader-masthead h1\s*\{[\s\S]*?color:\s*#111111;[\s\S]*?\}/,
   "Reader title should remain black",
 );
-assert.match(
-  globalsCss,
-  /\.reader-author-link\s*\{[\s\S]*?font-size:\s*15px;[\s\S]*?\}/,
-  "Author link should keep enlarged font size",
-);
+assert.doesNotMatch(bookReaderSource, /reader-author-link|作者のページ/, "Reader masthead should not show the author page link");
 
 console.log("beta verification: OK");

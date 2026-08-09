@@ -1372,7 +1372,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       }
       setStatusMessage(`公開しました: ${published.publicUrl}`);
       trackEvent("book_published", { bookId: published.bookId });
-      router.push(published.publicUrl);
     } catch (error) {
       if (error instanceof CanonicalBookCommandError && error.fieldErrors) setErrors(error.fieldErrors);
       logSupabaseIssue({
@@ -1416,6 +1415,16 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           <button className="maker-secondary-button" type="button" onClick={() => void handleCanonicalPublish()}>
             公開
           </button>
+          {state.status === "published" && state.slug ? (
+            <a
+              className="maker-secondary-link"
+              href={`/books/${encodeURIComponent(state.slug)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              公開済み作品を見る
+            </a>
+          ) : null}
           <Link className="maker-secondary-link" href="/dashboard">
             作品一覧へ
           </Link>

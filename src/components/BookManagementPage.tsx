@@ -72,7 +72,11 @@ export default function BookManagementPage() {
               <dl className="metadata-list">
                 <dt>状態</dt><dd>{book.status}</dd>
                 <dt>公開範囲</dt><dd>{book.visibility}</dd>
-                <dt>公開URL</dt><dd>{book.status === "published" ? <Link href={`/books/${book.slug}`}>/books/{book.slug}</Link> : "未公開"}</dd>
+                <dt>公開URL</dt><dd>{book.status === "published" ? (
+                  <a href={`/books/${book.slug}`} target="_blank" rel="noopener noreferrer">
+                    /books/{book.slug}
+                  </a>
+                ) : "未公開"}</dd>
                 <dt>更新日時</dt><dd>{new Date(book.updatedAt).toLocaleString("ja-JP")}</dd>
               </dl>
             </div>
