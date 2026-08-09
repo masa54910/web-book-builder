@@ -86,7 +86,7 @@ export default function PricingShowcasePage() {
       price: "¥0",
       unit: "/ 月",
       lead: "まずは無料で、Webブックを作って試せます。",
-      features: ["20ページまで", "作成・プレビュー", "表紙・ページ調整", "公開前の仕上がりを確認", "一般公開はできません"],
+      features: ["ご自身の閲覧用", "作成・プレビュー", "表紙・ページ調整", "公開前の仕上がりを確認", "一般公開はできません"],
       actionLabel: "無料ではじめる",
       href: startHref,
       note: "クレジットカード登録不要",
@@ -99,7 +99,7 @@ export default function PricingShowcasePage() {
       unit: "/ 1作品",
       lead: "完成した作品を、Webで公開したい方へ。",
       features: ["1作品を公開", "公開後7日間は編集可能", "WebBook Galleryに掲載", "X・note・LINEなどへ共有", "公開URLはそのまま継続"],
-      actionLabel: "この作品を出版する",
+      actionLabel: "出版プランではじめる",
       href: "/signup?plan=publish",
       note: "買い切り・月額料金なし",
     },
@@ -127,7 +127,7 @@ export default function PricingShowcasePage() {
         <section className={styles.hero} aria-labelledby="pricing-heading">
           <PricingIcon name="book" size={56} />
           <div className={styles.heroCopy}>
-            <p className={styles.kicker}>WebBookMaker</p>
+            <p className={styles.kicker}>WebBooK<span className={styles.brandMaker}>Maker</span></p>
             <h1 id="pricing-heading">料金プラン</h1>
             <p className={styles.heroLead}>作るところまでは無料。公開スタイルに合わせて選べます。</p>
             <p className={styles.heroSub}>1作品だけ公開するなら「出版プラン」。公開後も編集・分析しながら育てるなら「運用プラン」。</p>
@@ -138,6 +138,7 @@ export default function PricingShowcasePage() {
         <section className={styles.cards} aria-label="料金プラン一覧">
           {plans.map((plan) => (
             <article key={plan.id} className={`${styles.card} ${styles[`card${plan.id[0].toUpperCase()}${plan.id.slice(1)}`]}`}>
+              {plan.id === "operation" ? <span className={styles.dealRibbon}>お得！</span> : null}
               <span className={styles.badge}>{plan.badge}</span>
               <h2>{plan.name}</h2>
               <p className={styles.price}><strong>{plan.price}</strong> <small>{plan.unit}</small></p>
@@ -150,10 +151,9 @@ export default function PricingShowcasePage() {
                   </li>
                 ))}
               </ul>
-              {plan.id === "publish" ? <p className={styles.planTag}><PricingIcon name="tag" size={16} />{plan.note}</p> : null}
               <div className={styles.cardActions}>
                 <Link className={`maker-primary-link ${styles.planAction}`} href={plan.href}>{plan.actionLabel}</Link>
-                {plan.id !== "publish" ? <small className={styles.planNote}>{plan.note}</small> : null}
+                {plan.id === "publish" ? <p className={styles.planTag}><PricingIcon name="tag" size={16} />{plan.note}</p> : <small className={styles.planNote}>{plan.note}</small>}
               </div>
             </article>
           ))}

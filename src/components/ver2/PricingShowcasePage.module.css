@@ -54,11 +54,15 @@
 
 .kicker {
   margin: 0;
-  color: #1b6da9;
+  color: #123e68;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+.brandMaker {
+  color: #2d9ed6;
 }
 
 .hero h1 {
@@ -119,6 +123,24 @@
   inset: 0;
   pointer-events: none;
   background: linear-gradient(125deg, rgba(255, 255, 255, 0.45), transparent 42%);
+}
+
+.dealRibbon {
+  position: absolute;
+  z-index: 2;
+  top: 17px;
+  right: -37px;
+  width: 132px;
+  padding: 5px 0;
+  transform: rotate(45deg);
+  color: #fff;
+  background: linear-gradient(180deg, #36a6df, #147cc1);
+  box-shadow: 0 3px 8px rgba(22, 112, 172, 0.22);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-align: center;
 }
 
 .card:hover {
@@ -316,6 +338,11 @@
   color: #70859a;
   font-size: 11px;
   text-align: center;
+}
+
+.cardOperation .planNote {
+  color: #123e68;
+  font-weight: 800;
 }
 
 .compare,
