@@ -52,6 +52,9 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
   const children = Array.from(root.children);
 
   for (const [index, child] of children.entries()) {
+    if (child instanceof HTMLElement && child.dataset.nodeType === "page-break") {
+      continue;
+    }
     if (child instanceof HTMLElement && child.dataset.nodeType === "image") {
       blocks.push({
         id: child.dataset.nodeId || imageId(index),
@@ -154,13 +157,25 @@ function createImageElement(block: Extract<BookContentBlock, { type: "image" }>)
   return wrapper;
 }
 
-function renderNodes(root: HTMLElement, nodes: BookContentBlock[]) {
+function renderNodes(root: HTMLElement, nodes: BookContentBlock[], pageBreakAfterBlockIds: string[] = []) {
   const fragment = document.createDocumentFragment();
+  const breakIds = new Set(pageBreakAfterBlockIds);
   for (const block of nodes) {
     if (block.type === "text") {
       fragment.append(createParagraphElement(block));
     } else {
       fragment.append(createImageElement(block));
+    }
+    if (breakIds.has(block.id)) {
+      const marker = document.createElement("div");
+      marker.dataset.nodeType = "page-break";
+      marker.dataset.afterBlockId = block.id;
+      marker.className = "inline-editor-page-break-marker";
+      marker.setAttribute("role", "button");
+      marker.tabIndex = 0;
+      marker.title = "クリックして改ページを解除";
+      marker.textContent = "──────── 改ページ ────────";
+      fragment.append(marker);
     }
   }
   root.replaceChildren(fragment);
@@ -211,12 +226,31 @@ function setCaretAfterNode(node: Node) {
   selection.addRange(range);
 }
 
+function setCaretAtStartNode(node: HTMLElement) {
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
 function findParagraphTarget(root: HTMLElement, range?: Range | null) {
   if (!range) return null;
   const start = range.startContainer instanceof HTMLElement ? range.startContainer : range.startContainer.parentElement;
   const paragraph = start?.closest?.("p[data-node-type='paragraph']") as HTMLElement | null;
   if (paragraph && root.contains(paragraph)) return paragraph;
   return null;
+}
+
+function editorBlockIndex(root: HTMLElement, target: HTMLElement) {
+  let index = 0;
+  for (const child of Array.from(root.children)) {
+    if (child === target) return index;
+    if ((child as HTMLElement).dataset.nodeType !== "page-break") index += 1;
+  }
+  return -1;
 }
 
 function getRangeFromPoint(root: HTMLElement, x?: number, y?: number) {
@@ -246,27 +280,36 @@ type Props = {
   onPendingChange: (count: number) => void;
   onCursorChange?: (position: number, blockId: string | null) => void;
   scrollRequest?: { blockId: string; nonce: number } | null;
+  pageBreakAfterBlockIds?: string[];
+  onInsertPageBreak?: (blockId: string) => void;
+  onRemovePageBreak?: (blockId: string) => void;
 };
 
-function PhotoIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="9" cy="10" r="1.7" fill="currentColor" />
-      <path d="M6 17l4.2-4.2 2.8 2.6 2.2-2 2.8 3.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-export default function InlineManuscriptEditor({ value, revision, onChange, onStatus, onPendingChange, onCursorChange, scrollRequest }: Props) {
+export default function InlineManuscriptEditor({
+  value,
+  revision,
+  onChange,
+  onStatus,
+  onPendingChange,
+  onCursorChange,
+  scrollRequest,
+  pageBreakAfterBlockIds = [],
+  onInsertPageBreak,
+  onRemovePageBreak,
+}: Props) {
+  const editorRef = useRef<HTMLElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const nodesRef = useRef<BookContentBlock[]>(value);
   const renderedRevisionRef = useRef<string | null>(null);
+  const renderedBreakSignatureRef = useRef("");
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [cursorFallbackMessage, setCursorFallbackMessage] = useState("");
+  const [isInsertMenuOpen, setIsInsertMenuOpen] = useState(false);
+  const [imagePopoverPosition, setImagePopoverPosition] = useState<{ top: number; left: number } | null>(null);
+  const pageBreakSignature = pageBreakAfterBlockIds.join("|");
 
   const reportCursor = useCallback(() => {
     const root = rootRef.current;
@@ -330,21 +373,26 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
       ? value
       : [{ id: paragraphId(0), type: "text", content: "" }];
     nodesRef.current = nextNodes;
-    if (renderedRevisionRef.current === revision && rootRef.current?.childElementCount) {
+    if (
+      renderedRevisionRef.current === revision &&
+      renderedBreakSignatureRef.current === pageBreakSignature &&
+      rootRef.current?.childElementCount
+    ) {
       reportCursor();
       return;
     }
     if (rootRef.current) {
-      renderNodes(rootRef.current, nextNodes);
+      renderNodes(rootRef.current, nextNodes, pageBreakAfterBlockIds);
     }
     renderedRevisionRef.current = revision;
+    renderedBreakSignatureRef.current = pageBreakSignature;
     reportCursor();
-  }, [reportCursor, revision, value]);
+  }, [pageBreakAfterBlockIds, pageBreakSignature, reportCursor, revision, value]);
 
   const updateNode = (nodeId: string, patch: Partial<BookContentBlock>) => {
     const next = nodesRef.current.map((node) => (node.id === nodeId ? { ...node, ...patch } as BookContentBlock : node));
     emitChange(next);
-    if (rootRef.current) renderNodes(rootRef.current, next);
+    if (rootRef.current) renderNodes(rootRef.current, next, pageBreakAfterBlockIds);
   };
 
   useEffect(() => {
@@ -355,6 +403,46 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
       node.classList.toggle("is-selected", node.dataset.nodeId === selectedImageId);
     });
   }, [selectedImageId]);
+
+  useEffect(() => {
+    const updatePopoverPosition = () => {
+      const root = rootRef.current;
+      const editor = editorRef.current;
+      if (!root || !editor || !selectedImageId) {
+        setImagePopoverPosition(null);
+        return;
+      }
+      const image = root.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(selectedImageId)}"]`);
+      if (!image) {
+        setImagePopoverPosition(null);
+        return;
+      }
+      const editorRect = editor.getBoundingClientRect();
+      const imageRect = image.getBoundingClientRect();
+      const popoverWidth = Math.min(340, Math.max(260, editorRect.width - 24));
+      const left = Math.max(12, Math.min(imageRect.left - editorRect.left, editorRect.width - popoverWidth - 12));
+      const top = Math.max(12, imageRect.bottom - editorRect.top + 8);
+      setImagePopoverPosition({ top, left });
+    };
+    updatePopoverPosition();
+    window.addEventListener("resize", updatePopoverPosition);
+    window.addEventListener("scroll", updatePopoverPosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePopoverPosition);
+      window.removeEventListener("scroll", updatePopoverPosition, true);
+    };
+  }, [selectedImageId, value]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedImageId(null);
+        setIsInsertMenuOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -390,7 +478,9 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
   const removeNode = (nodeId: string) => {
     const next = nodesRef.current.filter((node) => node.id !== nodeId);
     emitChange(next.length ? next : [{ id: paragraphId(0), type: "text", content: "" }]);
-    if (rootRef.current) renderNodes(rootRef.current, next.length ? next : [{ id: paragraphId(0), type: "text", content: "" }]);
+    if (rootRef.current) {
+      renderNodes(rootRef.current, next.length ? next : [{ id: paragraphId(0), type: "text", content: "" }], pageBreakAfterBlockIds);
+    }
     setSelectedImageId(null);
   };
 
@@ -439,7 +529,7 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
     const paragraphTarget = findParagraphTarget(root, activeRange);
 
     if (paragraphTarget && activeRange) {
-      const nodeIndex = Array.from(root.children).indexOf(paragraphTarget);
+      const nodeIndex = editorBlockIndex(root, paragraphTarget);
       if (nodeIndex >= 0) {
         const currentParagraph = nodesRef.current[nodeIndex];
         if (currentParagraph?.type === "text") {
@@ -454,7 +544,7 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
             imageBlocks: pendingImages,
           });
           emitChange(nextBlocks);
-          if (rootRef.current) renderNodes(rootRef.current, nextBlocks);
+          if (rootRef.current) renderNodes(rootRef.current, nextBlocks, pageBreakAfterBlockIds);
           if (pendingIds.length) setSelectedImageId(pendingIds[pendingIds.length - 1] || null);
           const insertedNode = root.querySelector<HTMLElement>(`[data-node-id="${pendingIds[pendingIds.length - 1]}"]`);
           if (insertedNode) setCaretAfterNode(insertedNode);
@@ -473,12 +563,46 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
     fileInputRef.current?.click();
   };
 
+  const insertPageBreakAtCursor = () => {
+    const root = rootRef.current;
+    if (!root) return;
+    const activeRange = (savedRangeRef.current ?? cloneSelectionRange(root))?.cloneRange() ?? null;
+    const paragraphTarget = findParagraphTarget(root, activeRange);
+    if (!paragraphTarget || !activeRange) {
+      const message = "改ページを入れる位置にカーソルを置いてください。";
+      setCursorFallbackMessage(message);
+      onStatus(message);
+      return;
+    }
+    const nodeIndex = editorBlockIndex(root, paragraphTarget);
+    const current = nodeIndex >= 0 ? nodesRef.current[nodeIndex] : undefined;
+    if (!current || current.type !== "text") return;
+    const split = splitParagraphAtCaret(paragraphTarget, activeRange);
+    const before = { ...current, content: split.before } as Extract<BookContentBlock, { type: "text" }>;
+    const after = {
+      id: `${current.id}-after-${crypto.randomUUID()}`,
+      type: "text" as const,
+      content: split.after,
+    };
+    const nextBlocks = [...nodesRef.current];
+    nextBlocks.splice(nodeIndex, 1, before, after);
+    emitChange(nextBlocks);
+    onInsertPageBreak?.(before.id);
+    renderNodes(root, nextBlocks, pageBreakAfterBlockIds);
+    const afterElement = root.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(after.id)}"]`);
+    if (afterElement) {
+      setCaretAtStartNode(afterElement);
+      savedRangeRef.current = cloneSelectionRange(root);
+    }
+    reportCursor();
+  };
+
   return (
-    <section className={`inline-manuscript-editor ${dragOver ? "is-drag-over" : ""}`}>
+    <section ref={editorRef} className={`inline-manuscript-editor ${dragOver ? "is-drag-over" : ""}`}>
       <div className="inline-manuscript-layout">
-        <div className="inline-manuscript-floating-rail" aria-label="画像挿入">
+        <div className="inline-manuscript-floating-rail" aria-label="本文へ挿入">
           <button
-            className="inline-manuscript-floating-button inline-image-trigger"
+            className={`inline-manuscript-floating-button inline-image-trigger ${isInsertMenuOpen ? "is-open" : ""}`}
             type="button"
             onMouseDown={(event) => {
               captureSelectionRange();
@@ -486,13 +610,47 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
             }}
             onClick={() => {
               setCursorFallbackMessage("");
-              insertImageFromPicker();
+              setIsInsertMenuOpen((open) => !open);
             }}
-            aria-label="画像を挿入"
-            title="画像を挿入"
+            aria-label="本文へ挿入"
+            title="本文へ挿入"
+            aria-expanded={isInsertMenuOpen}
+            aria-haspopup="menu"
           >
-            <PhotoIcon />
+            <span aria-hidden="true">＋</span>
           </button>
+          {isInsertMenuOpen ? (
+            <div className="inline-manuscript-insert-menu" role="menu" aria-label="本文へ挿入する項目">
+              <button
+                type="button"
+                role="menuitem"
+                onMouseDown={(event) => {
+                  captureSelectionRange();
+                  event.preventDefault();
+                }}
+                onClick={() => {
+                  setIsInsertMenuOpen(false);
+                  insertImageFromPicker();
+                }}
+              >
+                画像を追加
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onMouseDown={(event) => {
+                  captureSelectionRange();
+                  event.preventDefault();
+                }}
+                onClick={() => {
+                  setIsInsertMenuOpen(false);
+                  insertPageBreakAtCursor();
+                }}
+              >
+                改ページを挿入
+              </button>
+            </div>
+          ) : null}
         </div>
         <div className="inline-manuscript-main">
           <div className="inline-manuscript-toolbar">
@@ -509,6 +667,12 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
             aria-label="本文入力欄"
             onClick={(event) => {
               const target = event.target as HTMLElement;
+              const pageBreak = target.closest("[data-node-type='page-break']") as HTMLElement | null;
+              if (pageBreak) {
+                const blockId = pageBreak.dataset.afterBlockId;
+                if (blockId) onRemovePageBreak?.(blockId);
+                return;
+              }
               const image = target.closest("[data-node-type='image']") as HTMLElement | null;
               setSelectedImageId(image?.dataset.nodeId || null);
               captureSelectionRange();
@@ -521,6 +685,14 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
             onKeyUp={() => {
               captureSelectionRange();
               reportCursor();
+            }}
+            onKeyDown={(event) => {
+              const target = event.target as HTMLElement;
+              const pageBreak = target.closest("[data-node-type='page-break']") as HTMLElement | null;
+              if (!pageBreak || (event.key !== "Enter" && event.key !== " ")) return;
+              event.preventDefault();
+              const blockId = pageBreak.dataset.afterBlockId;
+              if (blockId) onRemovePageBreak?.(blockId);
             }}
             onFocus={() => {
               captureSelectionRange();
@@ -576,7 +748,12 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
         }}
       />
       {selectedImage ? (
-        <div className="inline-manuscript-popover" role="group" aria-label="画像設定">
+        <div
+          className="inline-manuscript-popover"
+          role="group"
+          aria-label="画像設定"
+          style={imagePopoverPosition ? { top: imagePopoverPosition.top, left: imagePopoverPosition.left } : undefined}
+        >
           <label>
             <span>キャプション</span>
             <input

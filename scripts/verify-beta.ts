@@ -176,6 +176,27 @@ assert.equal(
   "Paragraph display override should preserve original characters and apply line breaks",
 );
 
+const pageBreakPages = buildReaderPages({
+  chapters: [{ id: "chapter-01", order: 1, title: "Breaks", slug: "breaks", source: "test", body: "First paragraph\n\nSecond paragraph" }],
+  images: [],
+  contentBlocks: [
+    { id: "text-first", type: "text", content: "First paragraph" },
+    { id: "text-second", type: "text", content: "Second paragraph" },
+  ],
+  pageAdjustments: [{ blockId: "text-first", pageBreakAfter: true }],
+  charactersPerPage: 380,
+  tableOfContentsItemsPerPage: 6,
+});
+const pageBreakTextPages = pageBreakPages.filter((page) => page.kind === "text");
+assert.equal(
+  pageBreakPages.some((page) => page.kind === "pageBreak"),
+  false,
+  "A forced break must not create a synthetic blank page",
+);
+assert.equal(pageBreakTextPages.length, 2, "A forced break should start the next block on a new text page");
+assert.equal(pageBreakTextPages[0]?.paragraphs.join(""), "First paragraph");
+assert.equal(pageBreakTextPages[1]?.paragraphs.join(""), "Second paragraph");
+
 const folioPages = buildReaderPages({
   chapters: [{ id: "chapter-01", order: 1, title: "番号", slug: "folio", source: "test", body: "本文" }],
   images: [],
@@ -344,6 +365,10 @@ if (previewResult.ok) {
   assert.ok(firstTextIndex > chapterTitleIndex, "First text page should appear after chapter title");
   assert.ok(imageIndex > firstTextIndex, "Image page should appear after first text page");
   assert.ok(secondTextIndex > imageIndex, "Second text page should appear after image page");
+
+  const legacyProject = { ...previewResult.project, contentBlocks: undefined };
+  const normalizedLegacyProject = parseBookProjectJson(legacyProject);
+  assert.ok(normalizedLegacyProject?.contentBlocks?.length, "Legacy Preview projects should recover content blocks");
 }
 
 assert.equal(resolveSafeInternalReturnPath("/dashboard/books/abc/edit"), "/dashboard/books/abc/edit");

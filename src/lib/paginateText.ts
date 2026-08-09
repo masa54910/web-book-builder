@@ -119,8 +119,38 @@ export function buildReaderPages({
     const textBlocks = (contentBlocks || []).filter(
       (block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text",
     );
+    const textSourceFor = (segment: string) =>
+      textBlocks.find((block) => block.content.includes(segment));
+    const segmentEntries = segments.map((segment, index) => ({
+      segment,
+      index,
+      source: textSourceFor(segment),
+    }));
+    const lastSegmentIndexBySource = new Map<string, number>();
+    for (const entry of segmentEntries) {
+      if (entry.source) lastSegmentIndexBySource.set(entry.source.id, entry.index);
+    }
+    const handledBreakBefore = new Set<string>();
+    const handledBreakAfter = new Set<string>();
+    const adjustmentForSource = (sourceId: string | undefined) =>
+      sourceId ? findPageAdjustment(pageAdjustments, sourceId) : undefined;
+    const shouldBreakBefore = (sourceId: string | undefined) => {
+      if (!sourceId || handledBreakBefore.has(sourceId)) return false;
+      const adjustment = adjustmentForSource(sourceId);
+      if (!adjustment?.pageBreakBefore) return false;
+      handledBreakBefore.add(sourceId);
+      return true;
+    };
+    const shouldBreakAfter = (sourceId: string | undefined, segmentIndex: number) => {
+      if (!sourceId || handledBreakAfter.has(sourceId)) return false;
+      if (lastSegmentIndexBySource.get(sourceId) !== segmentIndex) return false;
+      const adjustment = adjustmentForSource(sourceId);
+      if (!adjustment?.pageBreakAfter) return false;
+      handledBreakAfter.add(sourceId);
+      return true;
+    };
     const paragraphOverrideFor = (segment: string) => {
-      const source = textBlocks.find((block) => block.content.includes(segment));
+      const source = textSourceFor(segment);
       if (!source) return { text: segment, sourceId: undefined };
       const override = findPageAdjustment(pageAdjustments, source.id)?.displayTextOverride;
       if (typeof override !== "string" || !lineBreakOnlyOverride(source.content, override)) {
@@ -160,13 +190,17 @@ export function buildReaderPages({
       cost = 0;
     };
 
-    for (const segment of segments) {
+    for (const entry of segmentEntries) {
+      const { segment } = entry;
       if (!segment) continue;
       const imageMatch = segment.match(IMAGE_PATTERN);
       if (imageMatch) {
         const imageId = imageMatch[1];
         const image = imageMap.get(imageId) ?? imageMap.get(`${chapter.order}-${imageId}`);
         const pageMode = imageMatch[3] === "inline" ? "inline" : "full-page";
+        const imageSourceId = image?.image_id || image?.image_index || imageId;
+        const imageAdjustment = findPageAdjustment(pageAdjustments, imageSourceId);
+        if (shouldBreakBefore(imageSourceId)) flushTextPage();
         if (pageMode === "inline") {
           const inlineImageCost = Math.max(80, Math.floor(charactersPerPage * 0.42));
           if (paragraphs.length && cost + inlineImageCost > charactersPerPage) {
@@ -182,6 +216,10 @@ export function buildReaderPages({
           );
           paragraphSourceBlockIds.push(image?.image_id || image?.image_index || imageId);
           cost += inlineImageCost;
+          if (imageAdjustment?.pageBreakAfter) {
+            handledBreakAfter.add(imageSourceId);
+            flushTextPage();
+          }
           continue;
         }
 
@@ -198,9 +236,14 @@ export function buildReaderPages({
           missing: !image,
           sourceBlockIds: [image?.image_id || image?.image_index || imageId, `${chapter.slug}-image-${imageId}`],
         });
+        if (imageAdjustment?.pageBreakAfter) {
+          handledBreakAfter.add(imageSourceId);
+        }
         continue;
       }
 
+      const sourceId = entry.source?.id;
+      if (shouldBreakBefore(sourceId)) flushTextPage();
       const displaySegment = paragraphOverrideFor(segment);
       if (!displaySegment.text) continue;
       if (displaySegment.sourceId) paragraphSourceBlockIds.push(displaySegment.sourceId);
@@ -214,6 +257,7 @@ export function buildReaderPages({
         paragraphs.push(chunk);
         cost += chunkCost;
       }
+      if (shouldBreakAfter(sourceId, entry.index)) flushTextPage();
     }
 
     flushTextPage();

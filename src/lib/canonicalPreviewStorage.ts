@@ -4,7 +4,8 @@ import {
   buildBookProjectFromCanonicalPayload,
   type CanonicalBookPayload,
 } from "@/lib/canonicalBook";
-import { isBookProject, type BookProject } from "@/lib/bookProject";
+import { type BookProject } from "@/lib/bookProject";
+import { normalizeBookProject } from "@/lib/bookProjectNormalization";
 import { materializeBookProjectAssets } from "@/lib/bookAssetStorage";
 import { PREVIEW_POINTER_KEY } from "@/lib/browserBookStorage";
 
@@ -119,10 +120,11 @@ export async function loadCanonicalPreviewProject(): Promise<BookProject | null>
     const value = await withProjectStore<unknown>("readonly", (store) =>
       store.get(CURRENT_PREVIEW_ID),
     );
-    if (!isBookProject(value)) return null;
+    const normalized = normalizeBookProject(value);
+    if (!normalized) return null;
     // Refresh signed URLs on every Preview open while retaining storagePath
     // values as the canonical references for the editor and future saves.
-    return await materializeBookProjectAssets(value);
+    return await materializeBookProjectAssets(normalized);
   } catch {
     return null;
   }

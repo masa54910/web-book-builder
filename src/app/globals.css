@@ -1147,6 +1147,7 @@ a {
 }
 
 .inline-manuscript-editor {
+  position: relative;
   display: grid;
   gap: 12px;
 }
@@ -1178,6 +1179,52 @@ a {
   background: rgba(255, 252, 246, 0.96);
   box-shadow: 0 8px 18px rgba(38, 31, 20, 0.12);
   line-height: 1;
+}
+
+.inline-manuscript-floating-button > span {
+  display: block;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.inline-manuscript-floating-button.is-open {
+  color: #0f6f5d;
+  border-color: rgba(15, 111, 93, 0.42);
+  background: rgba(230, 248, 242, 0.98);
+}
+
+.inline-manuscript-insert-menu {
+  position: absolute;
+  z-index: 25;
+  top: 54px;
+  left: 0;
+  display: grid;
+  min-width: 156px;
+  padding: 6px;
+  gap: 4px;
+  border: 1px solid rgba(79, 67, 48, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 252, 246, 0.98);
+  box-shadow: 0 14px 28px rgba(26, 30, 28, 0.18);
+}
+
+.inline-manuscript-insert-menu button {
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: #2f251d;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.inline-manuscript-insert-menu button:hover,
+.inline-manuscript-insert-menu button:focus-visible {
+  background: rgba(111, 185, 173, 0.15);
 }
 
 .inline-manuscript-floating-button svg {
@@ -1311,12 +1358,43 @@ a {
 }
 
 .inline-manuscript-popover {
+  position: absolute;
+  z-index: 24;
+  width: min(340px, calc(100% - 24px));
+  max-height: min(70vh, 520px);
+  overflow: auto;
   display: grid;
   gap: 10px;
   padding: 14px;
   border: 1px solid rgba(79, 67, 48, 0.16);
   border-radius: 16px;
   background: rgba(255, 252, 246, 0.96);
+  box-shadow: 0 14px 32px rgba(26, 30, 28, 0.2);
+}
+
+.inline-editor-page-break-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin: 12px 0;
+  padding: 6px 10px;
+  border: 1px dashed rgba(15, 111, 93, 0.45);
+  border-radius: 8px;
+  color: #0f6f5d;
+  background: rgba(230, 248, 242, 0.65);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.inline-editor-page-break-marker:hover,
+.inline-editor-page-break-marker:focus-visible {
+  background: rgba(111, 185, 173, 0.22);
+  outline: 2px solid rgba(15, 111, 93, 0.28);
+  outline-offset: 2px;
 }
 
 .inline-manuscript-popover-actions {
@@ -4779,6 +4857,21 @@ button.reader-edit-link:disabled {
 
   .inline-manuscript-popover-panel {
     width: min(320px, calc(100vw - 24px));
+  }
+
+  .inline-manuscript-insert-menu {
+    top: 48px;
+    min-width: 148px;
+  }
+
+  .inline-manuscript-popover {
+    position: fixed;
+    top: auto !important;
+    right: 12px !important;
+    bottom: 12px !important;
+    left: 12px !important;
+    width: auto;
+    max-height: min(70vh, 520px);
   }
 
   .inline-editor-image-node {

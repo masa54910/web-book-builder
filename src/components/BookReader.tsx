@@ -99,22 +99,37 @@ function adjustmentBlockIdForPage(adjustments: PageAdjustment[], page: ReaderPag
 
 function paragraphBlockForPage(page: ReaderPage | undefined, contentBlocks?: BookContentBlock[]) {
   if (!page || page.kind !== "text" || !contentBlocks?.length) return null;
-  const textBlockIds = new Set(
-    contentBlocks
-      .filter((block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text")
-      .map((block) => block.id),
+  const textBlocks = contentBlocks.filter(
+    (block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text",
   );
-  const id = sourceBlockIdsForPage(page).filter((sourceId) => textBlockIds.has(sourceId)).at(-1);
-  if (!id) return null;
-  const block = contentBlocks.find((candidate) => candidate.type === "text" && candidate.id === id);
+  const textBlockIds = new Set(textBlocks.map((block) => block.id));
+  const sourceIds = sourceBlockIdsForPage(page);
+  const bySource = textBlocks.filter((block) => sourceIds.includes(block.id));
+  const byRenderedText = textBlocks.filter((block) =>
+    page.paragraphs.some((paragraph) => {
+      const rendered = paragraph.replace(/\s+/g, "");
+      const source = block.content.replace(/\s+/g, "");
+      return Boolean(rendered && source && (source.includes(rendered) || rendered.includes(source.slice(0, rendered.length))));
+    }),
+  );
+  const id = (bySource.length ? bySource : byRenderedText).at(-1)?.id;
+  if (!id || !textBlockIds.has(id)) return null;
+  const block = textBlocks.find((candidate) => candidate.id === id);
   return block?.type === "text" ? { id, originalText: block.content } : null;
 }
 
 function paragraphBlocksForPage(page: ReaderPage | undefined, contentBlocks?: BookContentBlock[]) {
   if (!page || page.kind !== "text" || !contentBlocks?.length) return [];
   const sourceIds = new Set(sourceBlockIdsForPage(page));
-  return contentBlocks
+  const textBlocks = contentBlocks
     .filter((block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text" && sourceIds.has(block.id))
+  if (textBlocks.length) {
+    return textBlocks.map((block) => ({ id: block.id, label: block.content.replace(/\s+/g, " ").trim().slice(0, 24) || "本文" }));
+  }
+  return contentBlocks
+    .filter((block): block is Extract<BookContentBlock, { type: "text" }> =>
+      block.type === "text" && page.paragraphs.some((paragraph) => block.content.includes(paragraph.trim())),
+    )
     .map((block) => ({ id: block.id, label: block.content.replace(/\s+/g, " ").trim().slice(0, 24) || "本文" }));
 }
 
@@ -220,28 +235,11 @@ export default function BookReader({
     () => buildReaderFolioById(logicalPages),
     [logicalPages],
   );
-  const pagesWithAdjustments = useMemo(() => {
-    const adjustedPages: ReaderPage[] = [];
-    for (const page of pages) {
-      const adjustment = adjustmentForPage(pageAdjustments, page);
-      if (adjustment?.pageBreakBefore) {
-        adjustedPages.push({
-          id: `page-break-before-${page.id}`,
-          kind: "pageBreak",
-          sourcePageId: page.id,
-        });
-      }
-      adjustedPages.push(page);
-      if (adjustment?.pageBreakAfter) {
-        adjustedPages.push({
-          id: `page-break-after-${page.id}`,
-          kind: "pageBreak",
-          sourcePageId: page.id,
-        });
-      }
-    }
-    return adjustedPages;
-  }, [pageAdjustments, pages]);
+  // Page breaks are applied by buildReaderPages so the next content starts on
+  // the following page without rendering a synthetic blank page. Keep this
+  // alias for the reader controls and adjustment drawer, which operate on the
+  // same canonical page list.
+  const pagesWithAdjustments = pages;
 
   const activePageIndex = Math.min(currentPage, Math.max(0, pagesWithAdjustments.length - 1));
   const activePage = pagesWithAdjustments[activePageIndex];

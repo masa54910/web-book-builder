@@ -64,7 +64,12 @@ import {
   normalizeCoverDesign,
   type CoverDesign,
 } from "@/lib/coverDesign";
-import { findPageAdjustment, normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
+import {
+  normalizePageAdjustments,
+  removePageAdjustment,
+  upsertPageAdjustment,
+  type PageAdjustment,
+} from "@/lib/pageAdjustments";
 import { buildReaderPages } from "@/lib/paginateText";
 import type { ImageManifestRow, ReaderPage } from "@/lib/types";
 import { countContentCharacters } from "@/lib/characterCount";
@@ -807,19 +812,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       charactersPerPage: Math.max(180, Number(state.charactersPerPage) || 380),
       tableOfContentsItemsPerPage: state.tableOfContentsItemsPerPage,
     });
-    const pageAdjustmentFor = (page: ReaderPage) => {
-      const ids = [...(page.sourceBlockIds || []), page.id];
-      return ids.map((id) => findPageAdjustment(state.pageAdjustments, id)).find(Boolean);
-    };
-    const pages = logicalPages.flatMap((page) => {
-      const adjustment = pageAdjustmentFor(page);
-      return [
-        ...(adjustment?.pageBreakBefore ? [{ id: `page-break-before-${page.id}`, kind: "pageBreak", sourcePageId: page.id } as const] : []),
-        page,
-        ...(adjustment?.pageBreakAfter ? [{ id: `page-break-after-${page.id}`, kind: "pageBreak", sourcePageId: page.id } as const] : []),
-      ];
-    });
-    return { logicalPages, pages };
+    // buildReaderPages applies canonical page-break adjustments directly. Do
+    // not add synthetic blank pages here; the mini preview must mirror Reader.
+    return { logicalPages, pages: logicalPages };
   }, [deferredContentBlocks, state.charactersPerPage, state.pageAdjustments, state.tableOfContentsItemsPerPage, state.title]);
   const miniPreviewPages = miniPreviewModel.pages;
   const miniPreviewLogicalPages = miniPreviewModel.logicalPages;
@@ -859,6 +854,32 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const handleCursorChange = useCallback((position: number, blockId: string | null) => {
     setCursorPosition(position);
     setActiveBlockId(blockId);
+  }, []);
+
+  const pageBreakAfterBlockIds = useMemo(
+    () => state.pageAdjustments.filter((adjustment) => adjustment.pageBreakAfter).map((adjustment) => adjustment.blockId),
+    [state.pageAdjustments],
+  );
+
+  const handleEditorInsertPageBreak = useCallback((blockId: string) => {
+    setState((current) => ({
+      ...current,
+      pageAdjustments: upsertPageAdjustment(current.pageAdjustments, blockId, { pageBreakAfter: true }),
+    }));
+    setDirty(true);
+  }, []);
+
+  const handleEditorRemovePageBreak = useCallback((blockId: string) => {
+    setState((current) => {
+      const adjustment = current.pageAdjustments.find((item) => item.blockId === blockId);
+      if (!adjustment) return current;
+      const remaining = Object.entries(adjustment).filter(([key, value]) => key !== "blockId" && key !== "pageBreakAfter" && value !== undefined);
+      const nextAdjustments = remaining.length
+        ? upsertPageAdjustment(current.pageAdjustments, blockId, { pageBreakAfter: undefined })
+        : removePageAdjustment(current.pageAdjustments, blockId);
+      return { ...current, pageAdjustments: nextAdjustments };
+    });
+    setDirty(true);
   }, []);
 
   const activeMiniPageId = useMemo(() => {
@@ -1543,6 +1564,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             onPendingChange={setPendingImageCount}
             onCursorChange={handleCursorChange}
             scrollRequest={editorScrollRequest}
+            pageBreakAfterBlockIds={pageBreakAfterBlockIds}
+            onInsertPageBreak={handleEditorInsertPageBreak}
+            onRemovePageBreak={handleEditorRemovePageBreak}
           />
           <p className="inline-manuscript-character-count" aria-live="polite">
             <strong>{Math.min(cursorPosition, bodyCharacterCount).toLocaleString("ja-JP")}</strong>
