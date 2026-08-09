@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { BETA_LIMITS } from "@/lib/limits";
 import { publicBookBaseUrl } from "@/lib/promotion";
 import {
   contentBlocksFromLegacy,
   contentBlocksToRawText,
+  extractChaptersFromText,
   type BookContentBlock,
   type BookProject,
   type UploadedBookImage,
@@ -63,7 +64,10 @@ import {
   normalizeCoverDesign,
   type CoverDesign,
 } from "@/lib/coverDesign";
-import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
+import { findPageAdjustment, normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
+import { buildReaderPages } from "@/lib/paginateText";
+import type { ImageManifestRow, ReaderPage } from "@/lib/types";
+import { countContentCharacters } from "@/lib/characterCount";
 import { validateRequiredBookFields, type RequiredBookFieldKey } from "@/lib/editorValidation";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
 import CharacterAssistant from "@/components/CharacterAssistant";
@@ -72,6 +76,7 @@ import BookCover from "@/components/BookCover";
 import HomeBackLink from "@/components/HomeBackLink";
 import Button from "@/components/ui/Button";
 import FormField from "@/components/ui/FormField";
+import EditorMiniPreview from "@/components/EditorMiniPreview";
 
 type EditorState = {
   title: string;
@@ -511,6 +516,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   );
   const [editorRevision, setEditorRevision] = useState(0);
   const [pendingImageCount, setPendingImageCount] = useState(0);
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [warnings, setWarnings] = useState<string[]>([]);
   const [statusMessage, setStatusMessage] = useState(
@@ -770,6 +777,55 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     return validateSlug(state.slug);
   }, [state.slug]);
   const publicBooksBaseUrl = useMemo(() => publicBookBaseUrl(), []);
+
+  const deferredContentBlocks = useDeferredValue(contentBlocks);
+  const miniPreviewPages = useMemo(() => {
+    const rawText = contentBlocksToRawText(deferredContentBlocks);
+    const chapters = extractChaptersFromText(rawText, state.title || "本文");
+    const imageRows: ImageManifestRow[] = deferredContentBlocks
+      .filter((block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image")
+      .map((block) => ({
+        chapter_order: 1,
+        chapter_title: state.title || "本文",
+        image_index: block.id,
+        image_id: block.id,
+        image_url: block.publicUrl || block.storagePath,
+        storage_path: block.storagePath,
+        public_url: block.publicUrl,
+        alt: block.altText || block.fileName,
+        caption: block.caption || "",
+        source_path: block.fileName,
+        local_path: "",
+      }));
+    const logicalPages = buildReaderPages({
+      chapters,
+      images: imageRows,
+      contentBlocks: deferredContentBlocks,
+      pageAdjustments: state.pageAdjustments,
+      charactersPerPage: Math.max(180, Number(state.charactersPerPage) || 380),
+      tableOfContentsItemsPerPage: state.tableOfContentsItemsPerPage,
+    });
+    const pageAdjustmentFor = (page: ReaderPage) => {
+      const ids = [...(page.sourceBlockIds || []), page.id];
+      return ids.map((id) => findPageAdjustment(state.pageAdjustments, id)).find(Boolean);
+    };
+    return logicalPages.flatMap((page) => {
+      const adjustment = pageAdjustmentFor(page);
+      return [
+        ...(adjustment?.pageBreakBefore ? [{ id: `page-break-before-${page.id}`, kind: "pageBreak", sourcePageId: page.id } as const] : []),
+        page,
+        ...(adjustment?.pageBreakAfter ? [{ id: `page-break-after-${page.id}`, kind: "pageBreak", sourcePageId: page.id } as const] : []),
+      ];
+    });
+  }, [deferredContentBlocks, state.charactersPerPage, state.pageAdjustments, state.tableOfContentsItemsPerPage, state.title]);
+
+  const activeMiniPageId = useMemo(() => {
+    if (!activeBlockId) return null;
+    return miniPreviewPages.find((page) => "sourceBlockIds" in page && page.sourceBlockIds?.includes(activeBlockId))?.id || null;
+  }, [activeBlockId, miniPreviewPages]);
+
+  const bodyCharacterCount = useMemo(() => countContentCharacters(contentBlocks), [contentBlocks]);
+  const bodyCharacterPercentage = bodyCharacterCount ? Math.round((cursorPosition / bodyCharacterCount) * 100) : 0;
 
   const estimatedPages = useMemo(() => {
     const charsPerPage = Math.max(180, Number(state.charactersPerPage) || 380);
@@ -1443,7 +1499,17 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             onChange={syncContentBlocks}
             onStatus={setStatusMessage}
             onPendingChange={setPendingImageCount}
+            onCursorChange={(position, blockId) => {
+              setCursorPosition(position);
+              setActiveBlockId(blockId);
+            }}
           />
+          <p className="inline-manuscript-character-count" aria-live="polite">
+            <strong>{Math.min(cursorPosition, bodyCharacterCount).toLocaleString("ja-JP")}</strong>
+            {" / "}
+            {bodyCharacterCount.toLocaleString("ja-JP")}文字
+            {bodyCharacterCount ? ` ${bodyCharacterPercentage}%` : ""}
+          </p>
           {errors.rawText ? <small className="form-error">{errors.rawText}</small> : null}
         </div>
         </div>
@@ -1478,6 +1544,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               />
             </div>
           </section>
+
+          <EditorMiniPreview pages={miniPreviewPages} activePageId={activeMiniPageId} />
 
         <div className="maker-card">
           <h2>表紙画像</h2>

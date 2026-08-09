@@ -96,6 +96,27 @@ function adjustmentBlockIdForPage(adjustments: PageAdjustment[], page: ReaderPag
   return ids.at(-1) || page.id;
 }
 
+function paragraphBlockForPage(page: ReaderPage | undefined, contentBlocks?: BookContentBlock[]) {
+  if (!page || page.kind !== "text" || !contentBlocks?.length) return null;
+  const textBlockIds = new Set(
+    contentBlocks
+      .filter((block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text")
+      .map((block) => block.id),
+  );
+  const id = sourceBlockIdsForPage(page).filter((sourceId) => textBlockIds.has(sourceId)).at(-1);
+  if (!id) return null;
+  const block = contentBlocks.find((candidate) => candidate.type === "text" && candidate.id === id);
+  return block?.type === "text" ? { id, originalText: block.content } : null;
+}
+
+function paragraphBlocksForPage(page: ReaderPage | undefined, contentBlocks?: BookContentBlock[]) {
+  if (!page || page.kind !== "text" || !contentBlocks?.length) return [];
+  const sourceIds = new Set(sourceBlockIdsForPage(page));
+  return contentBlocks
+    .filter((block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text" && sourceIds.has(block.id))
+    .map((block) => ({ id: block.id, label: block.content.replace(/\s+/g, " ").trim().slice(0, 24) || "本文" }));
+}
+
 export default function BookReader({
   config,
   chapters,
@@ -136,7 +157,7 @@ export default function BookReader({
   onPageAdjustmentChange?: (blockId: string, patch: Partial<PageAdjustment>) => void;
   onPageAdjustmentReset?: (blockId: string) => void;
   onPageAdjustmentsResetAll?: () => void;
-  onPageImageAdd?: (file: File, page: ReaderPage | null) => void;
+  onPageImageAdd?: (file: File, page: ReaderPage | null, afterBlockId?: string) => void;
 }) {
   const flipBookRef = useRef<FlipBookHandle | null>(null);
   const activePageIdRef = useRef<string | null>(null);
@@ -182,12 +203,13 @@ export default function BookReader({
         chapters,
         images,
         contentBlocks,
+        pageAdjustments,
         charactersPerPage: isMobile
           ? Math.max(220, Math.floor(config.charactersPerPage * 0.82))
           : config.charactersPerPage,
         tableOfContentsItemsPerPage: config.tableOfContentsItemsPerPage,
       }),
-    [chapters, config.charactersPerPage, config.tableOfContentsItemsPerPage, contentBlocks, images, isMobile],
+    [chapters, config.charactersPerPage, config.tableOfContentsItemsPerPage, contentBlocks, images, isMobile, pageAdjustments],
   );
   const pages = useMemo(
     () => toBoundPageOrder(logicalPages, isMobile, config.bindingDirection),
@@ -221,6 +243,12 @@ export default function BookReader({
   }, [pageAdjustments, pages]);
 
   const activePageIndex = Math.min(currentPage, Math.max(0, pagesWithAdjustments.length - 1));
+  const activePage = pagesWithAdjustments[activePageIndex];
+  const activeParagraphBlock = paragraphBlockForPage(activePage, contentBlocks);
+  const activeParagraphBlocks = paragraphBlocksForPage(activePage, contentBlocks);
+  const activeParagraphAdjustment = activeParagraphBlock
+    ? findPageAdjustment(pageAdjustments, activeParagraphBlock.id)
+    : undefined;
 
   useEffect(() => {
     if (!activePageIdRef.current) {
@@ -658,7 +686,7 @@ export default function BookReader({
         {displayMode === "preview" && isPageAdjustmentOpen ? (
           <aside className="reader-page-adjustment-drawer" aria-label="ページ調整設定">
             <PageAdjustmentControls
-              page={pagesWithAdjustments[activePageIndex] || null}
+              page={activePage || null}
               pageNumber={(logicalFolioById.get(pagesWithAdjustments[activePageIndex]?.id || "") ?? activePageIndex) + 1}
               totalPages={pagesWithAdjustments.length}
               value={adjustmentForPage(pageAdjustments, pagesWithAdjustments[activePageIndex])}
@@ -678,6 +706,30 @@ export default function BookReader({
               onImageAdd={(file) => {
                 const target = pagesWithAdjustments[activePageIndex];
                 onPageImageAdd?.(file, target?.kind === "text" || target?.kind === "image" ? target : null);
+              }}
+              imageInsertAnchors={activeParagraphBlocks}
+              onImageAddAtBlock={(file, afterBlockId) => {
+                const target = pagesWithAdjustments[activePageIndex];
+                onPageImageAdd?.(file, target?.kind === "text" || target?.kind === "image" ? target : null, afterBlockId);
+              }}
+              paragraphBlockId={activeParagraphBlock?.id}
+              paragraphOriginalText={activeParagraphBlock?.originalText}
+              paragraphValue={activeParagraphAdjustment?.displayTextOverride}
+              onParagraphChange={(value) => {
+                if (activeParagraphBlock) {
+                  onPageAdjustmentChange?.(activeParagraphBlock.id, { displayTextOverride: value });
+                }
+              }}
+              onParagraphReset={() => {
+                if (!activeParagraphBlock) return;
+                const hasOtherAdjustment = activeParagraphAdjustment
+                  ? Object.keys(activeParagraphAdjustment).some((key) => key !== "blockId" && key !== "displayTextOverride")
+                  : false;
+                if (hasOtherAdjustment) {
+                  onPageAdjustmentChange?.(activeParagraphBlock.id, { displayTextOverride: undefined });
+                } else {
+                  onPageAdjustmentReset?.(activeParagraphBlock.id);
+                }
               }}
               onClose={() => setIsPageAdjustmentOpen(false)}
             />

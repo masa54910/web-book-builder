@@ -68,8 +68,16 @@ function insertImageBlockAtPage(
   blocks: BookContentBlock[],
   imageBlock: Extract<BookContentBlock, { type: "image" }>,
   page: ReaderPage | null,
+  afterBlockId?: string,
 ) {
   const nextBlocks = [...blocks];
+  if (afterBlockId) {
+    const anchorIndex = blocks.findIndex((block) => block.id === afterBlockId);
+    if (anchorIndex >= 0) {
+      nextBlocks.splice(anchorIndex + 1, 0, imageBlock);
+      return nextBlocks;
+    }
+  }
   if (page?.kind === "text") {
     const lastParagraph = page.paragraphs.map((paragraph) => paragraph.trim()).filter(Boolean).at(-1);
     if (lastParagraph) {
@@ -241,7 +249,7 @@ export default function DynamicReaderPage() {
       });
   }, []);
 
-  const handlePageImageAdd = useCallback((file: File, targetPage: ReaderPage | null) => {
+  const handlePageImageAdd = useCallback((file: File, targetPage: ReaderPage | null, afterBlockId?: string) => {
     if (!file.type.startsWith("image/")) return;
     void fileToDataUrl(file).then((dataUrl) => {
       const current = projectRef.current;
@@ -263,7 +271,7 @@ export default function DynamicReaderPage() {
       const existingBlocks = current.contentBlocks?.length
         ? current.contentBlocks
         : contentBlocksFromLegacy(current.rawText, uploadedImagesFromManifest(current));
-      const nextBlocks = insertImageBlockAtPage(existingBlocks, imageBlock, targetPage);
+      const nextBlocks = insertImageBlockAtPage(existingBlocks, imageBlock, targetPage, afterBlockId);
       const nextRawText = contentBlocksToRawText(nextBlocks);
       const targetChapter = targetPage && "chapterTitle" in targetPage
         ? current.chapters.find((chapter) => chapter.title === targetPage.chapterTitle)

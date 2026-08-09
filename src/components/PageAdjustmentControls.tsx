@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReaderPage } from "@/lib/types";
+import { useState } from "react";
 import type {
   PageAdjustment,
   PageAdjustmentAlign,
@@ -49,6 +50,13 @@ export default function PageAdjustmentControls({
   onReset,
   onResetAll,
   onImageAdd,
+  imageInsertAnchors,
+  onImageAddAtBlock,
+  paragraphBlockId,
+  paragraphOriginalText,
+  paragraphValue,
+  onParagraphChange,
+  onParagraphReset,
   onClose,
 }: {
   page: ReaderPage | null;
@@ -59,8 +67,16 @@ export default function PageAdjustmentControls({
   onReset: () => void;
   onResetAll?: () => void;
   onImageAdd?: (file: File) => void;
+  imageInsertAnchors?: Array<{ id: string; label: string }>;
+  onImageAddAtBlock?: (file: File, afterBlockId: string) => void;
+  paragraphBlockId?: string | null;
+  paragraphOriginalText?: string;
+  paragraphValue?: string;
+  onParagraphChange?: (value: string) => void;
+  onParagraphReset?: () => void;
   onClose?: () => void;
 }) {
+  const [paragraphError, setParagraphError] = useState("");
   const hasPageTarget = page?.kind === "text" || page?.kind === "image";
   const imagePage = isImagePage(page);
   const textPage = isTextPage(page);
@@ -85,6 +101,36 @@ export default function PageAdjustmentControls({
         <>
           <div className="cover-design-section">
             <h4>テキスト</h4>
+            {textPage && paragraphBlockId && paragraphOriginalText !== undefined && onParagraphChange ? (
+              <div className="page-adjustment-paragraph-editor">
+                <label className="cover-design-control">
+                  <span>本文を調整</span>
+                  <textarea
+                    rows={6}
+                    value={paragraphValue ?? paragraphOriginalText}
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      const originalWithoutBreaks = paragraphOriginalText.replace(/\r\n?/g, "\n").replace(/\n/g, "");
+                      const nextWithoutBreaks = nextValue.replace(/\r\n?/g, "\n").replace(/\n/g, "");
+                      if (originalWithoutBreaks !== nextWithoutBreaks) {
+                        setParagraphError("本文の文字は変更せず、改行位置だけ調整できます。");
+                        return;
+                      }
+                      setParagraphError("");
+                      onParagraphChange(nextValue);
+                    }}
+                    aria-label="本文の改行を調整"
+                  />
+                </label>
+                <p className="maker-note">Enterで改行できます。本文の文字はそのまま保持されます。</p>
+                {paragraphError ? <p className="form-error" role="alert">{paragraphError}</p> : null}
+                {paragraphValue !== undefined && onParagraphReset ? (
+                  <button className="page-adjustment-secondary-action" type="button" onClick={onParagraphReset}>
+                    元の改行に戻す
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             <div className="cover-design-controls">
               <label className="cover-design-control">
                 <span>改ページ</span>
@@ -130,6 +176,25 @@ export default function PageAdjustmentControls({
                   }}
                 />
               </label>
+            ) : null}
+            {textPage && imageInsertAnchors?.length && onImageAddAtBlock ? (
+              <div className="page-adjustment-insert-points" aria-label="本文ブロック間への画像挿入">
+                <p className="maker-note">本文ブロックの間へ画像を挿入</p>
+                {imageInsertAnchors.map((anchor) => (
+                  <label className="page-adjustment-secondary-action page-adjustment-file-action" key={anchor.id}>
+                    ＋ {anchor.label}の後に挿入
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) onImageAddAtBlock(file, anchor.id);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
             ) : null}
             {imagePage ? (
               <div className="cover-design-controls">

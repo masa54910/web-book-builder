@@ -15,6 +15,7 @@ import { BETA_LIMITS } from "../src/lib/limits";
 import { createSlugCandidate, validateSlug } from "../src/lib/slug";
 import { validateImportFile, validateZipPath } from "../src/lib/fileImport";
 import { buildReaderPages } from "../src/lib/paginateText";
+import { countContentCharacters, countUserCharacters } from "../src/lib/characterCount";
 import { createPendingImageBlock, insertImageBlocksAtCursor } from "../src/lib/inlineContentBlocks";
 import { resolveSafeInternalReturnPath } from "../src/lib/returnTo";
 import { validateRequiredBookFields } from "../src/lib/editorValidation";
@@ -150,6 +151,29 @@ assert.equal(
 
 assert.equal(BETA_LIMITS.maxBooksPerUser, 5);
 assert.equal(BETA_LIMITS.maxCharactersPerBook, 200_000);
+assert.equal(countUserCharacters("あ😀い"), 3, "Grapheme-aware character count should treat emoji as one character");
+assert.equal(
+  countContentCharacters([
+    { type: "text", content: "本文\nです" },
+    { type: "image" },
+  ]),
+  5,
+  "Body character count should exclude image blocks",
+);
+
+const paragraphAdjustmentPages = buildReaderPages({
+  chapters: [{ id: "chapter-01", order: 1, title: "調整", slug: "adjustment", source: "test", body: "夜の街を歩くと窓の灯りが静かに路地を照らしていた。" }],
+  images: [],
+  contentBlocks: [{ id: "paragraph-001", type: "text", content: "夜の街を歩くと窓の灯りが静かに路地を照らしていた。" }],
+  pageAdjustments: [{ blockId: "paragraph-001", displayTextOverride: "夜の街を歩くと\n窓の灯りが静かに\n路地を照らしていた。" }],
+  charactersPerPage: 380,
+  tableOfContentsItemsPerPage: 6,
+});
+assert.equal(
+  paragraphAdjustmentPages.find((page) => page.kind === "text")?.paragraphs[0],
+  "夜の街を歩くと\n窓の灯りが静かに\n路地を照らしていた。",
+  "Paragraph display override should preserve original characters and apply line breaks",
+);
 
 const insertionSource: BookContentBlock[] = [{ id: "text-001", type: "text", content: "冒頭本文" }];
 const pendingNodes = [
@@ -475,10 +499,12 @@ assert.equal(normalizeCoverTitleOverride("  　"), "  　");
 const adjusted = upsertPageAdjustment([], "chapter-1-text-1", {
   pageBreakAfter: true,
   paragraphSpacing: "wide",
+  displayTextOverride: "本文の\n改行",
 });
 assert.equal(adjusted[0]?.blockId, "chapter-1-text-1");
 assert.equal(adjusted[0]?.pageBreakAfter, true);
 assert.equal(normalizePageAdjustments(adjusted)[0]?.paragraphSpacing, "wide");
+assert.equal(normalizePageAdjustments(adjusted)[0]?.displayTextOverride, "本文の\n改行");
 assert.deepEqual(removePageAdjustment(adjusted, "chapter-1-text-1"), []);
 
 const baseEditorState: EditorDraftState = {

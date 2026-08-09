@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BookContentBlock } from "@/lib/bookProject";
 import { isDisplayableImageUrl } from "@/lib/bookAssetStorage";
 import { createPendingImageBlock, insertImageBlocksAtCursor } from "@/lib/inlineContentBlocks";
+import { countContentCharacters, countUserCharacters } from "@/lib/characterCount";
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -243,6 +244,7 @@ type Props = {
   onChange: (next: BookContentBlock[]) => void;
   onStatus: (message: string) => void;
   onPendingChange: (count: number) => void;
+  onCursorChange?: (position: number, blockId: string | null) => void;
 };
 
 function PhotoIcon() {
@@ -255,14 +257,47 @@ function PhotoIcon() {
   );
 }
 
-export default function InlineManuscriptEditor({ value, revision, onChange, onStatus, onPendingChange }: Props) {
+export default function InlineManuscriptEditor({ value, revision, onChange, onStatus, onPendingChange, onCursorChange }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const nodesRef = useRef<BookContentBlock[]>(value);
+  const renderedRevisionRef = useRef<string | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [cursorFallbackMessage, setCursorFallbackMessage] = useState("");
+
+  const reportCursor = useCallback(() => {
+    const root = rootRef.current;
+    if (!root || !onCursorChange) return;
+    const selectionInfo = getSelectionRoot(root);
+    const total = countContentCharacters(nodesRef.current);
+    if (!selectionInfo) {
+      onCursorChange(0, null);
+      return;
+    }
+    const { range } = selectionInfo;
+    const target = range.startContainer instanceof HTMLElement
+      ? range.startContainer.closest("[data-node-type]")
+      : range.startContainer.parentElement?.closest("[data-node-type]");
+    const targetId = target?.getAttribute("data-node-id") || null;
+    let position = 0;
+    for (const node of Array.from(root.children)) {
+      if (node === target) {
+        if (node instanceof HTMLElement && node.dataset.nodeType === "paragraph" && node.contains(range.startContainer)) {
+          const paragraphRange = document.createRange();
+          paragraphRange.selectNodeContents(node);
+          paragraphRange.setEnd(range.startContainer, range.startOffset);
+          position += countUserCharacters(paragraphRange.toString());
+        }
+        break;
+      }
+      if (node instanceof HTMLElement && node.dataset.nodeType === "paragraph") {
+        position += countUserCharacters(node.textContent || "");
+      }
+    }
+    onCursorChange(Math.max(0, Math.min(total, position)), targetId);
+  }, [onCursorChange]);
 
   const captureSelectionRange = useCallback(() => {
     const root = rootRef.current;
@@ -294,10 +329,16 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
       ? value
       : [{ id: paragraphId(0), type: "text", content: "" }];
     nodesRef.current = nextNodes;
+    if (renderedRevisionRef.current === revision && rootRef.current?.childElementCount) {
+      reportCursor();
+      return;
+    }
     if (rootRef.current) {
       renderNodes(rootRef.current, nextNodes);
     }
-  }, [revision, value]);
+    renderedRevisionRef.current = revision;
+    reportCursor();
+  }, [reportCursor, revision, value]);
 
   const updateNode = (nodeId: string, patch: Partial<BookContentBlock>) => {
     const next = nodesRef.current.map((node) => (node.id === nodeId ? { ...node, ...patch } as BookContentBlock : node));
@@ -439,10 +480,20 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
               const image = target.closest("[data-node-type='image']") as HTMLElement | null;
               setSelectedImageId(image?.dataset.nodeId || null);
               captureSelectionRange();
+              reportCursor();
             }}
-            onMouseUp={captureSelectionRange}
-            onKeyUp={captureSelectionRange}
-            onFocus={captureSelectionRange}
+            onMouseUp={() => {
+              captureSelectionRange();
+              reportCursor();
+            }}
+            onKeyUp={() => {
+              captureSelectionRange();
+              reportCursor();
+            }}
+            onFocus={() => {
+              captureSelectionRange();
+              reportCursor();
+            }}
             onInput={() => {
               const root = rootRef.current;
               if (!root) return;
@@ -452,6 +503,7 @@ export default function InlineManuscriptEditor({ value, revision, onChange, onSt
               const nextPending = next.filter((block) => block.type === "image" && block.uploadState === "pending").length;
               onPendingChange(nextPending);
               captureSelectionRange();
+              reportCursor();
             }}
             onPaste={(event) => {
               const files = Array.from(event.clipboardData.files || []).filter(isImageFile);

@@ -12,6 +12,8 @@ export type PageAdjustment = {
   blockId: string;
   pageBreakBefore?: boolean;
   pageBreakAfter?: boolean;
+  /** Optional display-only paragraph text. The canonical block remains intact. */
+  displayTextOverride?: string;
   paragraphSpacing?: PageAdjustmentSpacing;
   imageSize?: PageAdjustmentImageSize;
   imageAlign?: PageAdjustmentAlign;
@@ -43,6 +45,7 @@ export function normalizePageAdjustment(value: unknown): PageAdjustment | null {
     blockId,
     pageBreakBefore: optionalBoolean(source.pageBreakBefore),
     pageBreakAfter: optionalBoolean(source.pageBreakAfter),
+    displayTextOverride: typeof source.displayTextOverride === "string" ? source.displayTextOverride : undefined,
     paragraphSpacing: enumValue(source.paragraphSpacing, SPACING),
     imageSize: enumValue(source.imageSize, IMAGE_SIZES),
     imageAlign: enumValue(source.imageAlign, ALIGNS),

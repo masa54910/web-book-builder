@@ -46,7 +46,7 @@ export default function BookReaderShell({
   onPageAdjustmentChange?: (blockId: string, patch: Partial<PageAdjustment>) => void;
   onPageAdjustmentReset?: (blockId: string) => void;
   onPageAdjustmentsResetAll?: () => void;
-  onPageImageAdd?: (file: File, page: ReaderPage | null) => void;
+  onPageImageAdd?: (file: File, page: ReaderPage | null, afterBlockId?: string) => void;
   backLink?: {
     destination?: "auto" | "home" | "dashboard";
     href?: string;

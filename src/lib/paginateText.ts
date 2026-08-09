@@ -1,6 +1,7 @@
 import type { BindingDirection } from "@/config/bookConfig";
 import type { BookContentBlock } from "./bookProject";
 import type { ImageManifestRow, NovelChapter, ReaderPage } from "./types";
+import { findPageAdjustment, type PageAdjustment } from "./pageAdjustments";
 
 const IMAGE_PATTERN = /^\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?\]\]$/;
 export const INLINE_IMAGE_TOKEN_PREFIX = "[[inline-image:";
@@ -41,6 +42,10 @@ function textCost(paragraph: string) {
   return paragraph.length + (paragraph.match(/\n/g)?.length ?? 0) * 18 + 22 + headingCost;
 }
 
+function lineBreakOnlyOverride(original: string, override: string) {
+  return original.replace(/\r\n?/g, "\n").replace(/\n/g, "") === override.replace(/\r\n?/g, "\n").replace(/\n/g, "");
+}
+
 function imageSource(image?: ImageManifestRow) {
   if (!image) return undefined;
   const displayUrl = image.public_url || image.image_url || image.storage_path || "";
@@ -56,12 +61,14 @@ export function buildReaderPages({
   chapters,
   images,
   contentBlocks,
+  pageAdjustments,
   charactersPerPage,
   tableOfContentsItemsPerPage,
 }: {
   chapters: NovelChapter[];
   images: ImageManifestRow[];
   contentBlocks?: BookContentBlock[];
+  pageAdjustments?: PageAdjustment[];
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
 }): ReaderPage[] {
@@ -112,6 +119,15 @@ export function buildReaderPages({
     const textBlocks = (contentBlocks || []).filter(
       (block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text",
     );
+    const paragraphOverrideFor = (segment: string) => {
+      const source = textBlocks.find((block) => block.content.includes(segment));
+      if (!source) return { text: segment, sourceId: undefined };
+      const override = findPageAdjustment(pageAdjustments, source.id)?.displayTextOverride;
+      if (typeof override !== "string" || !lineBreakOnlyOverride(source.content, override)) {
+        return { text: segment, sourceId: source.id };
+      }
+      return { text: override, sourceId: source.id };
+    };
     const sourceBlockIdsFor = (pageId: string, pageParagraphs: string[]) => {
       const sourceIds = new Set<string>();
       for (const sourceId of paragraphSourceBlockIds) sourceIds.add(sourceId);
@@ -185,7 +201,10 @@ export function buildReaderPages({
         continue;
       }
 
-      for (const chunk of splitLongParagraph(segment, Math.floor(charactersPerPage * 0.86))) {
+      const displaySegment = paragraphOverrideFor(segment);
+      if (!displaySegment.text) continue;
+      if (displaySegment.sourceId) paragraphSourceBlockIds.push(displaySegment.sourceId);
+      for (const chunk of splitLongParagraph(displaySegment.text, Math.floor(charactersPerPage * 0.86))) {
         const chunkCost = textCost(chunk);
         const startsWithHeading = chunk.startsWith("## ");
         if (paragraphs.length && cost + chunkCost > charactersPerPage) flushTextPage();
