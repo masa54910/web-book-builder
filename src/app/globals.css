@@ -4235,6 +4235,22 @@ button.reader-edit-link:disabled {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.reader-share-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.reader-share-actions .promotion-card {
+  min-width: 0;
+}
+
+.reader-qr-card > .maker-secondary-button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: auto;
+}
+
 .promotion-card {
   display: flex;
   min-width: 0;
@@ -4297,6 +4313,11 @@ button.reader-edit-link:disabled {
   color: #06c755;
 }
 
+.promotion-service-icon-qr,
+.promotion-action-icon-qr {
+  color: #123e68;
+}
+
 .promotion-service-icon-copy {
   display: grid;
   place-items: center;
@@ -4354,6 +4375,10 @@ button.reader-edit-link:disabled {
 }
 
 @media (max-width: 640px) {
+  .reader-share-actions {
+    grid-template-columns: 1fr;
+  }
+
   .promotion-card.reader-url-copy-card {
     grid-template-columns: auto minmax(0, 1fr);
   }
@@ -4372,6 +4397,165 @@ button.reader-edit-link:disabled {
   white-space: nowrap;
   color: #53645e;
   font-size: 13px;
+}
+
+.qr-share-modal-backdrop {
+  position: fixed;
+  z-index: 1300;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(10, 30, 52, 0.62);
+  backdrop-filter: blur(6px);
+}
+
+.qr-share-modal {
+  box-sizing: border-box;
+  width: min(430px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  border: 1px solid rgba(31, 78, 112, 0.2);
+  border-radius: 20px;
+  background: var(--wb-page-background, #f5faff);
+  box-shadow: 0 28px 90px rgba(6, 24, 42, 0.32);
+}
+
+.qr-share-modal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px 18px;
+  border-bottom: 1px solid rgba(31, 78, 112, 0.14);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.qr-share-modal-heading h2 {
+  margin: 0;
+  color: var(--wb-navy, #12365b);
+  font-size: 20px;
+}
+
+.qr-share-modal-close {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(18, 54, 91, 0.16);
+  border-radius: 999px;
+  color: var(--wb-navy, #12365b);
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.qr-share-modal-close:hover {
+  background: #ffffff;
+  box-shadow: 0 5px 14px rgba(31, 78, 112, 0.14);
+}
+
+.qr-share-modal-close:focus-visible,
+.qr-share-modal-actions a:focus-visible,
+.qr-share-modal-actions button:focus-visible {
+  outline: 3px solid rgba(31, 139, 207, 0.25);
+  outline-offset: 2px;
+}
+
+.qr-share-modal-body {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.qr-share-code {
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  padding: 14px;
+  border: 1px solid rgba(49, 130, 177, 0.18);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.qr-share-code img {
+  display: block;
+  width: min(280px, 72vw);
+  max-width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.qr-share-code p,
+.qr-share-error {
+  margin: 0;
+  color: #55708a;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.qr-share-error {
+  color: #a33b31;
+}
+
+.qr-share-title {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #123e68;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.qr-share-description {
+  margin: 0;
+  color: #55708a;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.qr-share-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 9px;
+}
+
+.qr-share-modal-actions a,
+.qr-share-modal-actions button {
+  min-width: 100px;
+  min-height: 44px;
+  flex: 1 1 100px;
+  justify-content: center;
+}
+
+.qr-share-modal-status {
+  min-height: 1.5em;
+  margin: 0;
+  color: var(--wb-navy, #12365b);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.qr-share-modal-url-action {
+  flex-basis: 100% !important;
+}
+
+.qr-share-modal-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 480px) {
+  .qr-share-modal-actions a,
+  .qr-share-modal-actions button {
+    flex-basis: 100%;
+  }
 }
 
 .promotion-preview {

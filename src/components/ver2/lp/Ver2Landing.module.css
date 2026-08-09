@@ -679,6 +679,8 @@
 .note { background: #fff; border: 1px solid #ddd; color: #111418; }
 .line { background: #35c95b; color: #fff; }
 .link { background: #fff3de; color: #8a6421; }
+.qr { background: #fff; border: 1px solid #d6e5ef; color: #123e68; }
+.qr svg { width: 24px; height: 24px; }
 
 .growCard {
   background:

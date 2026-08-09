@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import QrCodeIcon from "@/components/ui/QrCodeIcon";
 import styles from "./Ver2Landing.module.css";
 
 export default function Ver2HowItWorks() {
@@ -25,7 +27,7 @@ export default function Ver2HowItWorks() {
           </article>
           <article className={styles.step}>
             <div className={styles.stepHead}><span className={styles.stepNum}>3</span><h3>公開して、読者へ届ける</h3></div>
-            <div className={styles.sharebox} aria-label="利用できる共有方法の紹介"><div className={styles.url}>https://webbookmaker.app/books/123456</div><div className={styles.socials}><span className={`${styles.social} ${styles.x}`} role="img" aria-label="Xで共有">𝕏</span><span className={`${styles.social} ${styles.note}`} role="img" aria-label="noteで共有">note</span><span className={`${styles.social} ${styles.line}`} role="img" aria-label="LINEで共有">LINE</span><span className={`${styles.social} ${styles.link}`} role="img" aria-label="URLを共有">🔗</span></div></div>
+            <div className={styles.sharebox} aria-label="利用できる共有方法の紹介"><div className={styles.url}>https://webbookmaker.app/books/123456</div><div className={styles.socials}><span className={`${styles.social} ${styles.x}`} role="img" aria-label="Xで共有">𝕏</span><span className={`${styles.social} ${styles.note}`} role="img" aria-label="noteで共有">note</span><span className={`${styles.social} ${styles.line}`} role="img" aria-label="LINEで共有">LINE</span><span className={`${styles.social} ${styles.link}`} role="img" aria-label="URLを共有">🔗</span><span className={`${styles.social} ${styles.qr}`} role="img" aria-label="QRコードで共有"><QrCodeIcon /></span></div></div>
           </article>
           <article className={`${styles.step} ${styles.growCard}`}>
             <div className={styles.stepHead}><span className={styles.stepNum}>4</span><h3>公開後も作品を分析・編集</h3></div>
