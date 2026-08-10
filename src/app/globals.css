@@ -6008,3 +6008,45 @@ body {
     transition: none !important;
   }
 }
+
+/* WebBookMaker Design System v1.0 — canonical visual tokens.
+   Page-specific adoption remains phased; these aliases keep existing UI behavior intact. */
+:root {
+  --wb-navy: #0b2345;
+  --wb-blue: #1677b8;
+  --wb-accent: #28a8df;
+  --wb-pale-blue: #eef7fc;
+  --wb-warm-white: #fcfbf8;
+  --wb-white: #ffffff;
+  --wb-text: #14243a;
+  --wb-muted: #667085;
+  --wb-border: #dce5ec;
+
+  --wb-radius-sm: 4px;
+  --wb-radius-md: 8px;
+  --wb-radius-lg: 12px;
+
+  --wb-shadow-1: 0 4px 12px rgba(11, 35, 69, .06);
+  --wb-shadow-2: 0 12px 32px rgba(11, 35, 69, .12);
+
+  --wb-bg-page: var(--wb-warm-white);
+  --wb-bg-section: var(--wb-pale-blue);
+  --wb-bg-card: var(--wb-white);
+  --wb-bg-card-hover: #f8fbfd;
+  --wb-primary: var(--wb-blue);
+  --wb-primary-light: var(--wb-accent);
+  --wb-primary-hover: #105f95;
+  --wb-primary-dark: #0d527f;
+  --wb-navy-hover: #102f58;
+  --wb-border-soft: var(--wb-border);
+  --wb-border-strong: #b8c7d4;
+  --wb-border-focus: var(--wb-blue);
+  --wb-text-secondary: #344054;
+  --wb-text-muted: var(--wb-muted);
+  --wb-shadow-soft: var(--wb-shadow-1);
+  --wb-shadow-card: var(--wb-shadow-1);
+  --wb-shadow-elevated: var(--wb-shadow-2);
+  --wb-focus-ring: 0 0 0 3px rgba(22, 119, 184, .18);
+  --wb-cream-surface: var(--wb-warm-white);
+  --wb-page-background: var(--wb-warm-white);
+}
