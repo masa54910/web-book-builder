@@ -156,7 +156,12 @@ export default function Ver2Hero({
         </div>
 
         <div className={styles.heroRecommendations}>
-          <div className={styles.recommendLabel}>こんな方におすすめ</div>
+          <div className={styles.recommendHeading}>
+            <div className={styles.recommendLabel}>こんな方におすすめ</div>
+            <Link className={styles.useCasesCta} href="/use-cases">
+              詳しい活用例はこちら <span aria-hidden="true">→</span>
+            </Link>
+          </div>
           <div className={styles.heroRecommendationGrid}>
             <article className={styles.heroRecommendationCard}>
               <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="note" /></span>

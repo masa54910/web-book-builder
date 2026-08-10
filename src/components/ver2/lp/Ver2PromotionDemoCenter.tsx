@@ -9,10 +9,15 @@ export default function Ver2PromotionDemoCenter() {
   return (
     <section className={styles.promotionSection} id="promotion">
       <div className={styles.container}>
-        <h2 className={`${styles.promoTitle} ${styles.withBookmark}`}>
-          <span className={styles.bookmarkMark} aria-hidden="true">付箋</span>
-          公開後も、作品を編集・改善しながら広めよう
-        </h2>
+        <div className={styles.useCasesHeadingRow}>
+          <h2 className={`${styles.promoTitle} ${styles.withBookmark}`}>
+            <span className={styles.bookmarkMark} aria-hidden="true">付箋</span>
+            公開後も、作品を編集・改善しながら広めよう
+          </h2>
+          <Link className={styles.useCasesCta} href="/use-cases">
+            詳しい活用例はこちら <span aria-hidden="true">→</span>
+          </Link>
+        </div>
         <p className={styles.sectionLead}>公開して終わりではなく、読者に届く導線までひとつの体験にまとめます。</p>
         <div className={styles.promoGrid}>
           <article className={`${styles.promo} ${styles.adjustmentCard}`}>

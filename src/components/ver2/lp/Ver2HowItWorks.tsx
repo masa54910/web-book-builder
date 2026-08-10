@@ -7,10 +7,15 @@ export default function Ver2HowItWorks() {
   return (
     <section className={styles.section} id="samples">
       <div className={styles.container}>
-        <h2 className={`${styles.sectionTitle} ${styles.withBookmark}`}>
-          <span className={styles.bookmarkMark} aria-hidden="true">付箋</span>
-          かんたん3ステップで、あなたの本が完成
-        </h2>
+        <div className={styles.useCasesHeadingRow}>
+          <h2 className={`${styles.sectionTitle} ${styles.withBookmark}`}>
+            <span className={styles.bookmarkMark} aria-hidden="true">付箋</span>
+            かんたん3ステップで、あなたの本が完成
+          </h2>
+          <Link className={styles.useCasesCta} href="/use-cases">
+            詳しい活用例はこちら <span aria-hidden="true">→</span>
+          </Link>
+        </div>
         <p className={styles.sectionLead}>文章を貼り、表紙を選び、URLで届ける。迷わず進める制作フローです。</p>
         <div className={styles.steps}>
           <article className={styles.step}>
