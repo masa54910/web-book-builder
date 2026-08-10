@@ -67,7 +67,6 @@
 .heroDecoration span { position: absolute; opacity: .8; }
 .heroDecoration span:first-child { left: 13%; top: 54px; color: #6ac5e6; }
 .heroDecoration span:nth-child(2) { left: 19%; top: 88px; color: var(--use-navy); font-size: 26px; transform: rotate(14deg); }
-.heroDecoration .heroBookMark { right: 16%; top: 54px; color: var(--use-navy); font-size: 70px; transform: rotate(-7deg); }
 
 .heroKicker {
   position: relative;
@@ -236,7 +235,9 @@
 
 .sceneCard {
   position: relative;
+  display: flex;
   min-width: 0;
+  flex-direction: column;
   padding: 22px 9px 12px;
   border: 1px solid var(--use-border);
   border-radius: 14px;
@@ -308,19 +309,49 @@
 
 .sceneCard p {
   min-height: 126px;
-  margin: 0;
+  margin: 0 0 12px;
   color: #324d67;
   font-size: 12px;
   line-height: 1.75;
 }
 
-.sceneLink {
-  display: block;
-  margin-top: 8px;
-  color: var(--use-blue);
-  font-size: 11px;
+.sceneCta {
+  appearance: none;
+  display: flex;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 9px;
+  color: #fff;
+  background: linear-gradient(135deg, #164e7e, #0b3766);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 7px 14px rgba(18, 62, 104, .18);
+  font: inherit;
+  font-size: 12px;
   font-weight: 800;
-  line-height: 1.4;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: default;
+  transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
+}
+
+.sceneCta:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 9px 18px rgba(18, 62, 104, .22);
+}
+
+.sceneCta:active {
+  transform: translateY(0);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 4px 10px rgba(18, 62, 104, .16);
+}
+
+.sceneCta:focus-visible {
+  outline: 3px solid rgba(42, 159, 214, .35);
+  outline-offset: 3px;
 }
 
 .summarySection {
@@ -467,7 +498,6 @@
   .hero { width: calc(100% - 28px); margin-top: 18px; padding: 20px 8px 26px; }
   .heroDecoration span:first-child { left: 4%; top: 22px; }
   .heroDecoration span:nth-child(2) { left: 10%; top: 54px; }
-  .heroDecoration .heroBookMark { right: 6%; top: 36px; font-size: 50px; }
   .hero h1 { font-size: clamp(44px, 14vw, 62px); }
   .heroLead { font-size: 15px; }
   .pointGrid, .sceneGrid { grid-template-columns: 1fr; gap: 28px; }
@@ -479,6 +509,7 @@
   .sceneVisual { height: 190px; }
   .sceneCard h3 { font-size: 17px; }
   .sceneCard p { font-size: 14px; }
+  .sceneCta { min-height: 44px; font-size: 14px; }
   .summarySection { grid-template-columns: 1fr; gap: 18px; padding: 22px 18px; }
   .summaryBook { width: 100%; }
   .summaryBubble { grid-column: auto; min-height: 150px; }

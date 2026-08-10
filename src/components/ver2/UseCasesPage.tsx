@@ -49,6 +49,7 @@ const points: Array<{
 ];
 
 const scenes: Array<{
+  sampleId: "teacher" | "recipe" | "blog" | "research" | "writer" | "photographer";
   label: string;
   title: string;
   body: string;
@@ -56,6 +57,7 @@ const scenes: Array<{
   image: string;
 }> = [
   {
+    sampleId: "teacher",
     label: "講師・先生",
     title: "教材や教本を気軽に",
     body: "自分で作った教材やテキストをそのままWebブックに。生徒さんへの配布もラクになります。",
@@ -63,6 +65,7 @@ const scenes: Array<{
     image: "/use-cases/teacher-materials.webp",
   },
   {
+    sampleId: "recipe",
     label: "料理教室の方に",
     title: "レシピやコツを一冊に",
     body: "レシピやコツを一冊にまとめて、レッスン後の共有に。内容の更新もいつでもできます。",
@@ -70,6 +73,7 @@ const scenes: Array<{
     image: "/use-cases/recipe-book.webp",
   },
   {
+    sampleId: "blog",
     label: "note・ブログの方に",
     title: "書きためた記事を作品集に",
     body: "書きためた記事をテーマごとにまとめて、あなただけの作品集に。ファンへのプレゼントにもぴったり！",
@@ -77,6 +81,7 @@ const scenes: Array<{
     image: "/use-cases/note-blog.webp",
   },
   {
+    sampleId: "research",
     label: "研究者・学生の方に",
     title: "研究成果を読みやすく",
     body: "研究レポートや論文、卒業研究のまとめなどを見やすく整理。発表や共有にも役立ちます。",
@@ -84,6 +89,7 @@ const scenes: Array<{
     image: "/use-cases/research-paper.webp",
   },
   {
+    sampleId: "writer",
     label: "作家・エッセイストの方に",
     title: "世界観をそのまま届ける",
     body: "エッセイや短編小説を一冊にまとめて、あなたの世界観をそのまま読者へ届けられます。",
@@ -91,6 +97,7 @@ const scenes: Array<{
     image: "/use-cases/writer-essay.webp",
   },
   {
+    sampleId: "photographer",
     label: "写真家・クリエイターの方に",
     title: "作品をスマートに見せる",
     body: "作品集やポートフォリオをページをめくるWebブックとして公開。URLやQRで簡単にシェアできます。",
@@ -153,7 +160,7 @@ export default function UseCasesPage() {
         </div>
 
         <section className={styles.hero} aria-labelledby="use-cases-title">
-          <div className={styles.heroDecoration} aria-hidden="true"><span>♡</span><span>✎</span><span className={styles.heroBookMark}>▱</span></div>
+          <div className={styles.heroDecoration} aria-hidden="true"><span>♡</span><span>✎</span></div>
           <p className={styles.heroKicker}>WebBookMakerの</p>
           <h1 id="use-cases-title">おすすめ<span>ポイント</span></h1>
           <p className={styles.heroLead}>書いた文章を、あなただけの一冊の本に。<br />しかも、<strong>かんたん・低価格・ずっと使える！</strong></p>
@@ -186,7 +193,14 @@ export default function UseCasesPage() {
                 </div>
                 <h3>{scene.title}</h3>
                 <p>{scene.body}</p>
-                <span className={styles.sceneLink}>っていう人にこそおすすめ♪</span>
+                <button
+                  type="button"
+                  className={styles.sceneCta}
+                  aria-disabled="true"
+                  data-sample-id={scene.sampleId}
+                >
+                  サンプルを見る
+                </button>
               </article>
             ))}
           </div>
