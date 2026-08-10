@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import Ver2Footer from "@/components/ver2/lp/Ver2Footer";
 import Ver2Header from "@/components/ver2/lp/Ver2Header";
-import { SAMPLE_BOOK_COVER_IMAGE } from "@/lib/sampleBookConstants";
 import styles from "./UseCasesPage.module.css";
 
 type PointIconKind = "create" | "price" | "files" | "update";
@@ -61,42 +60,42 @@ const scenes: Array<{
     title: "教材や教本を気軽に",
     body: "自分で作った教材やテキストをそのままWebブックに。生徒さんへの配布もラクになります。",
     icon: "teacher",
-    image: "/sample-images/hoshifuru-01.webp",
+    image: "/use-cases/teacher-materials.webp",
   },
   {
     label: "料理教室の方に",
     title: "レシピやコツを一冊に",
     body: "レシピやコツを一冊にまとめて、レッスン後の共有に。内容の更新もいつでもできます。",
     icon: "cooking",
-    image: "/sample-images/hoshifuru-02.webp",
+    image: "/use-cases/recipe-book.webp",
   },
   {
     label: "note・ブログの方に",
     title: "書きためた記事を作品集に",
     body: "書きためた記事をテーマごとにまとめて、あなただけの作品集に。ファンへのプレゼントにもぴったり！",
     icon: "writer",
-    image: "/sample-images/hoshifuru-03.webp",
+    image: "/use-cases/note-blog.webp",
   },
   {
     label: "研究者・学生の方に",
     title: "研究成果を読みやすく",
     body: "研究レポートや論文、卒業研究のまとめなどを見やすく整理。発表や共有にも役立ちます。",
     icon: "research",
-    image: "/sample-images/hoshifuru-04.webp",
+    image: "/use-cases/research-paper.webp",
   },
   {
     label: "作家・エッセイストの方に",
     title: "世界観をそのまま届ける",
     body: "エッセイや短編小説を一冊にまとめて、あなたの世界観をそのまま読者へ届けられます。",
     icon: "author",
-    image: "/sample-images/hoshifuru-05.webp",
+    image: "/use-cases/writer-essay.webp",
   },
   {
     label: "写真家・クリエイターの方に",
     title: "作品をスマートに見せる",
     body: "作品集やポートフォリオをページをめくるWebブックとして公開。URLやQRで簡単にシェアできます。",
     icon: "camera",
-    image: "/sample-images/hoshifuru-06.webp",
+    image: "/use-cases/photographer-portfolio.webp",
   },
 ];
 
@@ -176,7 +175,7 @@ export default function UseCasesPage() {
         </section>
 
         <section className={`${styles.container} ${styles.sceneSection}`} aria-labelledby="scene-heading">
-          <h2 id="scene-heading"><span aria-hidden="true">✦</span>いろんなシーンで活躍しています！<span aria-hidden="true">✦</span></h2>
+          <h2 id="scene-heading"><span aria-hidden="true">✦</span>いろんなシーンで活用できます！<span aria-hidden="true">✦</span></h2>
           <div className={styles.sceneGrid}>
             {scenes.map((scene) => (
               <article className={styles.sceneCard} key={scene.label}>
@@ -203,9 +202,8 @@ export default function UseCasesPage() {
               <li>公開後も編集できて、あなたの作品を育てていける！</li>
             </ul>
           </div>
-          <div className={styles.summaryDevice} aria-hidden="true">
-            <div className={styles.deviceScreen}><Image src={SAMPLE_BOOK_COVER_IMAGE} alt="" fill sizes="360px" /></div>
-            <div className={styles.devicePhone}><Image src={SAMPLE_BOOK_COVER_IMAGE} alt="" fill sizes="100px" /></div>
+          <div className={styles.summaryBook} aria-hidden="true">
+            <Image src="/sample-images/hoshifuru-lp-complete.png" alt="" fill sizes="(max-width: 680px) 90vw, 420px" />
           </div>
           <div className={styles.summaryBubble}>あなたの文章が、<br /><strong>世界にひとつの<br />“めくれる本”に。</strong><span aria-hidden="true">✦</span></div>
         </section>
