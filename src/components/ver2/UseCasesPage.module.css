@@ -114,6 +114,7 @@
 .pointGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
   gap: 14px;
 }
 
@@ -124,7 +125,7 @@
   min-height: 462px;
   flex-direction: column;
   align-items: center;
-  padding: 52px 14px 14px;
+  padding: 52px 16px 14px;
   border: 1px solid var(--use-border);
   border-radius: 16px;
   background: linear-gradient(145deg, rgba(255, 255, 255, .94), rgba(241, 249, 254, .75));
@@ -152,13 +153,18 @@
 .pointCard:nth-child(4) .pointNumber { background: linear-gradient(145deg, #1b4e82, #123e68); }
 
 .pointCard h3 {
+  width: 100%;
   min-height: 58px;
   margin: 0;
   color: var(--use-navy);
   font-size: 20px;
   font-weight: 900;
   line-height: 1.45;
+  overflow-wrap: normal;
   text-align: center;
+  text-wrap: balance;
+  word-break: normal;
+  line-break: strict;
 }
 
 .pointIcon {
@@ -173,11 +179,17 @@
 .pointIcon svg { width: 112px; height: 112px; }
 
 .pointCard p {
+  width: 100%;
+  max-width: 34ch;
   margin: 0;
   color: #243f5a;
   font-size: 15px;
   line-height: 1.9;
+  overflow-wrap: normal;
   text-align: center;
+  text-wrap: pretty;
+  word-break: normal;
+  line-break: strict;
 }
 
 .pointTakeaway {
@@ -188,7 +200,7 @@
   justify-content: center;
   gap: 7px;
   margin-top: auto;
-  padding: 10px 12px;
+  padding: 10px;
   border: 1px solid rgba(49, 130, 177, .10);
   border-radius: 12px;
   color: var(--use-blue);
@@ -199,7 +211,7 @@
   text-align: center;
 }
 
-.pointTakeaway span {
+.pointTakeawayIcon {
   display: grid;
   width: 19px;
   height: 19px;
@@ -209,6 +221,25 @@
   color: #fff;
   background: var(--use-blue);
   font-size: 12px;
+}
+
+.pointTakeawayText {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: normal;
+  text-wrap: balance;
+  word-break: normal;
+  line-break: strict;
+}
+
+.noBreak { white-space: nowrap; }
+
+@supports (word-break: auto-phrase) {
+  .pointCard h3,
+  .pointCard p,
+  .pointTakeawayText {
+    word-break: auto-phrase;
+  }
 }
 
 .sceneSection { padding-top: 48px; }
@@ -492,6 +523,10 @@
   .summaryBubble { grid-column: 1 / -1; min-height: 108px; border-radius: 18px; }
 }
 
+@media (min-width: 1101px) and (max-width: 1180px) {
+  .pointGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 14px; }
+}
+
 @media (max-width: 680px) {
   .container { width: min(100% - 28px, 520px); }
   .breadcrumb { padding-top: 14px; font-size: 12px; }
@@ -501,10 +536,10 @@
   .hero h1 { font-size: clamp(44px, 14vw, 62px); }
   .heroLead { font-size: 15px; }
   .pointGrid, .sceneGrid { grid-template-columns: 1fr; gap: 28px; }
-  .pointCard { min-height: 0; padding-top: 48px; }
+  .pointCard { min-height: 0; padding: 48px 18px 14px; }
   .pointCard h3 { min-height: 0; font-size: 20px; }
   .pointCard p { max-width: 330px; }
-  .pointTakeaway { min-height: 60px; }
+  .pointTakeaway { min-height: 64px; }
   .sceneCard p { min-height: 0; }
   .sceneVisual { height: 190px; }
   .sceneCard h3 { font-size: 17px; }

@@ -48,6 +48,28 @@ const points: Array<{
   },
 ];
 
+const protectedPointPhrases = new Set([
+  "WebBookMaker",
+  "Webブック",
+  "PDF",
+  "1作品980円",
+  "月額1,980円",
+  "公開後",
+  "作りはじめられます",
+  "編集・改善",
+  "3ステップ",
+]);
+
+const protectedPointPhrasePattern = /(WebBookMaker|Webブック|PDF|1作品980円|月額1,980円|公開後|作りはじめられます|編集・改善|3ステップ)/g;
+
+function PointText({ text }: { text: string }) {
+  return text.split(protectedPointPhrasePattern).map((part, index) => (
+    protectedPointPhrases.has(part)
+      ? <span className={styles.noBreak} key={`${part}-${index}`}>{part}</span>
+      : part
+  ));
+}
+
 const scenes: Array<{
   sampleId: "teacher" | "recipe" | "blog" | "research" | "writer" | "photographer";
   label: string;
@@ -172,10 +194,13 @@ export default function UseCasesPage() {
             {points.map((point) => (
               <article className={styles.pointCard} key={point.number}>
                 <div className={styles.pointNumber}>{point.number}</div>
-                <h3>{point.titleLines ? point.titleLines.map((line, index) => <span key={line}>{index > 0 ? <br /> : null}{line}</span>) : point.title}</h3>
+                <h3>{point.titleLines ? point.titleLines.map((line, index) => <span key={line}>{index > 0 ? <br /> : null}<PointText text={line} /></span>) : <PointText text={point.title} />}</h3>
                 <div className={styles.pointIcon}><PointIcon kind={point.icon} /></div>
-                <p>{point.body}</p>
-                <div className={styles.pointTakeaway}><span aria-hidden="true">✓</span>{point.takeaway}</div>
+                <p><PointText text={point.body} /></p>
+                <div className={styles.pointTakeaway}>
+                  <span className={styles.pointTakeawayIcon} aria-hidden="true">✓</span>
+                  <span className={styles.pointTakeawayText}><PointText text={point.takeaway} /></span>
+                </div>
               </article>
             ))}
           </div>
