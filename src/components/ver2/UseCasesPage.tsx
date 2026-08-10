@@ -6,7 +6,6 @@ import Ver2Header from "@/components/ver2/lp/Ver2Header";
 import styles from "./UseCasesPage.module.css";
 
 type PointIconKind = "create" | "price" | "files" | "update";
-type SceneIconKind = "teacher" | "cooking" | "writer" | "research" | "author" | "camera";
 
 const points: Array<{
   number: string;
@@ -75,7 +74,6 @@ const scenes: Array<{
   label: string;
   title: string;
   body: string;
-  icon: SceneIconKind;
   image: string;
 }> = [
   {
@@ -83,7 +81,6 @@ const scenes: Array<{
     label: "講師・先生",
     title: "教材や教本を気軽に",
     body: "自分で作った教材やテキストをそのままWebブックに。生徒さんへの配布もラクになります。",
-    icon: "teacher",
     image: "/use-cases/teacher-materials.webp",
   },
   {
@@ -91,7 +88,6 @@ const scenes: Array<{
     label: "料理教室の方に",
     title: "レシピやコツを一冊に",
     body: "レシピやコツを一冊にまとめて、レッスン後の共有に。内容の更新もいつでもできます。",
-    icon: "cooking",
     image: "/use-cases/recipe-book.webp",
   },
   {
@@ -99,7 +95,6 @@ const scenes: Array<{
     label: "note・ブログの方に",
     title: "書きためた記事を作品集に",
     body: "書きためた記事をテーマごとにまとめて、あなただけの作品集に。ファンへのプレゼントにもぴったり！",
-    icon: "writer",
     image: "/use-cases/note-blog.webp",
   },
   {
@@ -107,7 +102,6 @@ const scenes: Array<{
     label: "研究者・学生の方に",
     title: "研究成果を読みやすく",
     body: "研究レポートや論文、卒業研究のまとめなどを見やすく整理。発表や共有にも役立ちます。",
-    icon: "research",
     image: "/use-cases/research-paper.webp",
   },
   {
@@ -115,7 +109,6 @@ const scenes: Array<{
     label: "作家・エッセイストの方に",
     title: "世界観をそのまま届ける",
     body: "エッセイや短編小説を一冊にまとめて、あなたの世界観をそのまま読者へ届けられます。",
-    icon: "author",
     image: "/use-cases/writer-essay.webp",
   },
   {
@@ -123,7 +116,6 @@ const scenes: Array<{
     label: "写真家・クリエイターの方に",
     title: "作品をスマートに見せる",
     body: "作品集やポートフォリオをページをめくるWebブックとして公開。URLやQRで簡単にシェアできます。",
-    icon: "camera",
     image: "/use-cases/photographer-portfolio.webp",
   },
 ];
@@ -149,25 +141,6 @@ function PointIcon({ kind }: { kind: PointIconKind }) {
     return <svg {...common}><path d="m18 22 7-7h24v31H25l-7-7z" /><path d="M25 15v8h-7" /><path d="m38 28 12 12M50 28 38 40" /></svg>;
   }
   return <svg {...common}><path d="M51 25a20 20 0 0 0-35-5M13 39a20 20 0 0 0 35 5" /><path d="m49 14 2 11-11-2M15 50l-2-11 11 2" /><path d="M32 20v12l8 5" /></svg>;
-}
-
-function SceneIcon({ kind }: { kind: SceneIconKind }) {
-  const common = {
-    viewBox: "0 0 48 48",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.9,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
-  };
-
-  if (kind === "teacher") return <svg {...common}><path d="M8 38h32M13 34V12h22v22M18 17h12M18 23h12M18 29h7" /><path d="m37 15 4-4" /></svg>;
-  if (kind === "cooking") return <svg {...common}><path d="M7 28h34M10 28c1 9 6 13 14 13s13-4 14-13M15 21c0-4 3-7 7-7s7 3 7 7" /><path d="M22 10V6M32 11l3-4" /></svg>;
-  if (kind === "writer") return <svg {...common}><path d="M7 12c6-3 11-3 17 0v28c-6-3-11-3-17 0zM41 12c-6-3-11-3-17 0v28c6-3 11-3 17 0z" /><path d="M13 20h6M13 26h6M29 20h6M29 26h6" /></svg>;
-  if (kind === "research") return <svg {...common}><path d="M8 39h32M12 34V18l12-7 12 7v16M19 34V25h10v9" /><path d="M24 7v4" /></svg>;
-  if (kind === "author") return <svg {...common}><path d="m11 38 5-17 21-10 3 6-21 10zM16 21l6 6M30 15l5 5" /><path d="M10 42h30" /></svg>;
-  return <svg {...common}><path d="M7 20h26l8 8v12H7z" /><circle cx="20" cy="30" r="6" /><path d="M33 20v-6h5l3 6M12 40l-2 4M36 40l2 4" /></svg>;
 }
 
 export default function UseCasesPage() {
@@ -214,7 +187,6 @@ export default function UseCasesPage() {
                 <div className={styles.sceneLabel}>{scene.label}</div>
                 <div className={styles.sceneVisual}>
                   <Image src={scene.image} alt="" fill sizes="(max-width: 640px) 90vw, (max-width: 1000px) 30vw, 220px" />
-                  <span className={styles.sceneIcon}><SceneIcon kind={scene.icon} /></span>
                 </div>
                 <h3>{scene.title}</h3>
                 <p>{scene.body}</p>

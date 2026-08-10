@@ -311,24 +311,6 @@
 
 .sceneVisual img { object-fit: cover; }
 
-.sceneIcon {
-  position: absolute;
-  right: 8px;
-  bottom: 7px;
-  z-index: 1;
-  display: grid;
-  width: 40px;
-  height: 40px;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, .74);
-  border-radius: 12px;
-  color: var(--use-navy);
-  background: rgba(255, 255, 255, .84);
-  backdrop-filter: blur(8px);
-}
-
-.sceneIcon svg { width: 26px; height: 26px; }
-
 .sceneCard h3 {
   min-height: 42px;
   margin: 12px 0 4px;
