@@ -126,14 +126,12 @@ export default function PricingShowcasePage() {
         </div>
 
         <section className={styles.hero} aria-labelledby="pricing-heading">
-          <PricingIcon name="book" size={56} />
           <div className={styles.heroCopy}>
             <p className={styles.kicker}>WebBooK<span className={styles.brandMaker}>Maker</span></p>
             <h1 id="pricing-heading">料金プラン</h1>
             <p className={styles.heroLead}>作るところまでは無料。公開スタイルに合わせて選べます。</p>
             <p className={styles.heroSub}>1作品だけ公開するなら「出版プラン」。公開後も編集・分析しながら育てるなら「運用プラン」。</p>
           </div>
-          <PricingIcon name="chart" size={56} />
         </section>
 
         <section className={styles.cards} aria-label="料金プラン一覧">
