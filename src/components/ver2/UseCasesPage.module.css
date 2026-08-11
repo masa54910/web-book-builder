@@ -5,10 +5,13 @@
   --use-border: rgba(49, 130, 177, .18);
   min-height: 100vh;
   color: #13202d;
-  background:
-    radial-gradient(circle at 7% 6%, rgba(168, 214, 238, .26), transparent 26%),
-    radial-gradient(circle at 92% 12%, rgba(207, 233, 247, .34), transparent 28%),
-    linear-gradient(180deg, #fff, #f3f9fd 54%, #fff);
+  background-color: #fff;
+  background-image:
+    linear-gradient(90deg, #fff 0%, rgba(255, 255, 255, .88) 10%, rgba(255, 255, 255, 0) 22%),
+    url("/use-cases/use-cases-bg-blur.webp");
+  background-position: center top, calc(100% + 40px) top;
+  background-repeat: no-repeat;
+  background-size: 100% 760px, 90% auto;
 }
 
 .container {
@@ -510,6 +513,11 @@
 }
 
 @media (max-width: 680px) {
+  .page {
+    background-position: center top, 56% 64px;
+    background-size: 100% 760px, auto 760px;
+  }
+
   .container { width: min(100% - 28px, 520px); }
   .breadcrumb { padding-top: 14px; font-size: 12px; }
   .hero { width: calc(100% - 28px); margin-top: 18px; padding: 20px 8px 26px; }
