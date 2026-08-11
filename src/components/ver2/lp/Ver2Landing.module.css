@@ -5622,16 +5622,28 @@
   background: var(--wb-white);
 }
 
+.pricingSection {
+  background: var(--wb-pale-blue);
+}
+
 .trustStrip {
-  border-top: 1px solid var(--wb-border);
+  gap: 16px;
+  border-top: 0;
   border-right: 0;
-  border-bottom: 1px solid var(--wb-border);
+  border-bottom: 0;
   border-left: 0;
   border-radius: 0;
   background: transparent;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   box-shadow: none;
+}
+
+.trustItem {
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius-lg);
+  background: var(--wb-white);
+  box-shadow: var(--wb-shadow-1);
 }
 
 .trustItem span {
@@ -5642,7 +5654,7 @@
 }
 
 .trustItem + .trustItem::before {
-  background: var(--wb-border);
+  content: none;
 }
 
 .trustText {
