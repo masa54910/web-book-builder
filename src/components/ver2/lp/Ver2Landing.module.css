@@ -5396,7 +5396,9 @@
   color: var(--wb-white);
   background: var(--wb-navy);
   box-shadow: none;
+  font-family: "Noto Serif JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
   font-weight: 600;
+  line-height: 1.45;
   transition: background-color 160ms ease-out;
 }
 
@@ -5552,7 +5554,9 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  font-family: "Noto Serif JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
   font-weight: 600;
+  line-height: 1.45;
 }
 
 .bookmarkMark {
