@@ -5829,7 +5829,11 @@
   .heroGrid {
     grid-template-columns: minmax(0, 47fr) minmax(0, 53fr);
     gap: clamp(24px, 2vw, 36px);
-    align-items: center;
+    align-items: start;
+  }
+
+  .heroCopy {
+    padding-top: 4px;
   }
 
   .heroBook {
