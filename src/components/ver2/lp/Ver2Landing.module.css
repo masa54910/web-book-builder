@@ -3006,7 +3006,7 @@
 
 @media (max-width: 640px) {
   .page {
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   .heroTitleLine {
@@ -5164,8 +5164,11 @@
 }
 
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   border-bottom-color: var(--wb-border);
-  background: color-mix(in srgb, var(--wb-warm-white) 96%, transparent);
+  background: #fff;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   box-shadow: none;
@@ -5707,8 +5710,13 @@
 
 .footer {
   border-top: 1px solid var(--wb-border);
-  background: var(--wb-warm-white);
+  background: #fff;
   box-shadow: none;
+}
+
+.section[id],
+.promotionSection[id] {
+  scroll-margin-top: 98px;
 }
 
 .footerLinks a {
