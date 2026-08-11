@@ -1,7 +1,27 @@
 import Image from "next/image";
 import styles from "./Ver2Landing.module.css";
 
-export default function Ver2BookShowcase() {
+type Ver2BookShowcaseProps = {
+  variant?: "book" | "heroPhoto";
+};
+
+export default function Ver2BookShowcase({ variant = "book" }: Ver2BookShowcaseProps) {
+  if (variant === "heroPhoto") {
+    return (
+      <div className={styles.bookShowcase}>
+        <Image
+          className={styles.heroTabletPhoto}
+          src="/home/hero-tablet-webbook-v4.webp"
+          alt="木製デスクのタブレットでWebBookMakerのサンプルWebブックを開いているイメージ"
+          width={1280}
+          height={940}
+          sizes="(max-width: 640px) calc(100vw - 24px), (max-width: 1280px) min(820px, calc(100vw - 32px)), 53vw"
+          preload
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={styles.bookShowcase} aria-label="Webブック完成イメージ">
       <div className={styles.bookStage}>
@@ -17,7 +37,11 @@ export default function Ver2BookShowcase() {
             priority
           />
         </div>
-        <div className={styles.featureBadges}><span><i>✓</i> 公開URL</span><span><i>✓</i> X共有</span><span><i>✓</i> note記事</span></div>
+        <div className={styles.featureBadges}>
+          <span><i>✓</i> 公開URL</span>
+          <span><i>✓</i> X共有</span>
+          <span><i>✓</i> note記事</span>
+        </div>
       </div>
     </div>
   );

@@ -5734,3 +5734,187 @@
 .flowDialog p {
   color: var(--wb-muted);
 }
+
+/* Home Hero right side: the sample is presented in a real-life tablet scene.
+   The left-side copy and every section below the Hero remain unchanged. */
+.heroShowcaseFrame {
+  display: block;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.heroShowcaseFrame::before {
+  content: none;
+}
+
+.heroShowcaseFrame .bookShowcase,
+.heroShowcaseFrame:hover .bookShowcase {
+  display: block;
+  width: 100%;
+  transform: none;
+}
+
+.heroTabletPhoto {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0;
+  object-fit: cover;
+  object-position: center;
+}
+
+.heroShowcaseFrame:hover {
+  transform: none;
+}
+
+.heroShowcaseFrame:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--wb-blue) 72%, transparent);
+  outline-offset: 4px;
+}
+
+.heroBook {
+  position: relative;
+}
+
+.heroBook .sampleGuide {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  color: var(--wb-navy);
+  font-size: clamp(14px, 1.25vw, 17px);
+  font-weight: 700;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+.sampleGuideArrow {
+  font-size: clamp(28px, 2.4vw, 36px);
+  font-weight: 400;
+  line-height: 1;
+}
+
+@media (min-width: 1281px) {
+  .heroGrid {
+    grid-template-columns: minmax(0, 47fr) minmax(0, 53fr);
+    gap: clamp(24px, 2vw, 36px);
+    align-items: center;
+  }
+
+  .heroBook {
+    margin-top: 0;
+  }
+
+  .heroShowcaseFrame {
+    width: calc(100% + clamp(84px, 7.8vw, 112px));
+    margin-left: calc(clamp(28px, 4vw, 58px) * -1);
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        rgb(0 0 0 / 30%) 5%,
+        #000 15%,
+        #000 95.5%,
+        rgb(0 0 0 / 42%) 98%,
+        transparent 100%
+      ),
+      linear-gradient(
+        to bottom,
+        transparent 0,
+        #000 18%,
+        #000 92%,
+        rgb(0 0 0 / 48%) 97%,
+        transparent 100%
+      );
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        rgb(0 0 0 / 30%) 5%,
+        #000 15%,
+        #000 95.5%,
+        rgb(0 0 0 / 42%) 98%,
+        transparent 100%
+      ),
+      linear-gradient(
+        to bottom,
+        transparent 0,
+        #000 18%,
+        #000 92%,
+        rgb(0 0 0 / 48%) 97%,
+        transparent 100%
+      );
+    mask-composite: intersect;
+  }
+
+  .heroBook .sampleGuide {
+    top: 4px;
+    transform: translateX(2%);
+  }
+}
+
+@media (max-width: 1280px) {
+  .heroBook .sampleGuide {
+    position: static;
+    margin-bottom: 10px;
+    transform: none;
+  }
+
+  .heroShowcaseFrame {
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        #000 7%,
+        #000 96%,
+        transparent 100%
+      ),
+      linear-gradient(to bottom, transparent 0, #000 7%, #000 94%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        #000 7%,
+        #000 96%,
+        transparent 100%
+      ),
+      linear-gradient(to bottom, transparent 0, #000 7%, #000 94%, transparent 100%);
+    mask-composite: intersect;
+  }
+}
+
+@media (max-width: 640px) {
+  .heroBook .sampleGuide {
+    gap: 2px;
+    font-size: 13px;
+  }
+
+  .sampleGuideArrow {
+    font-size: 25px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroShowcaseFrame,
+  .heroShowcaseFrame:hover {
+    transition: none;
+  }
+}
+
+@media (max-width: 1280px) {
+  .heroBook {
+    width: min(100%, 820px);
+  }
+}
+
+@media (max-width: 640px) {
+  .heroTabletPhoto {
+    width: 100%;
+    height: auto;
+  }
+}

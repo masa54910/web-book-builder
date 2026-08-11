@@ -148,9 +148,12 @@ export default function Ver2Hero({
           </div>
 
           <div className={styles.heroBook}>
-            <p className={styles.sampleGuide}>{SAMPLE_BOOK_GUIDE_TEXT}</p>
+            <p className={styles.sampleGuide}>
+              <span>{SAMPLE_BOOK_GUIDE_TEXT.replace(/^↓/, "")}</span>
+              <span className={styles.sampleGuideArrow} aria-hidden="true">↓</span>
+            </p>
             <Link className={styles.heroShowcaseFrame} href={SAMPLE_BOOK_ROUTE} aria-label="サンプルのWebブックを見る">
-              <Ver2BookShowcase />
+              <Ver2BookShowcase variant="heroPhoto" />
             </Link>
           </div>
         </div>
