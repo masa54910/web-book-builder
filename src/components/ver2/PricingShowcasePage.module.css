@@ -2,10 +2,7 @@
   min-height: 100vh;
   padding: 24px 14px 56px;
   color: #132f4c;
-  background:
-    radial-gradient(circle at 10% 8%, rgba(196, 228, 249, 0.5), transparent 32%),
-    radial-gradient(circle at 90% 12%, rgba(224, 241, 251, 0.8), transparent 30%),
-    linear-gradient(180deg, #fafdff 0%, #eef8fd 52%, #f7fbfe 100%);
+  background: #fffdf9;
 }
 
 .shell {
@@ -19,33 +16,33 @@
   display: flex;
   justify-content: flex-end;
   min-height: 32px;
+  min-width: 0;
 }
 
 .hero,
 .card,
 .compare,
 .guide {
-  border: 1px solid rgba(64, 145, 199, 0.2);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(239, 249, 255, 0.86));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.98),
-    0 14px 34px rgba(43, 103, 145, 0.1);
+  min-width: 0;
+  border: 1px solid #d9e4ec;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(19, 47, 76, 0.06);
 }
 
 .hero {
+  width: 100%;
   display: grid;
   grid-template-columns: 88px minmax(0, 1fr) 88px;
   align-items: center;
   gap: 20px;
   padding: 24px 30px;
-  border-radius: 24px;
+  border-radius: 12px;
   text-align: center;
 }
 
 .hero > svg {
   justify-self: center;
   color: #2e8ed2;
-  filter: drop-shadow(0 5px 8px rgba(36, 112, 176, 0.18));
 }
 
 .heroCopy {
@@ -72,10 +69,6 @@
   font-weight: 900;
   letter-spacing: -0.05em;
   line-height: 1.05;
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.95),
-    0 3px 5px rgba(20, 75, 125, 0.18),
-    0 8px 16px rgba(49, 139, 206, 0.1);
 }
 
 .heroLead,
@@ -96,6 +89,7 @@
 }
 
 .cards {
+  width: 100%;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
@@ -112,66 +106,49 @@
   gap: 9px;
   padding: 20px 18px 18px;
   overflow: hidden;
-  border-radius: 18px;
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
-}
-
-.card::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(125deg, rgba(255, 255, 255, 0.45), transparent 42%);
-}
-
-.dealRibbon {
-  position: absolute;
-  z-index: 2;
-  top: 17px;
-  right: -37px;
-  width: 132px;
-  padding: 5px 0;
-  transform: rotate(45deg);
-  color: #fff;
-  background: linear-gradient(180deg, #36a6df, #147cc1);
-  box-shadow: 0 3px 8px rgba(22, 112, 172, 0.22);
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  text-align: center;
+  border-radius: 8px;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .card:hover {
-  transform: translateY(-3px);
   border-color: rgba(40, 142, 207, 0.34);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.98),
-    0 19px 40px rgba(43, 103, 145, 0.16);
-}
-
-.card:active {
-  transform: translateY(-1px);
+  box-shadow: 0 7px 18px rgba(19, 47, 76, 0.09);
 }
 
 .card:focus-within {
   border-color: #268ace;
-  box-shadow:
-    0 0 0 4px rgba(38, 138, 206, 0.14),
-    0 16px 34px rgba(43, 103, 145, 0.13);
+  box-shadow: 0 0 0 3px rgba(38, 138, 206, 0.14);
 }
 
 .cardFree {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(238, 248, 255, 0.92));
+  background: #fff;
 }
 
 .cardPublish {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.99), rgba(245, 250, 255, 0.92));
+  background: #fff;
 }
 
 .cardOperation {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(230, 246, 255, 0.9));
+  border-color: #173e70;
+  background: #f3f9fd;
+}
+
+.dealRibbon {
+  position: absolute;
+  top: 15px;
+  right: -21px;
+  z-index: 1;
+  width: 86px;
+  padding: 4px 0;
+  border: 1px solid #173e70;
+  border-radius: 2px;
+  background: #173e70;
+  color: #fff;
+  transform: rotate(45deg);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
 }
 
 .badge {
@@ -277,9 +254,7 @@
   box-sizing: border-box;
   min-height: 32px;
   margin: 0;
-  padding: 8px 10px;
-  border-radius: 9px;
-  background: #eef7fe;
+  padding: 4px 0;
   color: #143f73;
   font-size: 11px;
   font-weight: 800;
@@ -287,12 +262,6 @@
 
 .planTag svg {
   flex: 0 0 auto;
-}
-
-.paymentNote {
-  color: #1579be;
-  font-weight: 900;
-  white-space: nowrap;
 }
 
 .cardActions {
@@ -311,10 +280,9 @@
   align-items: center;
   justify-content: center;
   padding: 0 14px;
-  border: 1px solid rgba(17, 111, 178, 0.18);
-  border-radius: 999px;
-  background: linear-gradient(180deg, #35a6e2, #147cc2);
-  box-shadow: 0 5px 12px rgba(30, 118, 180, 0.23), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  border: 1px solid #102e53;
+  border-radius: 8px;
+  background: #102e53;
   color: #fff;
   font-size: 13px;
   font-weight: 800;
@@ -324,24 +292,20 @@
 }
 
 .planAction:hover {
-  filter: brightness(1.06);
-  transform: translateY(-1px);
-  box-shadow: 0 7px 15px rgba(30, 118, 180, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  background: #173e70;
 }
 
 .planAction:active {
-  transform: translateY(1px);
-  box-shadow: 0 3px 8px rgba(30, 118, 180, 0.22);
+  background: #0b2548;
 }
 
-.planAction:focus-visible,
-.guideAction:focus-visible {
+.planAction:focus-visible {
   outline: 3px solid rgba(33, 132, 201, 0.28);
   outline-offset: 3px;
 }
 
 .cardPublish .planAction {
-  background: linear-gradient(180deg, #1a437c, #0b2c5c);
+  background: #0b2c5c;
 }
 
 .planNote {
@@ -354,6 +318,11 @@
   text-align: center;
 }
 
+.cardFree .planNote {
+  color: #123e68;
+  font-weight: 600;
+}
+
 .cardOperation .planNote {
   color: #123e68;
   font-weight: 800;
@@ -361,10 +330,11 @@
 
 .compare,
 .guide {
-  border-radius: 18px;
+  border-radius: 12px;
 }
 
 .compare {
+  width: 100%;
   padding: 18px 18px 16px;
 }
 
@@ -385,7 +355,7 @@
   width: 100%;
   min-width: 760px;
   border-collapse: collapse;
-  background: rgba(255, 255, 255, 0.86);
+  background: #fff;
 }
 
 .tableWrap th,
@@ -405,7 +375,7 @@
 
 .tableWrap thead th {
   color: #126a9e;
-  background: rgba(224, 242, 253, 0.76);
+  background: #eef7fc;
   font-weight: 800;
 }
 
@@ -431,22 +401,22 @@
 .priceRow th,
 .priceRow td {
   color: #123e68;
-  background: rgba(237, 248, 254, 0.9);
+  background: #f1f8fc;
   font-weight: 900;
 }
 
 .guide {
+  width: 100%;
   display: grid;
   grid-template-columns: 54px minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
   padding: 16px 18px;
-  background: linear-gradient(105deg, rgba(237, 248, 255, 0.94), rgba(255, 255, 255, 0.92));
+  background: #f3f9fd;
 }
 
 .guide > svg {
   color: #2084ca;
-  filter: drop-shadow(0 4px 7px rgba(36, 132, 202, 0.18));
 }
 
 .guide h2 {
@@ -460,26 +430,6 @@
   color: #466784;
   font-size: 12px;
   line-height: 1.65;
-}
-
-.guideAction {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  gap: 8px;
-  padding: 0 16px;
-  border: 1px solid rgba(36, 138, 207, 0.32);
-  border-radius: 999px;
-  color: #146aa3;
-  background: rgba(255, 255, 255, 0.75);
-  font-size: 12px;
-  font-weight: 800;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.guideAction:hover {
-  background: #e9f6fe;
 }
 
 @media (max-width: 980px) {
@@ -520,10 +470,6 @@
     grid-template-columns: 44px minmax(0, 1fr);
   }
 
-  .guideAction {
-    grid-column: 2;
-    justify-self: start;
-  }
 }
 
 @media (max-width: 520px) {
@@ -531,12 +477,7 @@
     padding: 16px 10px 40px;
   }
 
-  .hero,
-  .card,
-  .compare,
-  .guide {
-    border-radius: 16px;
-  }
+  .hero, .card, .compare, .guide { border-radius: 8px; }
 
   .hero h1 {
     font-size: clamp(34px, 12vw, 48px);
@@ -571,7 +512,6 @@
   }
 
   .card:hover,
-  .card:active,
   .planAction:hover,
   .planAction:active {
     transform: none;

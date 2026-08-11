@@ -60,20 +60,20 @@ type PlanCard = {
   lead: string;
   features: string[];
   note?: string;
-  paymentNote?: string;
   actionLabel: string;
   href: string;
 };
 
 const comparisonRows = [
   { icon: "book" as const, label: "作成・プレビュー", free: "○", publish: "○", operation: "○" },
-  { icon: "external" as const, label: "公開", free: "—", publish: "1作品", operation: "月10作品まで" },
+  { icon: "external" as const, label: "公開", free: "—", publish: "1作品", operation: "最大10作品まで" },
   { icon: "read" as const, label: "公開後の編集", free: "—", publish: "7日間まで", operation: "いつでも可能" },
   { icon: "book" as const, label: "WebBook Gallery掲載", free: "—", publish: "○", operation: "○" },
   { icon: "share" as const, label: "SNS共有（X・note・LINEなど）", free: "—", publish: "○", operation: "○" },
-  { icon: "analytics" as const, label: "アクセス分析", free: "—", publish: "○（基本）", operation: "○（詳細）" },
-  { icon: "read" as const, label: "読者の行動（読了・閲覧ページなど）", free: "—", publish: "△（一部）", operation: "○（すべて）" },
-  { icon: "external" as const, label: "外部リンク・CTA設置", free: "—", publish: "○", operation: "○（分析付き）" },
+  { icon: "share" as const, label: "URL / QR共有", free: "—", publish: "○", operation: "○" },
+  { icon: "analytics" as const, label: "アクセス解析ができる", free: "—", publish: "—", operation: "○" },
+  { icon: "read" as const, label: "読者の行動分析ができる", free: "—", publish: "—", operation: "○" },
+  { icon: "external" as const, label: "外部リンク・CTA設置", free: "—", publish: "○", operation: "○" },
 ];
 
 export default function PricingShowcasePage() {
@@ -85,7 +85,7 @@ export default function PricingShowcasePage() {
       badge: "FREE",
       name: "無料プラン",
       price: "¥0",
-      unit: "/ 月",
+      unit: "",
       lead: "まずは無料で、Webブックを作って試せます。",
       features: ["ご自身の閲覧用", "作成・プレビュー", "表紙・ページ調整", "公開前の仕上がりを確認", "一般公開はできません"],
       actionLabel: "無料ではじめる",
@@ -102,8 +102,7 @@ export default function PricingShowcasePage() {
       features: ["1作品を公開", "公開後7日間は編集可能", "WebBook Galleryに掲載", "X・note・LINEなどへ共有", "公開URLはそのまま継続"],
       actionLabel: "出版プランではじめる",
       href: "/signup?plan=publish",
-      note: "買い切り・月額料金なし",
-      paymentNote: "PayPay払いO.K！",
+      note: "買い切り・PayPay払いO.K!",
     },
     {
       id: "operation",
@@ -112,7 +111,7 @@ export default function PricingShowcasePage() {
       price: "¥1,980",
       unit: "/ 月",
       lead: "公開後も、編集・分析しながら作品を育てたい方へ。",
-      features: ["月10作品まで公開", "公開後もいつでも編集可能", "アクセス分析ができる", "読者がどのページまで読んだか分かる", "過去の出版済み作品も再編集可能"],
+      features: ["最大10作品まで公開", "公開後もいつでも編集可能", "アクセス分析ができる", "読者がどのページまで読んだか分かる", "リンクがどれくらい押されたか分かる", "過去の出版済み作品も再編集可能"],
       actionLabel: "運用プランではじめる",
       href: "/signup?plan=writer",
       note: "いつでも解約できます",
@@ -155,7 +154,7 @@ export default function PricingShowcasePage() {
               </ul>
               <div className={styles.cardActions}>
                 <Link className={`maker-primary-link ${styles.planAction}`} href={plan.href}>{plan.actionLabel}</Link>
-                {plan.id === "publish" ? <p className={styles.planTag}><PricingIcon name="tag" size={16} /><span>{plan.note}</span><span className={styles.paymentNote}>{plan.paymentNote}</span></p> : <small className={styles.planNote}>{plan.note}</small>}
+                {plan.id === "publish" ? <p className={styles.planTag}><PricingIcon name="tag" size={16} /><span>{plan.note}</span></p> : <small className={styles.planNote}>{plan.note}</small>}
               </div>
             </article>
           ))}
@@ -177,7 +176,7 @@ export default function PricingShowcasePage() {
                 ))}
                 <tr className={styles.priceRow}>
                   <th scope="row"><PricingIcon name="tag" size={19} /><span>料金</span></th>
-                  <td>¥0 / 月</td><td>¥980 / 1作品（買い切り）</td><td>¥1,980 / 月</td>
+                  <td>¥0</td><td>¥980 / 1作品（買い切り）</td><td>¥1,980 / 月</td>
                 </tr>
               </tbody>
             </table>
@@ -188,9 +187,8 @@ export default function PricingShowcasePage() {
           <PricingIcon name="lightbulb" size={42} />
           <div>
             <h2 id="plan-guide-heading">どのプランが合っている？</h2>
-            <p>1作品だけ公開したい方は「出版プラン」。<br />日々の情報発信や複数の作品を育てていきたい方は「運用プラン」がおすすめです。</p>
+            <p>まずは作って試したい方は「無料プラン」。1作品だけ公開したい方は「出版プラン」。<br />日々の情報発信や複数の作品を育てていきたい方は「運用プラン」がおすすめです。</p>
           </div>
-          <Link href="/help" className={styles.guideAction}>詳しく見る <span aria-hidden="true">›</span></Link>
         </section>
       </div>
     </main>
