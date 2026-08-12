@@ -5946,3 +5946,869 @@
     height: auto;
   }
 }
+
+/* Home creation flow: compact views of the real product UI. */
+.flowEditorMock,
+.flowCoverMock,
+.flowShareMock,
+.flowAnalyticsMock {
+  min-width: 0;
+  color: var(--wb-text);
+  font-family: "Noto Sans JP", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.flowEditorMock {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) minmax(145px, .72fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 12px 16px;
+  min-height: 284px;
+  padding: 16px;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius-md);
+  background: var(--wb-pale-blue);
+}
+
+.flowEditorMain,
+.flowEditorAside,
+.flowCoverSettings,
+.flowPublishPanel,
+.flowAnalyticsPanel,
+.flowManagePanel {
+  min-width: 0;
+}
+
+.flowUiHeading {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--wb-navy);
+  font-size: 12px;
+}
+
+.flowFileRow,
+.flowPublishedUrl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.flowFileRow span {
+  color: var(--wb-text-secondary);
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.flowFileRow b,
+.flowCoverRow b,
+.flowCoverRow span,
+.flowEditorActions > *,
+.flowCoverActions > *,
+.flowPublishedUrl b,
+.flowReset,
+.flowDetailToggle {
+  display: inline-flex;
+  min-height: 25px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-white);
+  color: var(--wb-navy);
+  font-size: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.flowHelper {
+  display: block;
+  margin: 6px 0 8px;
+  color: var(--wb-text-muted);
+  font-size: 7px;
+}
+
+.flowTextArea {
+  min-height: 176px;
+  padding: 13px 15px;
+  overflow: hidden;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-white);
+  color: var(--wb-navy);
+}
+
+.flowTextArea > strong {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 11px;
+}
+
+.flowTextArea p {
+  margin: 0 0 5px;
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1.52;
+}
+
+.flowEditorAside label,
+.flowTypeControls > small {
+  display: block;
+  margin: 7px 0 3px;
+  color: var(--wb-text-secondary);
+  font-size: 7px;
+  font-weight: 700;
+}
+
+.flowCoverRow {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+}
+
+.flowCoverRow > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.flowEditorDivider {
+  height: 1px;
+  margin: 10px 0;
+  background: var(--wb-border);
+}
+
+.flowSelect,
+.flowMockInput {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  overflow: hidden;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-white);
+  color: var(--wb-navy);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flowEditorActions {
+  display: flex;
+  grid-column: 1;
+  gap: 7px;
+}
+
+.flowEditorActions > b,
+.flowCoverActions > b {
+  border-color: var(--wb-blue);
+  background: var(--wb-blue);
+  color: var(--wb-white);
+}
+
+.flowCoverArtwork {
+  position: relative;
+  width: min(100%, 176px);
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border: 1px solid rgba(18, 62, 104, .18);
+  border-radius: var(--wb-radius-sm);
+  background: #06182d;
+  box-shadow: var(--wb-shadow-1);
+}
+
+.flowCoverArtwork img {
+  object-fit: cover;
+}
+
+.flowCoverArtwork::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: rgba(3, 19, 38, .26);
+}
+
+.flowCoverArtwork > span,
+.flowCoverArtwork > small {
+  position: absolute;
+  z-index: 1;
+  right: 8px;
+  left: 8px;
+  color: var(--wb-white);
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+}
+
+.flowCoverArtwork > span {
+  top: 33%;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.flowCoverArtwork > small {
+  bottom: 8px;
+  font-size: 6px;
+}
+
+.flowCoverArtworkCompact {
+  width: 64px;
+  border-radius: 4px;
+}
+
+.flowCoverArtworkCompact::after {
+  display: none;
+}
+
+.flowCoverArtworkCompact > span {
+  right: 4px;
+  left: 4px;
+  font-size: 7px;
+}
+
+.flowCoverArtworkCompact > small {
+  right: 3px;
+  bottom: 4px;
+  left: 3px;
+  font-size: 4px;
+}
+
+.flowCoverMock {
+  min-height: 284px;
+  overflow: hidden;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius-md);
+  background: var(--wb-pale-blue);
+}
+
+.flowModalBar {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--wb-border);
+  background: var(--wb-white);
+}
+
+.flowModalBar strong {
+  color: var(--wb-navy);
+  font-size: 10px;
+}
+
+.flowModalBar span {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1px solid var(--wb-border);
+  border-radius: 50%;
+  color: var(--wb-text-secondary);
+}
+
+.flowCoverBody {
+  display: grid;
+  grid-template-columns: minmax(118px, .72fr) minmax(0, 1.55fr);
+  gap: 13px;
+  padding: 12px;
+}
+
+.flowCoverPreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flowCoverPreview .flowCoverArtwork {
+  width: 118px;
+}
+
+.flowCoverSettings {
+  padding: 10px;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-white);
+}
+
+.flowSettingsIntro strong,
+.flowSettingsIntro small {
+  display: block;
+}
+
+.flowSettingsIntro strong {
+  color: var(--wb-navy);
+  font-size: 11px;
+}
+
+.flowSettingsIntro small {
+  margin-top: 2px;
+  color: var(--wb-text-muted);
+  font-size: 6px;
+}
+
+.flowSettingsColumns {
+  display: grid;
+  grid-template-columns: minmax(94px, .85fr) minmax(0, 1.15fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.flowSettingsColumns label,
+.flowTypeControls > label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--wb-text-secondary);
+  font-size: 7px;
+  font-weight: 700;
+}
+
+.flowLayoutGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.flowLayoutGrid > span {
+  display: flex;
+  min-height: 57px;
+  place-items: center;
+  padding: 4px 3px 3px;
+  border: 1px solid var(--wb-border);
+  border-radius: 5px;
+  background: var(--wb-white);
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.flowLayoutGrid > span.flowLayoutSelected {
+  border-color: var(--wb-blue);
+  background: var(--wb-pale-blue);
+}
+
+.flowLayoutThumb {
+  position: relative;
+  display: block;
+  width: 30px;
+  height: 36px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 4px;
+  background: var(--wb-navy);
+  box-shadow: inset 0 0 0 1px rgba(4, 40, 74, 0.18);
+}
+
+.flowLayoutThumbTitle,
+.flowLayoutThumbImage,
+.flowLayoutThumbAuthor {
+  position: absolute;
+  right: 5px;
+  left: 5px;
+  display: block;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.flowLayoutThumbTitle {
+  top: 5px;
+  height: 3px;
+}
+
+.flowLayoutThumbImage {
+  top: 12px;
+  height: 15px;
+  background: var(--wb-blue-soft);
+}
+
+.flowLayoutThumbAuthor {
+  bottom: 4px;
+  height: 2px;
+  opacity: 0.82;
+}
+
+.flowLayoutCentered .flowLayoutThumbTitle {
+  top: 16px;
+}
+
+.flowLayoutCentered .flowLayoutThumbImage {
+  top: 22px;
+  height: 10px;
+}
+
+.flowLayoutFullPhoto .flowLayoutThumbImage {
+  inset: 0;
+  height: 100%;
+  border-radius: 0;
+  background: linear-gradient(145deg, #6eb8d7, #d7eef7);
+}
+
+.flowLayoutFullPhoto .flowLayoutThumbTitle,
+.flowLayoutFullPhoto .flowLayoutThumbAuthor {
+  z-index: 1;
+}
+
+.flowLayoutPhotoTop .flowLayoutThumbImage {
+  top: 4px;
+  height: 19px;
+}
+
+.flowLayoutPhotoTop .flowLayoutThumbTitle {
+  top: 27px;
+}
+
+.flowLayoutPhotoTop .flowLayoutThumbAuthor {
+  bottom: 3px;
+}
+
+.flowLayoutPhotoBottom .flowLayoutThumbTitle {
+  top: 4px;
+}
+
+.flowLayoutPhotoBottom .flowLayoutThumbAuthor {
+  top: 10px;
+  bottom: auto;
+}
+
+.flowLayoutPhotoBottom .flowLayoutThumbImage {
+  top: 16px;
+  height: 17px;
+}
+
+.flowLayoutLargeTitle .flowLayoutThumbTitle {
+  top: 7px;
+  height: 8px;
+}
+
+.flowLayoutLargeTitle .flowLayoutThumbImage {
+  top: 19px;
+  height: 10px;
+}
+
+.flowLayoutGrid small {
+  color: var(--wb-navy);
+  font-size: 5.5px;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.flowLayoutGrid small b {
+  font: inherit;
+}
+
+.flowMockInput {
+  min-height: 25px;
+  padding: 4px 6px;
+  font-size: 6px;
+}
+
+.flowReset {
+  min-height: 20px;
+  margin-top: 4px;
+  padding: 2px 6px;
+  font-size: 6px;
+}
+
+.flowCheck {
+  display: block;
+  margin-top: 6px;
+  color: var(--wb-navy);
+  font-size: 7px;
+  font-weight: 700;
+}
+
+.flowScale {
+  display: grid;
+  grid-template-columns: 22px 1fr 22px;
+  align-items: center;
+  text-align: center;
+}
+
+.flowScale b {
+  display: grid;
+  height: 20px;
+  place-items: center;
+  border: 1px solid var(--wb-border);
+  border-radius: 4px;
+  color: var(--wb-blue);
+}
+
+.flowScale span {
+  color: var(--wb-text-secondary);
+  font-weight: 700;
+}
+
+.flowCoverActions {
+  display: flex;
+  gap: 7px;
+  padding: 0 12px 10px;
+}
+
+.flowShareMock,
+.flowAnalyticsMock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, .82fr);
+  gap: 14px;
+  min-height: 284px;
+}
+
+.flowPublishPanel,
+.flowAnalyticsPanel,
+.flowManagePanel {
+  padding: 14px;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius-md);
+  background: var(--wb-pale-blue);
+}
+
+.flowPublishDone {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--wb-navy);
+  font-size: 11px;
+}
+
+.flowPublishDone span {
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--wb-blue);
+  color: var(--wb-white);
+}
+
+.flowPublishedUrl {
+  margin-top: 12px;
+}
+
+.flowPublishedUrl > span {
+  min-width: 0;
+  flex: 1;
+  padding: 8px;
+  overflow: hidden;
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-white);
+  color: var(--wb-text-muted);
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flowPublishedUrl b {
+  border-color: var(--wb-blue-soft);
+  color: var(--wb-blue);
+}
+
+.flowShareLabel {
+  display: block;
+  margin-top: 18px;
+  color: var(--wb-navy);
+  font-size: 10px;
+}
+
+.flowShareServices {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.flowShareServices > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--wb-text-secondary);
+}
+
+.flowShareServices i {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--wb-border);
+  border-radius: 50%;
+  background: var(--wb-white);
+  font-style: normal;
+}
+
+.flowShareServices svg {
+  width: 19px;
+  height: 19px;
+}
+
+.flowServiceX {
+  background: #111 !important;
+  color: #fff;
+}
+
+.flowServiceNote {
+  color: #111;
+}
+
+.flowServiceFacebook {
+  color: #1877f2;
+}
+
+.flowServiceLine {
+  color: #06c755;
+}
+
+.flowServiceQr {
+  color: var(--wb-navy);
+}
+
+.flowShareServices small {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 6px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+}
+
+.flowDetailToggle {
+  min-height: 22px;
+  margin-top: 16px;
+  border-color: var(--wb-blue-soft);
+  background: var(--wb-pale-blue);
+  color: var(--wb-blue);
+  font-size: 7px;
+}
+
+.flowXPost {
+  min-width: 0;
+}
+
+.flowXPost .shareSampleCard {
+  height: 100%;
+  min-height: 284px;
+  padding: 12px;
+  border-radius: var(--wb-radius-md);
+  box-shadow: none;
+}
+
+.flowXPost .shareSampleHeading strong {
+  font-size: 8px;
+}
+
+.flowXPost .shareSampleHeading small,
+.flowXPost .shareSamplePostText,
+.flowXPost .shareSampleLinkMeta span {
+  font-size: 6px;
+}
+
+.flowXPost .shareSampleLinkMeta strong {
+  font-size: 7px;
+}
+
+.flowXPost .shareSampleLinkCard {
+  grid-template-columns: 62px minmax(0, 1fr);
+}
+
+.flowXPost .shareSampleCover {
+  min-height: 74px;
+}
+
+.flowXPost .shareSampleActions {
+  font-size: 9px;
+}
+
+.flowAnalyticsMock {
+  grid-template-columns: minmax(0, 1.18fr) minmax(175px, .82fr);
+}
+
+.flowAnalyticsHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--wb-navy);
+}
+
+.flowAnalyticsHeading strong {
+  font-size: 10px;
+}
+
+.flowAnalyticsHeading small {
+  color: var(--wb-text-muted);
+  font-size: 7px;
+}
+
+.flowChart {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  height: 128px;
+  margin-top: 10px;
+  border-bottom: 1px solid var(--wb-border);
+}
+
+.flowYAxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  color: var(--wb-text-muted);
+  font-size: 6px;
+}
+
+.flowBars {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+}
+
+.flowBars > span {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.flowBars i {
+  width: min(100%, 18px);
+  min-height: 12px;
+  border-radius: 3px 3px 0 0;
+  background: var(--wb-blue);
+}
+
+.flowBars small {
+  color: var(--wb-text-muted);
+  font-size: 6px;
+}
+
+.flowPopularHeading {
+  display: block;
+  margin: 14px 0 7px;
+  color: var(--wb-navy);
+  font-size: 9px;
+}
+
+.flowPopularRow {
+  display: grid;
+  grid-template-columns: 17px minmax(78px, auto) minmax(50px, 1fr) 26px;
+  align-items: center;
+  gap: 6px;
+  min-height: 25px;
+  color: var(--wb-navy);
+  font-size: 7px;
+}
+
+.flowPopularRow > b {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--wb-white);
+}
+
+.flowPopularRow > span {
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flowPopularRow > i {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--wb-white);
+}
+
+.flowPopularRow em {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--wb-blue);
+}
+
+.flowPopularRow > strong {
+  text-align: right;
+}
+
+.flowManagePanel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 12px;
+}
+
+.flowManagePanel > div {
+  display: grid;
+  min-height: 43px;
+  grid-template-columns: 26px minmax(0, 1fr) 10px;
+  align-items: center;
+  gap: 7px;
+  border-bottom: 1px solid var(--wb-border);
+  color: var(--wb-navy);
+}
+
+.flowManagePanel > div:last-child {
+  border-bottom: 0;
+}
+
+.flowManagePanel span {
+  color: var(--wb-blue);
+  font-size: 16px;
+  text-align: center;
+}
+
+.flowManagePanel strong {
+  font-size: 8px;
+}
+
+.flowManagePanel b {
+  color: var(--wb-text-muted);
+  font-size: 16px;
+}
+
+@media (max-width: 640px) {
+  .flowEditorMock,
+  .flowCoverBody,
+  .flowShareMock,
+  .flowAnalyticsMock {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .flowEditorAside {
+    grid-row: auto;
+  }
+
+  .flowEditorActions {
+    grid-column: auto;
+  }
+
+  .flowCoverBody {
+    padding: 10px;
+  }
+
+  .flowCoverPreview .flowCoverArtwork {
+    width: 132px;
+  }
+
+  .flowSettingsColumns {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .flowShareMock,
+  .flowAnalyticsMock {
+    gap: 10px;
+  }
+
+  .flowXPost .shareSampleCard {
+    min-height: 248px;
+  }
+}
