@@ -382,7 +382,7 @@ function mergeRestoredImageBlocks(
         publicUrl: displayUrl,
       };
     })
-    .filter((block) => block.type === "text" || isDisplayableImageUrl(block.publicUrl));
+    .filter((block) => block.type !== "image" || isDisplayableImageUrl(block.publicUrl));
 }
 
 function mergeRestoredImages(
@@ -895,9 +895,10 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     const characterCount = contentBlocks
       .filter((block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text")
       .reduce((sum, block) => sum + block.content.trim().length, 0);
-    const imagePages = contentBlocks.filter((block) => block.type === "image").length;
+    const imagePages = contentBlocks.filter((block) => block.type === "image" && block.pageMode !== "inline").length;
+    const videoPages = contentBlocks.filter((block) => block.type === "youtube" && block.displayMode !== "inline").length;
     const textPages = characterCount ? Math.max(1, Math.ceil(characterCount / charsPerPage)) : 0;
-    return textPages + imagePages;
+    return textPages + imagePages + videoPages;
   }, [contentBlocks, state.charactersPerPage]);
 
   const textPages = useMemo(() => {

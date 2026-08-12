@@ -4,7 +4,9 @@ import type { ExternalLink, ThemeId } from "@/lib/productTypes";
 import {
   buildBookProject,
   contentBlocksToRawText,
+  normalizeMediaDisplaySize,
   type BookContentBlock,
+  type MediaDisplaySize,
   type BookProject,
   type BookProjectInput,
   type ProjectBuildResult,
@@ -33,6 +35,7 @@ export type CanonicalAssetRef = {
   caption?: string;
   altText?: string;
   pageMode?: "inline" | "full-page";
+  displaySize?: MediaDisplaySize;
   fitMode?: "contain" | "cover";
   insertChapter?: string;
   orderInChapter?: number;
@@ -49,9 +52,18 @@ export type CanonicalContentBlock =
       type: "image";
       assetId: string;
       pageMode: "inline" | "full-page";
+      displaySize?: MediaDisplaySize;
       caption?: string;
       altText?: string;
       fitMode?: "contain" | "cover";
+    }
+  | {
+      id: string;
+      type: "youtube";
+      videoId: string;
+      originalUrl: string;
+      displayMode?: "inline" | "full-page";
+      displaySize?: MediaDisplaySize;
     };
 
 export type CanonicalBookPayload = {
@@ -219,6 +231,17 @@ export function buildCanonicalBookPayload(
       return { id: block.id, type: "text", content: block.content };
     }
 
+    if (block.type === "youtube") {
+      return {
+        id: block.id,
+        type: "youtube",
+        videoId: block.videoId,
+        originalUrl: block.originalUrl,
+        displayMode: block.displayMode,
+        displaySize: block.displaySize,
+      };
+    }
+
     const existing = assetMap.get(block.id);
     const blockAsset = mergeAsset(existing, {
       id: block.id,
@@ -231,6 +254,7 @@ export function buildCanonicalBookPayload(
       caption: block.caption,
       altText: block.altText || block.fileName,
       pageMode: block.pageMode,
+      displaySize: block.displaySize,
       fitMode: block.fitMode,
     });
     assetMap.set(block.id, blockAsset);
@@ -240,6 +264,7 @@ export function buildCanonicalBookPayload(
       type: "image",
       assetId: block.id,
       pageMode: block.pageMode,
+      displaySize: block.displaySize,
       caption: block.caption,
       altText: block.altText,
       fitMode: block.fitMode,
@@ -267,7 +292,7 @@ export function buildCanonicalBookPayload(
 
   if (!title) errors.title = "タイトルを入力してください。";
   if (!authorName) errors.author = "作者名を入力してください。";
-  if (!rawText && !contentBlocks.some((block) => block.type === "image")) {
+  if (!rawText && !contentBlocks.some((block) => block.type === "image" || block.type === "youtube")) {
     errors.rawText = "本文を入力してください。";
   }
 
@@ -346,6 +371,13 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
     if (block.type === "text") {
       return { id: block.id, type: "text", content: block.content };
     }
+    if (block.type === "youtube") {
+      return {
+        ...block,
+        displayMode: block.displayMode === "inline" ? "inline" : "full-page",
+        displaySize: normalizeMediaDisplaySize(block.displaySize),
+      };
+    }
     const asset = assetMap.get(block.assetId);
     return {
       id: block.id,
@@ -360,6 +392,7 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
       altText: block.altText || asset?.altText || asset?.fileName,
       fitMode: block.fitMode === "cover" ? "cover" : "contain",
       pageMode: block.pageMode === "inline" ? "inline" : "full-page",
+      displaySize: block.displaySize,
       uploadState: "ready",
     };
   });
@@ -457,6 +490,13 @@ export function canonicalContentBlocksToEditorBlocks(
   const assetMap = new Map(payload.assets.map((asset) => [asset.id, asset]));
   return payload.contentBlocks.map((block) => {
     if (block.type === "text") return block;
+    if (block.type === "youtube") {
+      return {
+        ...block,
+        displayMode: block.displayMode === "inline" ? "inline" : "full-page",
+        displaySize: normalizeMediaDisplaySize(block.displaySize),
+      };
+    }
     const asset = assetMap.get(block.assetId);
     return {
       id: block.id,
@@ -471,6 +511,7 @@ export function canonicalContentBlocksToEditorBlocks(
       altText: block.altText || asset?.altText,
       fitMode: block.fitMode === "cover" ? "cover" : "contain",
       pageMode: block.pageMode === "inline" ? "inline" : "full-page",
+      displaySize: block.displaySize,
       uploadState: "ready" as const,
     };
   });

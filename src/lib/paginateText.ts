@@ -1,18 +1,34 @@
 import type { BindingDirection } from "@/config/bookConfig";
-import type { BookContentBlock } from "./bookProject";
+import { normalizeMediaDisplaySize, type BookContentBlock, type MediaDisplaySize } from "./bookProject";
 import type { ImageManifestRow, NovelChapter, ReaderPage } from "./types";
 import { findPageAdjustment, type PageAdjustment } from "./pageAdjustments";
 
-const IMAGE_PATTERN = /^\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?\]\]$/;
+const IMAGE_PATTERN = /^\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]$/;
+const YOUTUBE_PATTERN = /^\[\[youtube:([A-Za-z0-9._-]+)(?:\|([A-Za-z0-9_-]{11}))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]$/;
 export const INLINE_IMAGE_TOKEN_PREFIX = "[[inline-image:";
+export const INLINE_YOUTUBE_TOKEN_PREFIX = "[[inline-youtube:";
 
 export function createInlineImageToken(payload: {
   src?: string;
   alt: string;
   caption: string;
   missing?: boolean;
+  displaySize?: MediaDisplaySize;
 }) {
   return `${INLINE_IMAGE_TOKEN_PREFIX}${encodeURIComponent(JSON.stringify(payload))}]]`;
+}
+
+export function createInlineYouTubeToken(payload: {
+  videoId: string;
+  originalUrl: string;
+  displaySize?: MediaDisplaySize;
+}) {
+  return `${INLINE_YOUTUBE_TOKEN_PREFIX}${encodeURIComponent(JSON.stringify(payload))}]]`;
+}
+
+function mediaCost(charactersPerPage: number, displaySize: MediaDisplaySize) {
+  const ratio = displaySize === "small" ? 0.28 : displaySize === "large" ? 0.54 : displaySize === "full" ? 0.68 : 0.42;
+  return Math.max(64, Math.floor(charactersPerPage * ratio));
 }
 
 function splitLongParagraph(paragraph: string, limit: number) {
@@ -108,7 +124,7 @@ export function buildReaderPages({
     });
 
     const segments = chapter.body
-      .replace(/^(\[\[image:[A-Za-z0-9._-]+(?:\|[^\]]*)?\]\])$/gm, "\n\n$1\n\n")
+      .replace(/^(\[\[(?:image|youtube):[^\]]+\]\])$/gm, "\n\n$1\n\n")
       .split(/\n{2,}/)
       .map((segment) => segment.trim());
     let paragraphs: string[] = [];
@@ -193,16 +209,61 @@ export function buildReaderPages({
     for (const entry of segmentEntries) {
       const { segment } = entry;
       if (!segment) continue;
+      const youtubeMatch = segment.match(YOUTUBE_PATTERN);
+      if (youtubeMatch) {
+        const storedBlockId = youtubeMatch[1];
+        const videoId = youtubeMatch[2] || storedBlockId;
+        const youtubeBlock = (contentBlocks || []).find(
+          (block): block is Extract<BookContentBlock, { type: "youtube" }> =>
+            block.type === "youtube" && (youtubeMatch[2] ? block.id === storedBlockId : block.videoId === videoId),
+        );
+        const sourceId = youtubeBlock?.id || `youtube-${videoId}`;
+        const displayMode = youtubeBlock?.displayMode === "inline" || youtubeMatch[3] === "inline" ? "inline" : "full-page";
+        const displaySize = normalizeMediaDisplaySize(youtubeBlock?.displaySize || youtubeMatch[4]);
+        if (shouldBreakBefore(sourceId)) flushTextPage();
+        if (displayMode === "inline") {
+          const inlineCost = mediaCost(charactersPerPage, displaySize);
+          if (paragraphs.length && cost + inlineCost > charactersPerPage) flushTextPage();
+          paragraphs.push(createInlineYouTubeToken({
+            videoId,
+            originalUrl: youtubeBlock?.originalUrl || `https://www.youtube.com/watch?v=${videoId}`,
+            displaySize,
+          }));
+          paragraphSourceBlockIds.push(sourceId);
+          cost += inlineCost;
+          if (adjustmentForSource(sourceId)?.pageBreakAfter) {
+            handledBreakAfter.add(sourceId);
+            flushTextPage();
+          }
+          continue;
+        }
+        flushTextPage();
+        pages.push({
+          id: `${chapter.slug}-youtube-${sourceId}`,
+          kind: "youtube",
+          chapterTitle: chapter.title,
+          videoId,
+          originalUrl: youtubeBlock?.originalUrl || `https://www.youtube.com/watch?v=${videoId}`,
+          displaySize,
+          sourceBlockIds: [sourceId],
+        });
+        if (adjustmentForSource(sourceId)?.pageBreakAfter) handledBreakAfter.add(sourceId);
+        continue;
+      }
       const imageMatch = segment.match(IMAGE_PATTERN);
       if (imageMatch) {
         const imageId = imageMatch[1];
         const image = imageMap.get(imageId) ?? imageMap.get(`${chapter.order}-${imageId}`);
         const pageMode = imageMatch[3] === "inline" ? "inline" : "full-page";
+        const imageBlock = (contentBlocks || []).find(
+          (block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image" && block.id === imageId,
+        );
+        const displaySize = normalizeMediaDisplaySize(imageBlock?.displaySize || imageMatch[4]);
         const imageSourceId = image?.image_id || image?.image_index || imageId;
         const imageAdjustment = findPageAdjustment(pageAdjustments, imageSourceId);
         if (shouldBreakBefore(imageSourceId)) flushTextPage();
         if (pageMode === "inline") {
-          const inlineImageCost = Math.max(80, Math.floor(charactersPerPage * 0.42));
+          const inlineImageCost = mediaCost(charactersPerPage, displaySize);
           if (paragraphs.length && cost + inlineImageCost > charactersPerPage) {
             flushTextPage();
           }
@@ -212,6 +273,7 @@ export function buildReaderPages({
               alt: image?.alt || `${chapter.title} image ${imageId}`,
               caption: image?.caption || imageMatch[2] || "",
               missing: !image,
+              displaySize,
             }),
           );
           paragraphSourceBlockIds.push(image?.image_id || image?.image_index || imageId);
@@ -234,6 +296,7 @@ export function buildReaderPages({
           alt: image?.alt || `${chapter.title} image ${imageId}`,
           caption: image?.caption || imageMatch[2] || "",
           missing: !image,
+          displaySize,
           sourceBlockIds: [image?.image_id || image?.image_index || imageId, `${chapter.slug}-image-${imageId}`],
         });
         if (imageAdjustment?.pageBreakAfter) {

@@ -9,6 +9,7 @@ import type { ThemeId } from "@/lib/productTypes";
 import type { BookThemeSettings } from "@/lib/themeSystem";
 import { DEFAULT_COVER_DESIGN, normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
+import { isValidYouTubeVideoId } from "@/lib/youtube";
 
 export type EditorDraftState = {
   title: string;
@@ -86,6 +87,14 @@ function isDraftContentBlock(value: unknown): value is BookContentBlock {
   if (block.type === "text") {
     return typeof block.id === "string" && typeof block.content === "string";
   }
+  if (block.type === "youtube") {
+    return (
+      typeof block.id === "string" &&
+      typeof block.videoId === "string" &&
+      isValidYouTubeVideoId(block.videoId) &&
+      typeof block.originalUrl === "string"
+    );
+  }
   return (
     block.type === "image" &&
     typeof block.id === "string" &&
@@ -127,7 +136,7 @@ export function buildEditorDraftFields(input: {
         publicUrl,
       };
     })
-    .filter((block) => block.type === "text" || Boolean(block.storagePath || block.publicUrl));
+    .filter((block) => block.type !== "image" || Boolean(block.storagePath || block.publicUrl));
 
   const safeState = {
     ...input.state,

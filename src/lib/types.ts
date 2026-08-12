@@ -66,6 +66,15 @@ type ReaderPageShape =
       alt: string;
       caption: string;
       missing?: boolean;
+      displaySize?: "small" | "medium" | "large" | "full";
+    }
+  | {
+      id: string;
+      kind: "youtube";
+      chapterTitle: string;
+      videoId: string;
+      originalUrl: string;
+      displaySize?: "small" | "medium" | "large" | "full";
     }
   | {
       id: string;

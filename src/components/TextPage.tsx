@@ -1,9 +1,10 @@
 import { Fragment } from "react";
 import type { SyntheticEvent } from "react";
 
-import { INLINE_IMAGE_TOKEN_PREFIX } from "@/lib/paginateText";
+import { INLINE_IMAGE_TOKEN_PREFIX, INLINE_YOUTUBE_TOKEN_PREFIX } from "@/lib/paginateText";
 import type { PageAdjustment } from "@/lib/pageAdjustments";
 import ReferenceBlock, { extractUrls } from "./ReferenceBlock";
+import YouTubePage from "./YouTubePage";
 
 const PREVIOUS_GUIDE_PATTERN =
   /^(?:[・\-]\s*)?(前回|前回はこちら|前回まで|前回の記事|前回[〜～~↓]?|前回はこちら↓)$/;
@@ -28,12 +29,39 @@ function parseInlineImageToken(paragraph: string) {
       alt?: string;
       caption?: string;
       missing?: boolean;
+      displaySize?: "small" | "medium" | "large" | "full";
     };
+    const displaySize: "small" | "medium" | "large" | "full" =
+      decoded.displaySize === "small" || decoded.displaySize === "large" || decoded.displaySize === "full"
+        ? decoded.displaySize
+        : "medium";
     return {
       src: decoded.src,
       alt: decoded.alt || "inline image",
       caption: decoded.caption || "",
       missing: Boolean(decoded.missing),
+      displaySize,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseInlineYouTubeToken(paragraph: string) {
+  if (!paragraph.startsWith(INLINE_YOUTUBE_TOKEN_PREFIX) || !paragraph.endsWith("]]")) return null;
+  try {
+    const decoded = JSON.parse(decodeURIComponent(paragraph.slice(INLINE_YOUTUBE_TOKEN_PREFIX.length, -2))) as {
+      videoId?: string;
+      displaySize?: "small" | "medium" | "large" | "full";
+    };
+    if (!decoded.videoId) return null;
+    const displaySize: "small" | "medium" | "large" | "full" =
+      decoded.displaySize === "small" || decoded.displaySize === "large" || decoded.displaySize === "full"
+        ? decoded.displaySize
+        : "medium";
+    return {
+      videoId: decoded.videoId,
+      displaySize,
     };
   } catch {
     return null;
@@ -66,7 +94,7 @@ export default function TextPage({
         const inlineImage = parseInlineImageToken(paragraph);
         if (inlineImage) {
           return (
-            <figure className="text-inline-image" key={`${key}-inline-image`}>
+            <figure className={`text-inline-image media-display-size-${inlineImage.displaySize}`} key={`${key}-inline-image`}>
               {inlineImage.src ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={inlineImage.src} alt={inlineImage.alt} loading="lazy" decoding="async" />
@@ -76,6 +104,15 @@ export default function TextPage({
               {inlineImage.caption.trim() ? <figcaption>{inlineImage.caption}</figcaption> : null}
               {inlineImage.missing ? <p className="text-inline-image-missing">画像IDが登録されていません。</p> : null}
             </figure>
+          );
+        }
+
+        const inlineYouTube = parseInlineYouTubeToken(paragraph);
+        if (inlineYouTube) {
+          return (
+            <div className={`text-inline-youtube media-display-size-${inlineYouTube.displaySize}`} key={`${key}-inline-youtube`}>
+              <YouTubePage videoId={inlineYouTube.videoId} inline displaySize={inlineYouTube.displaySize} />
+            </div>
           );
         }
 

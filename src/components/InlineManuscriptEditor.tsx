@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { BookContentBlock } from "@/lib/bookProject";
+import { normalizeMediaDisplaySize, type BookContentBlock, type MediaDisplayMode, type MediaDisplaySize } from "@/lib/bookProject";
 import { isDisplayableImageUrl } from "@/lib/bookAssetStorage";
-import { createPendingImageBlock, insertImageBlocksAtCursor } from "@/lib/inlineContentBlocks";
+import { createPendingImageBlock, insertImageBlocksAtCursor, insertYouTubeBlockAtCursor } from "@/lib/inlineContentBlocks";
 import { countContentCharacters, countUserCharacters } from "@/lib/characterCount";
+import { parseYouTubeUrl, youtubeThumbnailUrl } from "@/lib/youtube";
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -69,6 +70,7 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
         altText: child.dataset.altText || undefined,
         fitMode: child.dataset.fitMode === "cover" ? "cover" : "contain",
         pageMode: child.dataset.pageMode === "inline" ? "inline" : "full-page",
+        displaySize: normalizeMediaDisplaySize(child.dataset.displaySize),
         uploadState:
           child.dataset.uploadState === "pending" ||
           child.dataset.uploadState === "error" ||
@@ -76,6 +78,17 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
             ? child.dataset.uploadState
             : undefined,
         errorMessage: child.dataset.errorMessage || undefined,
+      });
+      continue;
+    }
+    if (child instanceof HTMLElement && child.dataset.nodeType === "youtube") {
+      blocks.push({
+        id: child.dataset.nodeId || `youtube-${index + 1}`,
+        type: "youtube",
+        videoId: child.dataset.videoId || "",
+        originalUrl: child.dataset.originalUrl || "",
+        displayMode: child.dataset.displayMode === "inline" ? "inline" : "full-page",
+        displaySize: normalizeMediaDisplaySize(child.dataset.displaySize),
       });
       continue;
     }
@@ -120,14 +133,17 @@ function createImageElement(block: Extract<BookContentBlock, { type: "image" }>)
   wrapper.dataset.altText = block.altText || "";
   wrapper.dataset.fitMode = block.fitMode;
   wrapper.dataset.pageMode = block.pageMode;
+  wrapper.dataset.displaySize = normalizeMediaDisplaySize(block.displaySize);
   wrapper.dataset.uploadState = block.uploadState || "ready";
   if (block.errorMessage) wrapper.dataset.errorMessage = block.errorMessage;
   wrapper.contentEditable = "false";
+  const editorDisplaySize = block.pageMode === "inline" ? normalizeMediaDisplaySize(block.displaySize) : "full";
   wrapper.className = [
     "inline-editor-image-node",
     block.uploadState === "pending" ? "is-pending" : "",
     block.uploadState === "error" ? "is-error" : "",
     block.fitMode === "cover" ? "fit-cover" : "fit-contain",
+    `media-display-size-${editorDisplaySize}`,
   ]
     .filter(Boolean)
     .join(" ");
@@ -157,14 +173,41 @@ function createImageElement(block: Extract<BookContentBlock, { type: "image" }>)
   return wrapper;
 }
 
+function createYouTubeElement(block: Extract<BookContentBlock, { type: "youtube" }>) {
+  const wrapper = document.createElement("div");
+  wrapper.dataset.nodeType = "youtube";
+  wrapper.dataset.nodeId = block.id;
+  wrapper.dataset.videoId = block.videoId;
+  wrapper.dataset.originalUrl = block.originalUrl;
+  wrapper.dataset.displayMode = block.displayMode === "inline" ? "inline" : "full-page";
+  wrapper.dataset.displaySize = normalizeMediaDisplaySize(block.displaySize);
+  wrapper.contentEditable = "false";
+  const editorDisplaySize = block.displayMode === "inline" ? normalizeMediaDisplaySize(block.displaySize) : "full";
+  wrapper.className = `inline-editor-youtube-node media-display-size-${editorDisplaySize}`;
+
+  const thumbnail = document.createElement("img");
+  thumbnail.src = youtubeThumbnailUrl(block.videoId);
+  thumbnail.alt = "";
+  thumbnail.loading = "lazy";
+  thumbnail.decoding = "async";
+
+  const label = document.createElement("span");
+  label.className = "inline-editor-youtube-label";
+  label.textContent = "▶ YouTube動画";
+  wrapper.append(thumbnail, label);
+  return wrapper;
+}
+
 function renderNodes(root: HTMLElement, nodes: BookContentBlock[], pageBreakAfterBlockIds: string[] = []) {
   const fragment = document.createDocumentFragment();
   const breakIds = new Set(pageBreakAfterBlockIds);
   for (const block of nodes) {
     if (block.type === "text") {
       fragment.append(createParagraphElement(block));
-    } else {
+    } else if (block.type === "image") {
       fragment.append(createImageElement(block));
+    } else {
+      fragment.append(createYouTubeElement(block));
     }
     if (breakIds.has(block.id)) {
       const marker = document.createElement("div");
@@ -305,10 +348,17 @@ export default function InlineManuscriptEditor({
   const renderedRevisionRef = useRef<string | null>(null);
   const renderedBreakSignatureRef = useRef("");
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [selectedYouTubeId, setSelectedYouTubeId] = useState<string | null>(null);
+  const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubeDisplayMode, setYoutubeDisplayMode] = useState<MediaDisplayMode>("inline");
+  const [youtubeDisplaySize, setYoutubeDisplaySize] = useState<MediaDisplaySize>("medium");
+  const [youtubeError, setYoutubeError] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [cursorFallbackMessage, setCursorFallbackMessage] = useState("");
   const [isInsertMenuOpen, setIsInsertMenuOpen] = useState(false);
   const [imagePopoverPosition, setImagePopoverPosition] = useState<{ top: number; left: number } | null>(null);
+  const [youtubePopoverPosition, setYoutubePopoverPosition] = useState<{ top: number; left: number } | null>(null);
   const pageBreakSignature = pageBreakAfterBlockIds.join("|");
 
   const reportCursor = useCallback(() => {
@@ -360,6 +410,10 @@ export default function InlineManuscriptEditor({
     () => value.find((block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image" && block.id === selectedImageId) ?? null,
     [selectedImageId, value],
   );
+  const selectedYouTube = useMemo(
+    () => value.find((block): block is Extract<BookContentBlock, { type: "youtube" }> => block.type === "youtube" && block.id === selectedYouTubeId) ?? null,
+    [selectedYouTubeId, value],
+  );
 
   const emitChange = (next: BookContentBlock[]) => {
     nodesRef.current = next;
@@ -405,6 +459,15 @@ export default function InlineManuscriptEditor({
   }, [selectedImageId]);
 
   useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const nodes = root.querySelectorAll<HTMLElement>("[data-node-type='youtube']");
+    nodes.forEach((node) => {
+      node.classList.toggle("is-selected", node.dataset.nodeId === selectedYouTubeId);
+    });
+  }, [selectedYouTubeId]);
+
+  useEffect(() => {
     const updatePopoverPosition = () => {
       const root = rootRef.current;
       const editor = editorRef.current;
@@ -434,9 +497,38 @@ export default function InlineManuscriptEditor({
   }, [selectedImageId, value]);
 
   useEffect(() => {
+    const updatePopoverPosition = () => {
+      const root = rootRef.current;
+      const editor = editorRef.current;
+      if (!root || !editor || !selectedYouTubeId) {
+        setYoutubePopoverPosition(null);
+        return;
+      }
+      const node = root.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(selectedYouTubeId)}"]`);
+      if (!node) return;
+      const editorRect = editor.getBoundingClientRect();
+      const nodeRect = node.getBoundingClientRect();
+      const popoverWidth = Math.min(340, Math.max(260, editorRect.width - 24));
+      setYoutubePopoverPosition({
+        top: Math.max(12, nodeRect.bottom - editorRect.top + 8),
+        left: Math.max(12, Math.min(nodeRect.left - editorRect.left, editorRect.width - popoverWidth - 12)),
+      });
+    };
+    updatePopoverPosition();
+    window.addEventListener("resize", updatePopoverPosition);
+    window.addEventListener("scroll", updatePopoverPosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePopoverPosition);
+      window.removeEventListener("scroll", updatePopoverPosition, true);
+    };
+  }, [selectedYouTubeId, value]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setSelectedImageId(null);
+        setSelectedYouTubeId(null);
+        setIsYouTubeModalOpen(false);
         setIsInsertMenuOpen(false);
       }
     };
@@ -482,6 +574,7 @@ export default function InlineManuscriptEditor({
       renderNodes(rootRef.current, next.length ? next : [{ id: paragraphId(0), type: "text", content: "" }], pageBreakAfterBlockIds);
     }
     setSelectedImageId(null);
+    setSelectedYouTubeId(null);
   };
 
   async function finishUpload(files: File[], pendingIds: string[]) {
@@ -561,6 +654,67 @@ export default function InlineManuscriptEditor({
 
   const insertImageFromPicker = () => {
     fileInputRef.current?.click();
+  };
+
+  const openYouTubeModal = () => {
+    setYoutubeUrl("");
+    setYoutubeDisplayMode("inline");
+    setYoutubeDisplaySize("medium");
+    setYoutubeError("");
+    setIsYouTubeModalOpen(true);
+  };
+
+  const saveYouTubeBlock = () => {
+    const parsed = parseYouTubeUrl(youtubeUrl);
+    if (!parsed) {
+      setYoutubeError("有効なYouTube URLを入力してください。");
+      return;
+    }
+
+    if (selectedYouTube) {
+      updateNode(selectedYouTube.id, {
+        type: "youtube",
+        videoId: parsed.videoId,
+        originalUrl: parsed.canonicalUrl,
+        displayMode: youtubeDisplayMode,
+        displaySize: youtubeDisplaySize,
+      });
+      setIsYouTubeModalOpen(false);
+      return;
+    }
+
+    const root = rootRef.current;
+    if (!root) return;
+    const activeRange = (savedRangeRef.current ?? cloneSelectionRange(root))?.cloneRange() ?? null;
+    const paragraphTarget = findParagraphTarget(root, activeRange);
+    if (!paragraphTarget || !activeRange) {
+      const message = "動画を入れる位置にカーソルを置いてください。";
+      setYoutubeError(message);
+      onStatus(message);
+      return;
+    }
+    const nodeIndex = editorBlockIndex(root, paragraphTarget);
+    const current = nodeIndex >= 0 ? nodesRef.current[nodeIndex] : undefined;
+    if (!current || current.type !== "text") return;
+    const split = splitParagraphAtCaret(paragraphTarget, activeRange);
+    const youtubeBlock = {
+      id: `youtube-${crypto.randomUUID()}`,
+      type: "youtube" as const,
+      videoId: parsed.videoId,
+      originalUrl: parsed.canonicalUrl,
+      displayMode: youtubeDisplayMode,
+      displaySize: youtubeDisplaySize,
+    };
+    const nextBlocks = insertYouTubeBlockAtCursor({
+      blocks: nodesRef.current,
+      paragraphIndex: nodeIndex,
+      cursorOffset: split.before.length,
+      youtubeBlock,
+    });
+    emitChange(nextBlocks);
+    renderNodes(root, nextBlocks, pageBreakAfterBlockIds);
+    setSelectedYouTubeId(youtubeBlock.id);
+    setIsYouTubeModalOpen(false);
   };
 
   const insertPageBreakAtCursor = () => {
@@ -644,6 +798,21 @@ export default function InlineManuscriptEditor({
                 }}
                 onClick={() => {
                   setIsInsertMenuOpen(false);
+                  setSelectedYouTubeId(null);
+                  openYouTubeModal();
+                }}
+              >
+                YouTube動画を埋め込む
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onMouseDown={(event) => {
+                  captureSelectionRange();
+                  event.preventDefault();
+                }}
+                onClick={() => {
+                  setIsInsertMenuOpen(false);
                   insertPageBreakAtCursor();
                 }}
               >
@@ -674,7 +843,9 @@ export default function InlineManuscriptEditor({
                 return;
               }
               const image = target.closest("[data-node-type='image']") as HTMLElement | null;
+              const youtube = target.closest("[data-node-type='youtube']") as HTMLElement | null;
               setSelectedImageId(image?.dataset.nodeId || null);
+              setSelectedYouTubeId(youtube?.dataset.nodeId || null);
               captureSelectionRange();
               reportCursor();
             }}
@@ -801,6 +972,20 @@ export default function InlineManuscriptEditor({
               <span>1ページ</span>
             </label>
           </fieldset>
+          {selectedImage.pageMode === "inline" ? (
+            <label>
+              <span>表示サイズ</span>
+              <select
+                value={normalizeMediaDisplaySize(selectedImage.displaySize)}
+                onChange={(event) => updateNode(selectedImage.id, { displaySize: normalizeMediaDisplaySize(event.target.value) })}
+              >
+                <option value="small">小（40%）</option>
+                <option value="medium">中（60%）</option>
+                <option value="large">大（80%）</option>
+                <option value="full">最大（100%）</option>
+              </select>
+            </label>
+          ) : null}
           <div className="inline-manuscript-popover-actions">
             <button className="maker-secondary-button" type="button" onClick={insertImageFromPicker}>
               差し替え
@@ -809,6 +994,107 @@ export default function InlineManuscriptEditor({
               削除
             </button>
           </div>
+        </div>
+      ) : null}
+      {selectedYouTube ? (
+        <div
+          className="inline-manuscript-popover"
+          role="group"
+          aria-label="YouTube動画設定"
+          style={youtubePopoverPosition ? { top: youtubePopoverPosition.top, left: youtubePopoverPosition.left } : undefined}
+        >
+          <strong>YouTube動画</strong>
+          <span className="maker-note">{selectedYouTube.originalUrl}</span>
+          <fieldset className="inline-image-layout-fieldset">
+            <legend>表示方法</legend>
+            <label>
+              <input type="radio" name={`youtube-layout-${selectedYouTube.id}`} checked={selectedYouTube.displayMode === "inline"} onChange={() => updateNode(selectedYouTube.id, { displayMode: "inline" })} />
+              <span>本文内に表示</span>
+            </label>
+            <label>
+              <input type="radio" name={`youtube-layout-${selectedYouTube.id}`} checked={selectedYouTube.displayMode !== "inline"} onChange={() => updateNode(selectedYouTube.id, { displayMode: "full-page" })} />
+              <span>1ページに表示</span>
+            </label>
+          </fieldset>
+          {selectedYouTube.displayMode === "inline" ? (
+            <label>
+              <span>表示サイズ</span>
+              <select value={normalizeMediaDisplaySize(selectedYouTube.displaySize)} onChange={(event) => updateNode(selectedYouTube.id, { displaySize: normalizeMediaDisplaySize(event.target.value) })}>
+                <option value="small">小（40%）</option>
+                <option value="medium">中（60%）</option>
+                <option value="large">大（80%）</option>
+                <option value="full">最大（100%）</option>
+              </select>
+            </label>
+          ) : null}
+          <div className="inline-manuscript-popover-actions">
+            <button
+              className="maker-secondary-button"
+              type="button"
+              onClick={() => {
+                setYoutubeUrl(selectedYouTube.originalUrl);
+                setYoutubeDisplayMode(selectedYouTube.displayMode === "inline" ? "inline" : "full-page");
+                setYoutubeDisplaySize(normalizeMediaDisplaySize(selectedYouTube.displaySize));
+                setYoutubeError("");
+                setIsYouTubeModalOpen(true);
+              }}
+            >
+              URLを変更
+            </button>
+            <button className="maker-secondary-button danger" type="button" onClick={() => removeNode(selectedYouTube.id)}>
+              動画を削除
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {isYouTubeModalOpen ? (
+        <div className="youtube-url-modal-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setIsYouTubeModalOpen(false);
+        }}>
+          <section className="youtube-url-modal" role="dialog" aria-modal="true" aria-labelledby="youtube-url-modal-title">
+            <h2 id="youtube-url-modal-title">YouTube動画を埋め込む</h2>
+            <p>YouTubeのURLを入力してください。</p>
+            <label>
+              <span>YouTube URL</span>
+              <input
+                autoFocus
+                type="url"
+                value={youtubeUrl}
+                placeholder="https://www.youtube.com/watch?v=..."
+                onChange={(event) => {
+                  setYoutubeUrl(event.target.value);
+                  setYoutubeError("");
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    saveYouTubeBlock();
+                  }
+                }}
+              />
+            </label>
+            <fieldset className="inline-image-layout-fieldset youtube-modal-settings">
+              <legend>表示方法</legend>
+              <label><input type="radio" name="youtube-modal-layout" checked={youtubeDisplayMode === "inline"} onChange={() => setYoutubeDisplayMode("inline")} /><span>本文内に表示</span></label>
+              <label><input type="radio" name="youtube-modal-layout" checked={youtubeDisplayMode === "full-page"} onChange={() => setYoutubeDisplayMode("full-page")} /><span>1ページに表示</span></label>
+            </fieldset>
+            {youtubeDisplayMode === "inline" ? (
+              <label>
+                <span>表示サイズ</span>
+                <select value={youtubeDisplaySize} onChange={(event) => setYoutubeDisplaySize(normalizeMediaDisplaySize(event.target.value))}>
+                  <option value="small">小（40%）</option>
+                  <option value="medium">中（60%）</option>
+                  <option value="large">大（80%）</option>
+                  <option value="full">最大（100%）</option>
+                </select>
+              </label>
+            ) : null}
+            {youtubeError ? <p className="youtube-url-error" role="alert">{youtubeError}</p> : null}
+            <div className="youtube-url-modal-actions">
+              <button className="maker-secondary-button" type="button" onClick={() => setIsYouTubeModalOpen(false)}>キャンセル</button>
+              <button className="maker-primary-button" type="button" disabled={!youtubeUrl.trim()} onClick={saveYouTubeBlock}>追加する</button>
+            </div>
+          </section>
         </div>
       ) : null}
     </section>

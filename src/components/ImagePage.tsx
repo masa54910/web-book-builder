@@ -20,12 +20,14 @@ export default function ImagePage({
   caption,
   missing = false,
   adjustment,
+  displaySize = "medium",
 }: {
   src?: string;
   alt: string;
   caption: string;
   missing?: boolean;
   adjustment?: PageAdjustment;
+  displaySize?: "small" | "medium" | "large" | "full";
 }) {
   void caption;
   void missing;
@@ -36,7 +38,7 @@ export default function ImagePage({
   const spacingTop = adjustment?.imageSpacingTop || "normal";
   const spacingBottom = adjustment?.imageSpacingBottom || "normal";
   return (
-    <figure className={`image-page image-page-size-${imageSize} image-page-align-${imageAlign} image-page-position-${imagePosition} image-page-spacing-top-${spacingTop} image-page-spacing-bottom-${spacingBottom}`}>
+    <figure className={`image-page media-display-size-${displaySize} image-page-size-${imageSize} image-page-align-${imageAlign} image-page-position-${imagePosition} image-page-spacing-top-${spacingTop} image-page-spacing-bottom-${spacingBottom}`}>
       <div className="image-page-content">
         <div className="image-frame">
           {src ? <ReaderImage src={src} alt={alt} /> : <div className="image-fallback">IMAGE</div>}

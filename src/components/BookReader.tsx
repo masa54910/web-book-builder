@@ -37,6 +37,7 @@ import ReadingTools from "./ReadingTools";
 import ShareTools from "./ShareTools";
 import TextPage from "./TextPage";
 import TitlePage from "./TitlePage";
+import YouTubePage from "./YouTubePage";
 import HomeBackLink from "./HomeBackLink";
 
 function getSafeLocalStorage() {
@@ -212,6 +213,8 @@ export default function BookReader({
           ? page.paragraphs.join(" ").replace(/\s+/g, " ").trim().slice(0, 72)
           : page.kind === "image"
             ? page.caption || `本文画像 ${page.imageIndex}`
+            : page.kind === "youtube"
+              ? "YouTube動画"
             : page.kind === "chapterTitle"
               ? "章扉"
               : chapterTitle;
@@ -457,8 +460,11 @@ export default function BookReader({
           caption={page.caption}
           missing={page.missing}
           adjustment={adjustmentForPage(pageAdjustments, page)}
+          displaySize={page.displaySize}
         />
       );
+    } else if (page.kind === "youtube") {
+      content = <YouTubePage videoId={page.videoId} displaySize={page.displaySize} />;
     } else if (page.kind === "pageBreak") {
       content = <div className="page-break-page" aria-label="手動改ページ">ここから新しいページ</div>;
     } else if (page.kind === "colophon") content = <ColophonPage config={config} cloudBookId={cloudBookId} />;
@@ -469,7 +475,7 @@ export default function BookReader({
     return (
       <BookPage
         key={page.id}
-        label={page.kind === "text" || page.kind === "image" ? page.chapterTitle : page.kind}
+        label={page.kind === "text" || page.kind === "image" || page.kind === "youtube" ? page.chapterTitle : page.kind}
         folio={hard ? undefined : logicalFolio}
         hard={hard}
         bookmarked={bookmarkedPageIds.has(page.id)}

@@ -2,6 +2,7 @@ import type { BookContentBlock } from "@/lib/bookProject";
 
 type ImageBlock = Extract<BookContentBlock, { type: "image" }>;
 type TextBlock = Extract<BookContentBlock, { type: "text" }>;
+type YouTubeBlock = Extract<BookContentBlock, { type: "youtube" }>;
 
 export function createPendingImageBlock(id: string, fileName: string, mimeType: string): ImageBlock {
   return {
@@ -16,6 +17,7 @@ export function createPendingImageBlock(id: string, fileName: string, mimeType: 
     altText: fileName,
     fitMode: "contain",
     pageMode: "inline",
+    displaySize: "medium",
     uploadState: "pending",
   };
 }
@@ -79,4 +81,36 @@ export function insertImageBlocksAtCursor({
     nextBlocks: next,
     insertedImageIds: imageBlocks.map((block) => block.id),
   };
+}
+
+export function insertYouTubeBlockAtCursor({
+  blocks,
+  paragraphIndex,
+  cursorOffset,
+  youtubeBlock,
+}: {
+  blocks: BookContentBlock[];
+  paragraphIndex: number;
+  cursorOffset: number;
+  youtubeBlock: YouTubeBlock;
+}) {
+  const next = [...blocks];
+  const fallbackIndex = Math.min(Math.max(paragraphIndex, 0), next.length);
+  const target = next[paragraphIndex];
+
+  if (!target || target.type !== "text") {
+    next.splice(fallbackIndex, 0, youtubeBlock);
+    return next;
+  }
+
+  const boundedOffset = Math.max(0, Math.min(target.content.length, cursorOffset));
+  const beforeText = target.content.slice(0, boundedOffset);
+  const afterText = target.content.slice(boundedOffset);
+  const replacement: BookContentBlock[] = [];
+
+  if (beforeText.length > 0) replacement.push(createTextBlock(target.id, beforeText));
+  replacement.push(youtubeBlock);
+  if (afterText.length > 0) replacement.push(createTextBlock(`${target.id}-tail`, afterText));
+  next.splice(paragraphIndex, 1, ...replacement);
+  return next;
 }

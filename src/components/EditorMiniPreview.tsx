@@ -2,7 +2,7 @@
 
 import type { ReaderPage } from "@/lib/types";
 import { useMemo } from "react";
-import { INLINE_IMAGE_TOKEN_PREFIX } from "@/lib/paginateText";
+import { INLINE_IMAGE_TOKEN_PREFIX, INLINE_YOUTUBE_TOKEN_PREFIX } from "@/lib/paginateText";
 import { buildReaderFolioById, readerPageNumberLabel } from "@/lib/readerFolio";
 
 function pageLabel(page: ReaderPage) {
@@ -19,6 +19,8 @@ function pageLabel(page: ReaderPage) {
       return page.chapterTitle;
     case "image":
       return page.caption || "画像ページ";
+    case "youtube":
+      return "YouTube動画";
     case "colophon":
       return "奥付";
     case "backCover":
@@ -34,6 +36,10 @@ function isInlineImageToken(value: string) {
   return value.startsWith(INLINE_IMAGE_TOKEN_PREFIX) && value.endsWith("]]");
 }
 
+function isInlineYouTubeToken(value: string) {
+  return value.startsWith(INLINE_YOUTUBE_TOKEN_PREFIX) && value.endsWith("]]");
+}
+
 function MiniImageMarker({ inline = false }: { inline?: boolean }) {
   return (
     <span className={`editor-mini-image-marker ${inline ? "is-inline" : ""}`} role="img" aria-label="画像">
@@ -45,6 +51,9 @@ function MiniImageMarker({ inline = false }: { inline?: boolean }) {
 function MiniPageContent({ page }: { page: ReaderPage }) {
   if (page.kind === "image") {
     return <div className="editor-mini-page-image"><MiniImageMarker /></div>;
+  }
+  if (page.kind === "youtube") {
+    return <div className="editor-mini-page-youtube"><span aria-hidden="true">▶</span><strong>YouTube動画</strong></div>;
   }
   if (page.kind === "cover" || page.kind === "backCover") {
     return <div className="editor-mini-page-cover"><span>{page.kind === "cover" ? "WebBook" : ""}</span></div>;
@@ -67,6 +76,8 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
       {page.paragraphs.map((paragraph, index) => (
         isInlineImageToken(paragraph) ? (
           <MiniImageMarker inline key={`${page.id}-${index}`} />
+        ) : isInlineYouTubeToken(paragraph) ? (
+          <span className="editor-mini-inline-youtube" key={`${page.id}-${index}`}><span aria-hidden="true">▶</span> YouTube動画</span>
         ) : (
           <p className={paragraph.startsWith("## ") ? "is-heading" : ""} key={`${page.id}-${index}`}>
             {paragraph.startsWith("## ") ? paragraph.slice(3) : paragraph}

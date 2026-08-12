@@ -16,8 +16,16 @@ import { createSlugCandidate } from "@/lib/slug";
 import type { ImageManifestRow, NovelChapter } from "@/lib/types";
 import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
+import { isValidYouTubeVideoId } from "@/lib/youtube";
 
 export const BOOK_PROJECT_VERSION = 1;
+
+export type MediaDisplayMode = "inline" | "full-page";
+export type MediaDisplaySize = "small" | "medium" | "large" | "full";
+
+export function normalizeMediaDisplaySize(value: unknown): MediaDisplaySize {
+  return value === "small" || value === "large" || value === "full" ? value : "medium";
+}
 
 export type BookContentBlock =
   | {
@@ -38,8 +46,17 @@ export type BookContentBlock =
       altText?: string;
       fitMode: "contain" | "cover";
       pageMode: "inline" | "full-page";
+      displaySize?: MediaDisplaySize;
       uploadState?: "pending" | "ready" | "error";
       errorMessage?: string;
+    }
+  | {
+      id: string;
+      type: "youtube";
+      videoId: string;
+      originalUrl: string;
+      displayMode?: MediaDisplayMode;
+      displaySize?: MediaDisplaySize;
     };
 
 export type UploadedBookImage = {
@@ -108,7 +125,7 @@ export type ProjectBuildResult =
   | { ok: true; project: BookProject }
   | { ok: false; errors: Record<string, string> };
 
-const IMAGE_REFERENCE_PATTERN = /\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?\]\]/g;
+const IMAGE_REFERENCE_PATTERN = /\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]/g;
 
 function blockId(prefix: string, index: number) {
   return `${prefix}-${String(index + 1).padStart(3, "0")}`;
@@ -174,6 +191,19 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
       continue;
     }
 
+    if (block.type === "youtube") {
+      if (!isValidYouTubeVideoId(block.videoId)) continue;
+      normalized.push({
+        id: normalizeBlockId(block.id, "youtube", index),
+        type: "youtube",
+        videoId: block.videoId,
+        originalUrl: typeof block.originalUrl === "string" ? block.originalUrl : "",
+        displayMode: block.displayMode === "inline" ? "inline" : "full-page",
+        displaySize: normalizeMediaDisplaySize(block.displaySize),
+      });
+      continue;
+    }
+
     const storagePath =
       typeof block.storagePath === "string" && block.storagePath
         ? block.storagePath
@@ -193,6 +223,7 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
       altText: block.altText?.trim() || undefined,
       fitMode: block.fitMode === "cover" ? "cover" : "contain",
       pageMode: block.pageMode === "inline" ? "inline" : "full-page",
+      displaySize: normalizeMediaDisplaySize(block.displaySize),
       uploadState: block.uploadState,
       errorMessage: block.errorMessage?.trim() || undefined,
     });
@@ -207,12 +238,17 @@ export function contentBlocksToRawText(blocks: BookContentBlock[]) {
       return block.content;
     }
 
+    if (block.type === "youtube") {
+      const mode = block.displayMode === "inline" ? "inline" : "full-page";
+      return `[[youtube:${block.id}|${block.videoId}|${mode}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
+    }
+
     const caption = block.caption?.trim();
     const mode = block.pageMode === "inline" ? "inline" : "full-page";
     if (caption) {
-      return `[[image:${block.id}|${caption}|${mode}]]`;
+      return `[[image:${block.id}|${caption}|${mode}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
     }
-    return `[[image:${block.id}||${mode}]]`;
+    return `[[image:${block.id}||${mode}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
   });
 
   return normalizeLineBreaks(parts.join("\n\n"));
@@ -246,13 +282,13 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
   const imageById = new Map(images.map((image) => [image.id, image]));
   const usedImageIds = new Set<string>();
   const blocks: BookContentBlock[] = [];
-  const pattern = /\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?\]\]/g;
+  const pattern = /\[\[(image|youtube):([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]/g;
   let cursor = 0;
   let match: RegExpExecArray | null = null;
 
   while ((match = pattern.exec(text))) {
     const textPart = text.slice(cursor, match.index);
-    if (textPart) {
+    if (textPart.trim()) {
       blocks.push({
         id: blockId("text", blocks.length),
         type: "text",
@@ -260,7 +296,24 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
       });
     }
 
-    const imageId = match[1];
+    if (match[1] === "youtube") {
+      const storedBlockId = match[2];
+      const videoId = isValidYouTubeVideoId(match[3] || "") ? match[3] : storedBlockId;
+      if (isValidYouTubeVideoId(videoId)) {
+        blocks.push({
+          id: match[3] ? storedBlockId : blockId("youtube", blocks.length),
+          type: "youtube",
+          videoId,
+          originalUrl: `https://www.youtube.com/watch?v=${videoId}`,
+          displayMode: match[4] === "inline" ? "inline" : "full-page",
+          displaySize: normalizeMediaDisplaySize(match[5]),
+        });
+      }
+      cursor = pattern.lastIndex;
+      continue;
+    }
+
+    const imageId = match[2];
     const image = imageById.get(imageId);
     if (image) {
       usedImageIds.add(image.id);
@@ -273,10 +326,11 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
         mimeType: image.mimeType || "image/jpeg",
         width: 1200,
         height: 800,
-        caption: image.caption || match[2] || undefined,
+        caption: image.caption || match[3] || undefined,
         altText: image.fileName,
         fitMode: "contain",
-        pageMode: match[3] === "inline" ? "inline" : "full-page",
+        pageMode: match[4] === "inline" ? "inline" : "full-page",
+        displaySize: normalizeMediaDisplaySize(match[5]),
         uploadState: "ready",
       });
     } else {
@@ -291,7 +345,7 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
   }
 
   const tail = text.slice(cursor);
-  if (tail) {
+  if (tail.trim()) {
     blocks.push({
       id: blockId("text", blocks.length),
       type: "text",
@@ -314,6 +368,7 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
       altText: image.fileName,
       fitMode: "contain",
       pageMode: "full-page",
+      displaySize: "medium",
       uploadState: "ready",
     });
   }
@@ -431,7 +486,7 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
 
   if (!title) errors.title = "タイトルを入力してください。";
   if (!author) errors.author = "著者名を入力してください。";
-  if (!rawText && !contentBlocks.some((block) => block.type === "image")) {
+  if (!rawText && !contentBlocks.some((block) => block.type === "image" || block.type === "youtube")) {
     errors.rawText = "本文を入力してください。";
   }
 

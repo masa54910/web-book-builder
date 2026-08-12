@@ -17,7 +17,8 @@ import { validateImportFile, validateZipPath } from "../src/lib/fileImport";
 import { buildReaderPages } from "../src/lib/paginateText";
 import { buildReaderFolioById, readerPageNumberLabel } from "../src/lib/readerFolio";
 import { countContentCharacters, countUserCharacters } from "../src/lib/characterCount";
-import { createPendingImageBlock, insertImageBlocksAtCursor } from "../src/lib/inlineContentBlocks";
+import { createPendingImageBlock, insertImageBlocksAtCursor, insertYouTubeBlockAtCursor } from "../src/lib/inlineContentBlocks";
+import { parseYouTubeUrl, youtubeEmbedUrl } from "../src/lib/youtube";
 import { resolveSafeInternalReturnPath } from "../src/lib/returnTo";
 import { validateRequiredBookFields } from "../src/lib/editorValidation";
 import { computeInlineImagePopoverLayout } from "../src/lib/inlineImagePopover";
@@ -50,7 +51,11 @@ import { xIntentUrl } from "../src/lib/promotion";
 
 function blockSignature(blocks: BookContentBlock[]) {
   return blocks.map((block) =>
-    block.type === "text" ? `text:${block.content.replace(/\n+/g, " ").trim()}` : `image:${block.id}`,
+    block.type === "text"
+      ? `text:${block.content.replace(/\n+/g, " ").trim()}`
+      : block.type === "image"
+        ? `image:${block.id}`
+        : `youtube:${block.id}:${block.videoId}`,
   );
 }
 
@@ -199,6 +204,68 @@ assert.equal(pageBreakTextPages[1]?.paragraphs.join(""), "Second paragraph");
 assert.ok(pageBreakTextPages[0]?.sourceBlockIds?.includes("text-first"), "Text pages should expose their source block IDs");
 assert.ok(pageBreakTextPages[1]?.sourceBlockIds?.includes("text-second"), "The page after a break should expose its source block ID");
 
+const youtubePages = buildReaderPages({
+  chapters: [{
+    id: "chapter-youtube",
+    order: 1,
+    title: "Video",
+    slug: "youtube",
+    source: "test",
+    body: "Before\n\n[[youtube:youtube-001|dQw4w9WgXcQ]]\n\nAfter",
+  }],
+  images: [],
+  contentBlocks: [
+    { id: "youtube-before", type: "text", content: "Before" },
+    {
+      id: "youtube-001",
+      type: "youtube",
+      videoId: "dQw4w9WgXcQ",
+      originalUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    },
+    { id: "youtube-after", type: "text", content: "After" },
+  ],
+  charactersPerPage: 380,
+  tableOfContentsItemsPerPage: 6,
+});
+const youtubePage = youtubePages.find((page) => page.kind === "youtube");
+assert.equal(youtubePage?.videoId, "dQw4w9WgXcQ", "Pagination should create an independent YouTube page");
+assert.deepEqual(youtubePage?.sourceBlockIds, ["youtube-001"]);
+assert.equal(youtubePage?.displaySize, "medium", "Legacy YouTube blocks should retain full-page behavior with a safe default size");
+
+const inlineYoutubePages = buildReaderPages({
+  chapters: [{
+    id: "chapter-inline-youtube",
+    order: 1,
+    title: "Inline video",
+    slug: "inline-youtube",
+    source: "test",
+    body: "Before\n\n[[youtube:youtube-inline|dQw4w9WgXcQ|inline|small]]\n\nAfter",
+  }],
+  images: [],
+  contentBlocks: [
+    { id: "youtube-inline-before", type: "text", content: "Before" },
+    {
+      id: "youtube-inline",
+      type: "youtube",
+      videoId: "dQw4w9WgXcQ",
+      originalUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      displayMode: "inline",
+      displaySize: "small",
+    },
+    { id: "youtube-inline-after", type: "text", content: "After" },
+  ],
+  charactersPerPage: 1200,
+  tableOfContentsItemsPerPage: 6,
+});
+assert.equal(inlineYoutubePages.some((page) => page.kind === "youtube"), false, "Inline YouTube should not create an independent page");
+const inlineYoutubeTextPage = inlineYoutubePages.find(
+  (page): page is Extract<(typeof inlineYoutubePages)[number], { kind: "text" }> =>
+    page.kind === "text" && page.paragraphs.some((paragraph) => paragraph.startsWith("[[inline-youtube:")),
+);
+assert.ok(inlineYoutubeTextPage, "Inline YouTube should be represented inside a text page");
+assert.equal(inlineYoutubeTextPage?.paragraphs.includes("Before"), true);
+assert.equal(inlineYoutubeTextPage?.paragraphs.includes("After"), true);
+
 const folioPages = buildReaderPages({
   chapters: [{ id: "chapter-01", order: 1, title: "番号", slug: "folio", source: "test", body: "本文" }],
   images: [],
@@ -241,6 +308,37 @@ assert.deepEqual(
   "Images should be inserted at cursor position inside the paragraph",
 );
 
+const youtubeUrls = [
+  "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "https://youtu.be/dQw4w9WgXcQ?t=12",
+  "https://www.youtube.com/shorts/dQw4w9WgXcQ",
+  "https://m.youtube.com/watch?v=dQw4w9WgXcQ",
+  "youtube.com/watch?v=dQw4w9WgXcQ",
+];
+for (const url of youtubeUrls) {
+  assert.equal(parseYouTubeUrl(url)?.videoId, "dQw4w9WgXcQ", `YouTube URL should parse: ${url}`);
+}
+assert.equal(parseYouTubeUrl("https://example.com/watch?v=dQw4w9WgXcQ"), null);
+assert.equal(parseYouTubeUrl("javascript:alert(1)"), null);
+assert.equal(youtubeEmbedUrl("dQw4w9WgXcQ").startsWith("https://www.youtube-nocookie.com/embed/"), true);
+
+const youtubeInsertion = insertYouTubeBlockAtCursor({
+  blocks: [{ id: "youtube-source-text", type: "text", content: "before-after" }],
+  paragraphIndex: 0,
+  cursorOffset: 7,
+  youtubeBlock: {
+    id: "youtube-001",
+    type: "youtube",
+    videoId: "dQw4w9WgXcQ",
+    originalUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  },
+});
+assert.deepEqual(
+  blockSignature(youtubeInsertion),
+  ["text:before-", "youtube:youtube-001:dQw4w9WgXcQ", "text:after"],
+  "YouTube block should be inserted at the current cursor without disturbing surrounding text",
+);
+
 const orderedBlocks: BookContentBlock[] = [
   { id: "text-001", type: "text", content: "最初の段落" },
   {
@@ -255,9 +353,18 @@ const orderedBlocks: BookContentBlock[] = [
     altText: "alt-1",
     fitMode: "contain",
     pageMode: "full-page",
+    displaySize: "large",
     uploadState: "ready",
   },
   { id: "text-002", type: "text", content: "中間の段落" },
+  {
+    id: "youtube-001",
+    type: "youtube",
+    videoId: "dQw4w9WgXcQ",
+    originalUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    displayMode: "inline",
+    displaySize: "small",
+  },
   {
     id: "img-002",
     type: "image",
@@ -282,6 +389,15 @@ assert.deepEqual(
   blockSignature(orderedBlocks),
   "Text and image order should survive serialization and restoration",
 );
+const restoredOrderedImage = restoredBlocks.find(
+  (block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image" && block.id === "img-001",
+);
+const restoredOrderedYoutube = restoredBlocks.find(
+  (block): block is Extract<BookContentBlock, { type: "youtube" }> => block.type === "youtube" && block.id === "youtube-001",
+);
+assert.equal(restoredOrderedImage?.displaySize, "large", "Image display size should survive raw text round trip");
+assert.equal(restoredOrderedYoutube?.displayMode, "inline", "YouTube display mode should survive raw text round trip");
+assert.equal(restoredOrderedYoutube?.displaySize, "small", "YouTube display size should survive raw text round trip");
 
 const projectWithBlocks = buildBookProject({
   title: "順序検証",
@@ -634,6 +750,40 @@ if (canonicalCoverResult.ok) {
   );
 }
 
+const youtubeCanonicalResult = buildCanonicalBookPayload({
+  state: {
+    ...baseEditorState,
+    title: "YouTube canonical test",
+    author: "Verifier",
+    description: "YouTube block round trip",
+  },
+  contentBlocks: [
+    { id: "text-youtube", type: "text", content: "Before" },
+    {
+      id: "youtube-canonical",
+      type: "youtube",
+      videoId: "dQw4w9WgXcQ",
+      originalUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      displayMode: "inline",
+      displaySize: "large",
+    },
+  ],
+  images: [],
+});
+assert.equal(youtubeCanonicalResult.ok, true, "Canonical payload should accept a YouTube block");
+if (youtubeCanonicalResult.ok) {
+  const canonicalYoutube = youtubeCanonicalResult.payload.contentBlocks.find((block) => block.type === "youtube");
+  assert.equal(canonicalYoutube?.videoId, "dQw4w9WgXcQ");
+  assert.equal(canonicalYoutube?.displayMode, "inline");
+  assert.equal(canonicalYoutube?.displaySize, "large");
+  const restoredYoutube = canonicalPayloadToBookProjectInput(youtubeCanonicalResult.payload).contentBlocks?.find(
+    (block) => block.type === "youtube",
+  );
+  assert.equal(restoredYoutube?.id, "youtube-canonical", "Canonical round trip should preserve the YouTube block ID");
+  assert.equal(restoredYoutube?.displayMode, "inline", "Canonical round trip should preserve YouTube display mode");
+  assert.equal(restoredYoutube?.displaySize, "large", "Canonical round trip should preserve YouTube display size");
+}
+
 const emptyCoverResult = buildCanonicalBookPayload({
   state: {
     ...baseEditorState,
@@ -659,6 +809,14 @@ if (emptyCoverResult.ok) {
 }
 
 const draftBlocks: BookContentBlock[] = [
+  {
+    id: "youtube-draft",
+    type: "youtube",
+    videoId: "dQw4w9WgXcQ",
+    originalUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    displayMode: "inline",
+    displaySize: "small",
+  },
   { id: "text-001", type: "text", content: "長文テキスト" },
   {
     id: "img-001",
@@ -672,6 +830,7 @@ const draftBlocks: BookContentBlock[] = [
     altText: "alt",
     fitMode: "contain",
     pageMode: "full-page",
+    displaySize: "large",
     uploadState: "ready",
   },
 ];
@@ -703,6 +862,12 @@ assert.equal(restoredSeed.state.theme, "photo");
 assert.equal(restoredSeed.state.fontFamily, "serif");
 assert.equal(restoredSeed.state.coverImage, "https://cdn.example.com/cover.webp");
 assert.equal(restoredSeed.contentBlocks.some((block) => block.type === "image"), true);
+assert.equal(restoredSeed.contentBlocks.some((block) => block.type === "youtube"), true);
+const restoredDraftYoutube = restoredSeed.contentBlocks.find((block) => block.type === "youtube");
+const restoredDraftImage = restoredSeed.contentBlocks.find((block) => block.type === "image");
+assert.equal(restoredDraftYoutube?.displayMode, "inline", "Draft restore should preserve YouTube display mode");
+assert.equal(restoredDraftYoutube?.displaySize, "small", "Draft restore should preserve YouTube display size");
+assert.equal(restoredDraftImage?.displaySize, "large", "Draft restore should preserve image display size");
 
 // Autosave snapshots are isolated by both user and book, tolerate malformed
 // storage, expire old data, and never persist transient image references.
