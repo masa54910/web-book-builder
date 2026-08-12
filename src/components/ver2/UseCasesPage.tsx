@@ -19,14 +19,14 @@ const points: Array<{
     number: "01",
     title: "自分でかんたんに作れる",
     body: "テキストを貼るだけ、または入力するだけでOK。制作会社とのやり取りや特別なスキルは必要ありません。",
-    takeaway: "思い立ったその日から、すぐに作りはじめられます！",
+    takeaway: "すぐに作り始められます！",
     icon: "create",
   },
   {
     number: "02",
     title: "個人でも使える安心の価格",
     body: "出版プランは1作品980円から。サブスクでも月額1,980円と続けやすい価格で、気軽にWebブックを公開できます。",
-    takeaway: "価格を気にせず、あなたの作品をカタチに！",
+    takeaway: "リーズナブルな価格で安心！",
     icon: "price",
   },
   {
@@ -42,7 +42,7 @@ const points: Array<{
     title: "公開後も編集・改善できる",
     titleLines: ["公開後もいつでも", "編集・改善できる"],
     body: "出版プランは公開後7日間、運用プランは公開後もいつでも編集可能。公開して終わりではなく、作品を育てていけます。",
-    takeaway: "公開して終わりじゃないから、ずっと役立つ一冊に！",
+    takeaway: "公開後もずっと活用できる！",
     icon: "update",
   },
 ];
@@ -115,7 +115,7 @@ const scenes: Array<{
     sampleId: "photographer",
     label: "写真家・クリエイターの方に",
     title: "作品をスマートに見せる",
-    body: "作品集やポートフォリオをページをめくるWebブックとして公開。URLやQRで簡単にシェアできます。",
+    body: "作品集やポートフォリオをページをめくるフォトブックとして公開。URLやQRで簡単にシェアできます。",
     image: "/use-cases/photographer-portfolio.webp",
   },
 ];
@@ -216,7 +216,7 @@ export default function UseCasesPage() {
           <div className={styles.summaryBook} aria-hidden="true">
             <Image src="/sample-images/hoshifuru-lp-complete.png" alt="" fill sizes="(max-width: 680px) 90vw, 420px" />
           </div>
-          <div className={styles.summaryBubble}>あなたの文章が、<br /><strong>世界にひとつの<br />“めくれる本”に。</strong><span aria-hidden="true">✦</span></div>
+          <div className={styles.summaryBubble}>あなたの文章が、<br /><strong>世界にひとつの<br />“めくれるWebブック”に。</strong><span aria-hidden="true">✦</span></div>
         </section>
 
         <section className={styles.ctaSection} aria-labelledby="use-cases-cta-title">

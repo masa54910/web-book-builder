@@ -187,6 +187,9 @@ export default function PricingShowcasePage() {
             <h2 id="plan-guide-heading">どのプランが合っている？</h2>
             <p>まずは作って試したい方は「無料プラン」。1作品だけ公開したい方は「出版プラン」。<br />日々の情報発信や複数の作品を育てていきたい方は「運用プラン」がおすすめです。</p>
           </div>
+          <Link className={`maker-secondary-link ${styles.guideAction}`} href="/use-cases">
+            詳しい活用例はこちら<span aria-hidden="true">→</span>
+          </Link>
         </section>
       </div>
     </main>
