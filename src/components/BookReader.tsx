@@ -101,6 +101,7 @@ export default function BookReader({
   shareDisabledReason,
   backLink,
   onCoverDesignChange,
+  sampleBookPresentation = false,
 }: {
   config: BookConfig;
   chapters: NovelChapter[];
@@ -120,6 +121,7 @@ export default function BookReader({
     label?: string;
   };
   onCoverDesignChange?: (patch: Partial<CoverDesign>) => void;
+  sampleBookPresentation?: boolean;
 }) {
   const flipBookRef = useRef<FlipBookHandle | null>(null);
   const activePageIdRef = useRef<string | null>(null);
@@ -553,7 +555,30 @@ export default function BookReader({
       ) : null}
 
       <div className="reader-preview-layout">
-        <section className="book-viewport" aria-label="デジタル書籍リーダー">
+        <section
+          className={`book-viewport${sampleBookPresentation ? " sample-book-viewport" : ""}`}
+          aria-label="デジタル書籍リーダー"
+          data-book-edge={
+            sampleBookPresentation
+              ? activePageIndex === 0
+                ? "cover"
+                : activePageIndex >= pagesWithAdjustments.length - 1
+                  ? "back"
+                  : "spread"
+              : undefined
+          }
+        >
+          {sampleBookPresentation ? (
+            <button
+              type="button"
+              className="sample-book-chevron sample-book-chevron-previous"
+              aria-label="前のページへ"
+              disabled={activePageIndex === 0}
+              onClick={() => pageFlip()?.flipPrev("top")}
+            >
+              <span aria-hidden="true">&#8249;</span>
+            </button>
+          ) : null}
           <HTMLFlipBook
             key={`${isMobile ? "mobile" : "desktop"}-${pagesWithAdjustments.length}`}
             ref={flipBookRef}
@@ -591,6 +616,17 @@ export default function BookReader({
           >
             {pagesWithAdjustments.map(renderPage)}
           </HTMLFlipBook>
+          {sampleBookPresentation ? (
+            <button
+              type="button"
+              className="sample-book-chevron sample-book-chevron-next"
+              aria-label="次のページへ"
+              disabled={activePageIndex >= pagesWithAdjustments.length - 1}
+              onClick={() => pageFlip()?.flipNext("top")}
+            >
+              <span aria-hidden="true">&#8250;</span>
+            </button>
+          ) : null}
         </section>
       </div>
 

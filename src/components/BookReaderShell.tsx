@@ -25,6 +25,7 @@ export default function BookReaderShell({
   authorPageHandle,
   backLink,
   onCoverDesignChange,
+  sampleBookPresentation = false,
 }: {
   config: BookConfig;
   chapters: NovelChapter[];
@@ -37,6 +38,7 @@ export default function BookReaderShell({
   shareDescription?: string;
   shareDisabledReason?: string;
   authorPageHandle?: string | null;
+  sampleBookPresentation?: boolean;
   onCoverDesignChange?: (patch: Partial<CoverDesign>) => void;
   backLink?: {
     destination?: "auto" | "home" | "dashboard";
@@ -59,6 +61,7 @@ export default function BookReaderShell({
       authorPageHandle={authorPageHandle}
       backLink={backLink}
       onCoverDesignChange={onCoverDesignChange}
+      sampleBookPresentation={sampleBookPresentation}
     />
   );
 }

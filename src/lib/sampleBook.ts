@@ -33,6 +33,7 @@ export function loadSampleBookProject() {
       coverImage: SAMPLE_BOOK_COVER_IMAGE,
       coverDesign: {
         layout: "layout-10",
+        titleTextOverride: SAMPLE_BOOK_DISPLAY_TITLE_LINES.join("\n"),
         titleScale: 0.92,
         titlePosition: "bottom-left",
         authorScale: 0.92,
