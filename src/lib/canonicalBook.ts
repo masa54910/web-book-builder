@@ -15,6 +15,7 @@ import {
 import type { BookThemeSettings } from "@/lib/themeSystem";
 import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
+import type { TextMark } from "@/lib/textStyles";
 
 export type CanonicalPublicationStatus = "draft" | "published" | "archived";
 export type CanonicalPublicationVisibility = "private" | "unlisted" | "public";
@@ -46,6 +47,7 @@ export type CanonicalContentBlock =
       id: string;
       type: "text";
       content: string;
+      marks?: TextMark[];
     }
   | {
       id: string;
@@ -228,7 +230,7 @@ export function buildCanonicalBookPayload(
 
   const contentBlocks: CanonicalContentBlock[] = input.contentBlocks.map((block) => {
     if (block.type === "text") {
-      return { id: block.id, type: "text", content: block.content };
+      return { id: block.id, type: "text", content: block.content, marks: block.marks };
     }
 
     if (block.type === "youtube") {
@@ -369,7 +371,7 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
 
   const contentBlocks: BookContentBlock[] = payload.contentBlocks.map((block) => {
     if (block.type === "text") {
-      return { id: block.id, type: "text", content: block.content };
+      return { id: block.id, type: "text", content: block.content, marks: block.marks };
     }
     if (block.type === "youtube") {
       return {

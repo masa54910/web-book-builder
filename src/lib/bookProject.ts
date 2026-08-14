@@ -17,6 +17,7 @@ import type { ImageManifestRow, NovelChapter } from "@/lib/types";
 import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
 import { isValidYouTubeVideoId } from "@/lib/youtube";
+import { normalizeTextMarks, type TextMark } from "@/lib/textStyles";
 
 export const BOOK_PROJECT_VERSION = 1;
 
@@ -32,6 +33,7 @@ export type BookContentBlock =
       id: string;
       type: "text";
       content: string;
+      marks?: TextMark[];
     }
   | {
       id: string;
@@ -187,6 +189,7 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
         id: normalizeBlockId(block.id, "text", index),
         type: "text",
         content: typeof block.content === "string" ? block.content : "",
+        marks: normalizeTextMarks(typeof block.content === "string" ? block.content : "", block.marks),
       });
       continue;
     }

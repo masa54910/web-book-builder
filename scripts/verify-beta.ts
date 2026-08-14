@@ -48,6 +48,20 @@ import {
 import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, buildLineWebShareUrl, buildShareTemplate, buildXShareTemplate, buildXShareUrl, NOTE_NEW_POST_URL } from "../src/lib/shareTemplates";
 import { buildReaderFacebookShareUrl, buildReaderLineShareUrl, buildReaderLineWebShareUrl, buildReaderShareTemplate, buildReaderXShareUrl, READER_NOTE_NEW_POST_URL } from "../src/lib/readerShareTemplates";
 import { xIntentUrl } from "../src/lib/promotion";
+import { applyTextMark, normalizeTextMarks, sliceTextMarks, TEXT_COLORS, TEXT_COLOR_LABELS } from "../src/lib/textStyles";
+
+const styledText = "通常の太字と色";
+const boldMarks = applyTextMark(styledText, [], 3, 5, { bold: true });
+assert.deepEqual(normalizeTextMarks(styledText, boldMarks), [{ start: 3, end: 5, bold: true }]);
+const coloredMarks = applyTextMark(styledText, boldMarks, 5, 7, { color: "#1677B8", fontSize: "large" });
+assert.ok(coloredMarks.some((mark) => mark.bold && mark.start === 3 && mark.end === 5));
+assert.ok(coloredMarks.some((mark) => mark.color === "#1677B8" && mark.fontSize === "large"));
+assert.deepEqual(sliceTextMarks(coloredMarks, 3, 7).map((mark) => ({ ...mark })), [
+  { start: 0, end: 2, bold: true },
+  { start: 2, end: 4, color: "#1677B8", fontSize: "large" },
+]);
+assert.deepEqual(TEXT_COLORS, ["#111827", "#1677B8", "#EF4444", "#EAB308", "#667085"]);
+assert.deepEqual(Object.values(TEXT_COLOR_LABELS), ["黒", "青", "赤", "黄色", "グレー"]);
 
 function blockSignature(blocks: BookContentBlock[]) {
   return blocks.map((block) =>

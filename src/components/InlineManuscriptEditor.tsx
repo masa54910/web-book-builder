@@ -7,6 +7,7 @@ import { isDisplayableImageUrl } from "@/lib/bookAssetStorage";
 import { createPendingImageBlock, insertImageBlocksAtCursor, insertYouTubeBlockAtCursor } from "@/lib/inlineContentBlocks";
 import { countContentCharacters, countUserCharacters } from "@/lib/characterCount";
 import { parseYouTubeUrl, youtubeThumbnailUrl } from "@/lib/youtube";
+import { applyTextMark, marksCoverRange, normalizeTextMarks, sliceTextMarks, TEXT_COLORS, TEXT_COLOR_LABELS, TEXT_FONT_SIZE_LABELS, type TextColor, type TextFontSize, type TextMark } from "@/lib/textStyles";
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -42,6 +43,54 @@ function normalizeText(value: string) {
 
 function paragraphId(index: number) {
   return `paragraph-${String(index + 1).padStart(3, "0")}`;
+}
+
+function parseStyledParagraph(paragraph: HTMLElement) {
+  const marks: TextMark[] = [];
+  let content = "";
+  const walk = (node: Node, inherited: Partial<TextMark>) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = normalizeText(node.textContent || "");
+      const start = content.length;
+      content += text;
+      if (text && (inherited.bold || inherited.color || inherited.fontSize)) marks.push({ start, end: start + text.length, ...inherited });
+      return;
+    }
+    if (!(node instanceof HTMLElement)) return;
+    const next: Partial<TextMark> = { ...inherited };
+    const tag = node.tagName.toLowerCase();
+    if (tag === "strong" || tag === "b") next.bold = true;
+    const dataColor = node.dataset.textColor || node.style.color;
+    if ((TEXT_COLORS as readonly string[]).includes(dataColor)) next.color = dataColor as TextColor;
+    const size = node.dataset.fontSize;
+    if (size === "small" || size === "normal" || size === "large") next.fontSize = size;
+    node.childNodes.forEach((child) => walk(child, next));
+  };
+  paragraph.childNodes.forEach((child) => walk(child, {}));
+  return { content, marks: normalizeTextMarks(content, marks) };
+}
+
+function renderStyledText(parent: HTMLElement, text: string, marks?: TextMark[]) {
+  const normalized = normalizeTextMarks(text, marks);
+  if (!normalized.length) { parent.textContent = text; return; }
+  const boundaries = new Set<number>([0, text.length]);
+  normalized.forEach((mark) => { boundaries.add(mark.start); boundaries.add(mark.end); });
+  const sorted = [...boundaries].sort((a, b) => a - b);
+  for (let index = 0; index < sorted.length - 1; index += 1) {
+    const start = sorted[index];
+    const end = sorted[index + 1];
+    if (end <= start) continue;
+    const active = normalized.filter((mark) => mark.start <= start && mark.end >= end).pop();
+    let node: Node = document.createTextNode(text.slice(start, end));
+    if (active?.fontSize || active?.color) {
+      const span = document.createElement("span");
+      if (active.color) { span.style.color = active.color; span.dataset.textColor = active.color; }
+      if (active.fontSize) span.dataset.fontSize = active.fontSize;
+      span.append(node); node = span;
+    }
+    if (active?.bold) { const strong = document.createElement("strong"); strong.append(node); node = strong; }
+    parent.append(node);
+  }
 }
 
 function imageId(index: number) {
@@ -93,11 +142,12 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
       continue;
     }
 
-    const text = normalizeText(child.textContent || "");
+    const styled = child instanceof HTMLElement ? parseStyledParagraph(child) : { content: normalizeText(child.textContent || ""), marks: [] };
     blocks.push({
       id: child instanceof HTMLElement && child.dataset.nodeId ? child.dataset.nodeId : paragraphId(index),
       type: "text",
-      content: text,
+      content: styled.content,
+      marks: styled.marks,
     });
   }
 
@@ -112,7 +162,7 @@ function createParagraphElement(block: Extract<BookContentBlock, { type: "text" 
   const paragraph = document.createElement("p");
   paragraph.dataset.nodeType = "paragraph";
   paragraph.dataset.nodeId = block.id;
-  paragraph.textContent = block.content || "";
+  renderStyledText(paragraph, block.content || "", block.marks);
   if (!block.content) {
     paragraph.append(document.createElement("br"));
   }
@@ -287,6 +337,30 @@ function findParagraphTarget(root: HTMLElement, range?: Range | null) {
   return null;
 }
 
+function setParagraphSelection(paragraph: HTMLElement, start: number, end: number) {
+  const range = document.createRange();
+  const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+  let cursor = 0;
+  let startNode: Node | null = null;
+  let endNode: Node | null = null;
+  let startOffset = 0;
+  let endOffset = 0;
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const length = node.textContent?.length || 0;
+    if (!startNode && start <= cursor + length) { startNode = node; startOffset = Math.max(0, start - cursor); }
+    if (end <= cursor + length) { endNode = node; endOffset = Math.max(0, end - cursor); break; }
+    cursor += length;
+  }
+  if (!startNode || !endNode) return null;
+  range.setStart(startNode, startOffset);
+  range.setEnd(endNode, endOffset);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  return range;
+}
+
 function editorBlockIndex(root: HTMLElement, target: HTMLElement) {
   let index = 0;
   for (const child of Array.from(root.children)) {
@@ -359,6 +433,7 @@ export default function InlineManuscriptEditor({
   const [isInsertMenuOpen, setIsInsertMenuOpen] = useState(false);
   const [imagePopoverPosition, setImagePopoverPosition] = useState<{ top: number; left: number } | null>(null);
   const [youtubePopoverPosition, setYoutubePopoverPosition] = useState<{ top: number; left: number } | null>(null);
+  const [selectionToolbar, setSelectionToolbar] = useState<{ top: number; left: number } | null>(null);
   const pageBreakSignature = pageBreakAfterBlockIds.join("|");
 
   const reportCursor = useCallback(() => {
@@ -399,7 +474,47 @@ export default function InlineManuscriptEditor({
     const range = cloneSelectionRange(root);
     if (!range) return;
     savedRangeRef.current = range;
+    const editor = editorRef.current;
+    if (!editor || range.collapsed || !range.toString()) { setSelectionToolbar(null); return; }
+    const rect = range.getBoundingClientRect();
+    const editorRect = editor.getBoundingClientRect();
+    setSelectionToolbar({ top: Math.max(8, rect.bottom - editorRect.top + 8), left: Math.max(8, Math.min(rect.left - editorRect.left, editorRect.width - 290)) });
   }, []);
+
+  const emitChange = useCallback((next: BookContentBlock[]) => {
+    nodesRef.current = next;
+    onChange(next);
+    const nextPending = next.filter((block) => block.type === "image" && block.uploadState === "pending").length;
+    onPendingChange(nextPending);
+  }, [onChange, onPendingChange]);
+
+  const applyMarkToSelection = useCallback((patch: Partial<Pick<TextMark, "bold" | "color" | "fontSize">>) => {
+    const root = rootRef.current;
+    const range = savedRangeRef.current?.cloneRange();
+    if (!root || !range || range.collapsed) return;
+    const paragraph = findParagraphTarget(root, range);
+    if (!paragraph) return;
+    const nodeIndex = editorBlockIndex(root, paragraph);
+    const block = nodeIndex >= 0 ? nodesRef.current[nodeIndex] : undefined;
+    if (!block || block.type !== "text") return;
+    const start = getTextOffsetWithinParagraph(paragraph, range);
+    const endRange = range.cloneRange();
+    endRange.collapse(false);
+    const end = getTextOffsetWithinParagraph(paragraph, endRange);
+    const next = [...nodesRef.current];
+    const from = Math.min(start, end);
+    const to = Math.max(start, end);
+    const nextPatch = patch.bold === true ? { ...patch, bold: !marksCoverRange(block.marks, from, to, "bold") } : patch;
+    next[nodeIndex] = { ...block, marks: applyTextMark(block.content, block.marks, from, to, nextPatch) };
+    emitChange(next);
+    renderNodes(root, next, pageBreakAfterBlockIds);
+    const rendered = root.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(block.id)}"]`);
+    if (rendered) {
+      const restored = setParagraphSelection(rendered, Math.min(start, end), Math.max(start, end));
+      savedRangeRef.current = restored?.cloneRange() || null;
+    }
+    captureSelectionRange();
+  }, [captureSelectionRange, emitChange, pageBreakAfterBlockIds]);
 
   const pendingCount = useMemo(
     () => value.filter((block) => block.type === "image" && block.uploadState === "pending").length,
@@ -414,13 +529,6 @@ export default function InlineManuscriptEditor({
     () => value.find((block): block is Extract<BookContentBlock, { type: "youtube" }> => block.type === "youtube" && block.id === selectedYouTubeId) ?? null,
     [selectedYouTubeId, value],
   );
-
-  const emitChange = (next: BookContentBlock[]) => {
-    nodesRef.current = next;
-    onChange(next);
-    const nextPending = next.filter((block) => block.type === "image" && block.uploadState === "pending").length;
-    onPendingChange(nextPending);
-  };
 
   useEffect(() => {
     const nextNodes: BookContentBlock[] = value.length
@@ -732,11 +840,12 @@ export default function InlineManuscriptEditor({
     const current = nodeIndex >= 0 ? nodesRef.current[nodeIndex] : undefined;
     if (!current || current.type !== "text") return;
     const split = splitParagraphAtCaret(paragraphTarget, activeRange);
-    const before = { ...current, content: split.before } as Extract<BookContentBlock, { type: "text" }>;
+    const before = { ...current, content: split.before, marks: sliceTextMarks(current.marks, 0, split.before.length) } as Extract<BookContentBlock, { type: "text" }>;
     const after = {
       id: `${current.id}-after-${crypto.randomUUID()}`,
       type: "text" as const,
       content: split.after,
+      marks: sliceTextMarks(current.marks, split.before.length, current.content.length),
     };
     const nextBlocks = [...nodesRef.current];
     nextBlocks.splice(nodeIndex, 1, before, after);
@@ -826,6 +935,21 @@ export default function InlineManuscriptEditor({
             {cursorFallbackMessage ? <span className="maker-note">{cursorFallbackMessage}</span> : null}
             {pendingCount ? <span className="maker-note">画像を読み込み中…</span> : null}
           </div>
+          {selectionToolbar ? (
+            <div className="inline-manuscript-selection-toolbar" style={{ top: selectionToolbar.top, left: selectionToolbar.left }} role="toolbar" aria-label="選択した本文の書式" onMouseDown={(event) => {
+              // Keep the saved Range for toolbar buttons, but allow the native
+              // select to receive its mousedown so the size menu can open.
+              if (event.target instanceof HTMLSelectElement || (event.target as HTMLElement).closest("select")) return;
+              event.preventDefault();
+            }}>
+              <button type="button" aria-label="太字" title="太字" onClick={() => applyMarkToSelection({ bold: true })}><strong>B</strong></button>
+              <div className="inline-manuscript-color-tools" aria-label="文字色">
+                <button type="button" aria-label="文字色を標準に戻す" title="標準色" onClick={() => applyMarkToSelection({ color: undefined })}>A</button>
+                {TEXT_COLORS.map((color) => <button key={color} type="button" aria-label={`文字色（${TEXT_COLOR_LABELS[color]}）`} title={TEXT_COLOR_LABELS[color]} style={{ color }} onClick={() => applyMarkToSelection({ color })}>●</button>)}
+              </div>
+              <label className="inline-manuscript-font-size"><span>サイズ</span><select aria-label="文字サイズ" defaultValue="normal" onChange={(event) => applyMarkToSelection({ fontSize: event.target.value as TextFontSize })}>{Object.entries(TEXT_FONT_SIZE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            </div>
+          ) : null}
           <div
             ref={rootRef}
             className="inline-manuscript-surface"
@@ -858,6 +982,11 @@ export default function InlineManuscriptEditor({
               reportCursor();
             }}
             onKeyDown={(event) => {
+              if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b" && savedRangeRef.current && !savedRangeRef.current.collapsed) {
+                event.preventDefault();
+                applyMarkToSelection({ bold: true });
+                return;
+              }
               const target = event.target as HTMLElement;
               const pageBreak = target.closest("[data-node-type='page-break']") as HTMLElement | null;
               if (!pageBreak || (event.key !== "Enter" && event.key !== " ")) return;

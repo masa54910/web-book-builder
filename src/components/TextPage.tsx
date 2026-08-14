@@ -5,6 +5,24 @@ import { INLINE_IMAGE_TOKEN_PREFIX, INLINE_YOUTUBE_TOKEN_PREFIX } from "@/lib/pa
 import type { PageAdjustment } from "@/lib/pageAdjustments";
 import ReferenceBlock, { extractUrls } from "./ReferenceBlock";
 import YouTubePage from "./YouTubePage";
+import type { TextMark } from "@/lib/textStyles";
+import { normalizeTextMarks, TEXT_FONT_SIZE_CSS } from "@/lib/textStyles";
+
+function StyledParagraph({ text, marks }: { text: string; marks?: TextMark[] }) {
+  const normalized = normalizeTextMarks(text, marks);
+  if (!normalized.length) return <>{text}</>;
+  const boundaries = new Set<number>([0, text.length]);
+  normalized.forEach((mark) => { boundaries.add(mark.start); boundaries.add(mark.end); });
+  const sorted = [...boundaries].sort((a, b) => a - b);
+  return <>{sorted.slice(0, -1).map((start, index) => {
+    const end = sorted[index + 1];
+    if (end <= start) return null;
+    const active = normalized.filter((mark) => mark.start <= start && mark.end >= end).pop();
+    const content = text.slice(start, end);
+    const styled = active?.color || active?.fontSize ? <span style={{ color: active.color, fontSize: active.fontSize ? TEXT_FONT_SIZE_CSS[active.fontSize] : undefined }}>{content}</span> : content;
+    return active?.bold ? <strong key={`${start}-${end}`}>{styled}</strong> : <Fragment key={`${start}-${end}`}>{styled}</Fragment>;
+  })}</>;
+}
 
 const PREVIOUS_GUIDE_PATTERN =
   /^(?:[・\-]\s*)?(前回|前回はこちら|前回まで|前回の記事|前回[〜～~↓]?|前回はこちら↓)$/;
@@ -72,6 +90,7 @@ export default function TextPage({
   bookTitle,
   chapterTitle,
   paragraphs,
+  paragraphRuns,
   previousChapterTitle,
   onJumpToPrevious,
   adjustment,
@@ -79,6 +98,7 @@ export default function TextPage({
   bookTitle: string;
   chapterTitle: string;
   paragraphs: string[];
+  paragraphRuns?: TextMark[][];
   previousChapterTitle?: string;
   onJumpToPrevious?: () => void;
   adjustment?: PageAdjustment;
@@ -132,7 +152,7 @@ export default function TextPage({
                   onJumpToPrevious();
                 }}
               >
-                {paragraph}
+              <StyledParagraph text={paragraph} marks={paragraphRuns?.[index]} />
               </button>
             </p>
           );
@@ -158,7 +178,7 @@ export default function TextPage({
 
         return (
           <p className="text-paragraph" key={key}>
-            {paragraph.startsWith("## ") ? paragraph.slice(3) : paragraph}
+            {paragraph.startsWith("## ") ? <StyledParagraph text={paragraph.slice(3)} marks={paragraphRuns?.[index]?.map((mark) => ({ ...mark, start: Math.max(0, mark.start - 3), end: Math.max(0, mark.end - 3) }))} /> : <StyledParagraph text={paragraph} marks={paragraphRuns?.[index]} />}
           </p>
         );
       })}

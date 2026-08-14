@@ -1,3 +1,5 @@
+import type { TextMark } from "@/lib/textStyles";
+
 export type NovelChapter = {
   id: string;
   order: number;
@@ -55,6 +57,7 @@ type ReaderPageShape =
       kind: "text";
       chapterTitle: string;
       paragraphs: string[];
+      paragraphRuns?: TextMark[][];
     }
   | {
       id: string;

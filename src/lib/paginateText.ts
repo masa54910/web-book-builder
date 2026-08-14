@@ -2,6 +2,7 @@ import type { BindingDirection } from "@/config/bookConfig";
 import { normalizeMediaDisplaySize, type BookContentBlock, type MediaDisplaySize } from "./bookProject";
 import type { ImageManifestRow, NovelChapter, ReaderPage } from "./types";
 import { findPageAdjustment, type PageAdjustment } from "./pageAdjustments";
+import { sliceTextMarks, type TextMark } from "./textStyles";
 
 const IMAGE_PATTERN = /^\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]$/;
 const YOUTUBE_PATTERN = /^\[\[youtube:([A-Za-z0-9._-]+)(?:\|([A-Za-z0-9_-]{11}))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]$/;
@@ -32,8 +33,9 @@ function mediaCost(charactersPerPage: number, displaySize: MediaDisplaySize) {
 }
 
 function splitLongParagraph(paragraph: string, limit: number) {
-  const chunks: string[] = [];
+  const chunks: Array<{ text: string; start: number; end: number }> = [];
   let remainder = paragraph;
+  let offset = 0;
 
   while (remainder.length > limit) {
     const minimum = Math.floor(limit * 0.64);
@@ -45,11 +47,20 @@ function splitLongParagraph(paragraph: string, limit: number) {
       }
     }
     if (cut === -1) cut = limit;
-    chunks.push(remainder.slice(0, cut).trim());
-    remainder = remainder.slice(cut).trim();
+    const raw = remainder.slice(0, cut);
+    const text = raw.trim();
+    const trimStart = raw.length - raw.trimStart().length;
+    chunks.push({ text, start: offset + trimStart, end: offset + trimStart + text.length });
+    const nextRemainder = remainder.slice(cut);
+    const leadingTrim = nextRemainder.length - nextRemainder.trimStart().length;
+    remainder = nextRemainder.trimStart();
+    offset += cut + leadingTrim;
   }
 
-  if (remainder) chunks.push(remainder);
+  if (remainder) {
+    const start = paragraph.length - remainder.length;
+    chunks.push({ text: remainder, start, end: start + remainder.length });
+  }
   return chunks;
 }
 
@@ -128,6 +139,7 @@ export function buildReaderPages({
       .split(/\n{2,}/)
       .map((segment) => segment.trim());
     let paragraphs: string[] = [];
+    let paragraphRuns: TextMark[][] = [];
     let paragraphSourceBlockIds: string[] = [];
     let cost = 0;
     let textPageIndex = 1;
@@ -170,9 +182,9 @@ export function buildReaderPages({
       if (!source) return { text: segment, sourceId: undefined };
       const override = findPageAdjustment(pageAdjustments, source.id)?.displayTextOverride;
       if (typeof override !== "string" || !lineBreakOnlyOverride(source.content, override)) {
-        return { text: segment, sourceId: source.id };
+        return { text: segment, sourceId: source.id, marks: source.marks };
       }
-      return { text: override, sourceId: source.id };
+      return { text: override, sourceId: source.id, marks: source.marks };
     };
     const sourceBlockIdsFor = (pageId: string, pageParagraphs: string[]) => {
       const sourceIds = new Set<string>();
@@ -198,10 +210,12 @@ export function buildReaderPages({
         kind: "text",
         chapterTitle: chapter.title,
         paragraphs,
+        paragraphRuns,
         sourceBlockIds: sourceBlockIdsFor(pageId, paragraphs),
       });
       textPageIndex += 1;
       paragraphs = [];
+      paragraphRuns = [];
       paragraphSourceBlockIds = [];
       cost = 0;
     };
@@ -311,13 +325,14 @@ export function buildReaderPages({
       if (!displaySegment.text) continue;
       if (displaySegment.sourceId) paragraphSourceBlockIds.push(displaySegment.sourceId);
       for (const chunk of splitLongParagraph(displaySegment.text, Math.floor(charactersPerPage * 0.86))) {
-        const chunkCost = textCost(chunk);
-        const startsWithHeading = chunk.startsWith("## ");
+        const chunkCost = textCost(chunk.text);
+        const startsWithHeading = chunk.text.startsWith("## ");
         if (paragraphs.length && cost + chunkCost > charactersPerPage) flushTextPage();
         if (startsWithHeading && paragraphs.length && cost > charactersPerPage * 0.72) {
           flushTextPage();
         }
-        paragraphs.push(chunk);
+        paragraphs.push(chunk.text);
+        paragraphRuns.push(sliceTextMarks(displaySegment.marks, chunk.start, chunk.end));
         cost += chunkCost;
       }
       if (shouldBreakAfter(sourceId, entry.index)) flushTextPage();

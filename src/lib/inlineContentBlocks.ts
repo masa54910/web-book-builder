@@ -1,4 +1,5 @@
 import type { BookContentBlock } from "@/lib/bookProject";
+import { sliceTextMarks } from "@/lib/textStyles";
 
 type ImageBlock = Extract<BookContentBlock, { type: "image" }>;
 type TextBlock = Extract<BookContentBlock, { type: "text" }>;
@@ -22,11 +23,12 @@ export function createPendingImageBlock(id: string, fileName: string, mimeType: 
   };
 }
 
-function createTextBlock(id: string, content: string): TextBlock {
+function createTextBlock(id: string, content: string, marks?: TextBlock["marks"]): TextBlock {
   return {
     id,
     type: "text",
     content,
+    marks,
   };
 }
 
@@ -66,13 +68,13 @@ export function insertImageBlocksAtCursor({
   const replacement: BookContentBlock[] = [];
 
   if (beforeText.length > 0) {
-    replacement.push(createTextBlock(target.id, beforeText));
+    replacement.push(createTextBlock(target.id, beforeText, sliceTextMarks(target.marks, 0, boundedOffset)));
   }
 
   replacement.push(...imageBlocks);
 
   if (afterText.length > 0) {
-    replacement.push(createTextBlock(`${target.id}-tail`, afterText));
+    replacement.push(createTextBlock(`${target.id}-tail`, afterText, sliceTextMarks(target.marks, boundedOffset, target.content.length)));
   }
 
   next.splice(paragraphIndex, 1, ...replacement);
@@ -108,9 +110,9 @@ export function insertYouTubeBlockAtCursor({
   const afterText = target.content.slice(boundedOffset);
   const replacement: BookContentBlock[] = [];
 
-  if (beforeText.length > 0) replacement.push(createTextBlock(target.id, beforeText));
+  if (beforeText.length > 0) replacement.push(createTextBlock(target.id, beforeText, sliceTextMarks(target.marks, 0, boundedOffset)));
   replacement.push(youtubeBlock);
-  if (afterText.length > 0) replacement.push(createTextBlock(`${target.id}-tail`, afterText));
+  if (afterText.length > 0) replacement.push(createTextBlock(`${target.id}-tail`, afterText, sliceTextMarks(target.marks, boundedOffset, target.content.length)));
   next.splice(paragraphIndex, 1, ...replacement);
   return next;
 }

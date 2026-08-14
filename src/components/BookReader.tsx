@@ -447,6 +447,7 @@ export default function BookReader({
           bookTitle={config.title}
           chapterTitle={page.chapterTitle}
           paragraphs={page.paragraphs}
+          paragraphRuns={page.paragraphRuns}
           previousChapterTitle={previousChapter?.title}
           onJumpToPrevious={
             previousChapter ? () => jumpToId(`chapter-${previousChapter.slug}`) : undefined

@@ -4,6 +4,21 @@ import type { ReaderPage } from "@/lib/types";
 import { useMemo } from "react";
 import { INLINE_IMAGE_TOKEN_PREFIX, INLINE_YOUTUBE_TOKEN_PREFIX } from "@/lib/paginateText";
 import { buildReaderFolioById, readerPageNumberLabel } from "@/lib/readerFolio";
+import { normalizeTextMarks, TEXT_FONT_SIZE_CSS, type TextMark } from "@/lib/textStyles";
+
+function MiniStyledText({ text, marks }: { text: string; marks?: TextMark[] }) {
+  const normalized = normalizeTextMarks(text, marks);
+  if (!normalized.length) return <>{text}</>;
+  const boundaries = new Set<number>([0, text.length]);
+  normalized.forEach((mark) => { boundaries.add(mark.start); boundaries.add(mark.end); });
+  const sorted = [...boundaries].sort((a, b) => a - b);
+  return <>{sorted.slice(0, -1).map((start, index) => {
+    const end = sorted[index + 1];
+    const active = normalized.filter((mark) => mark.start <= start && mark.end >= end).pop();
+    const textNode = <span style={{ color: active?.color, fontSize: active?.fontSize ? TEXT_FONT_SIZE_CSS[active.fontSize] : undefined }}>{text.slice(start, end)}</span>;
+    return active?.bold ? <strong key={`${start}-${end}`}>{textNode}</strong> : <span key={`${start}-${end}`}>{textNode}</span>;
+  })}</>;
+}
 
 function pageLabel(page: ReaderPage) {
   switch (page.kind) {
@@ -80,7 +95,7 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
           <span className="editor-mini-inline-youtube" key={`${page.id}-${index}`}><span aria-hidden="true">▶</span> YouTube動画</span>
         ) : (
           <p className={paragraph.startsWith("## ") ? "is-heading" : ""} key={`${page.id}-${index}`}>
-            {paragraph.startsWith("## ") ? paragraph.slice(3) : paragraph}
+            {paragraph.startsWith("## ") ? <MiniStyledText text={paragraph.slice(3)} marks={page.paragraphRuns?.[index]} /> : <MiniStyledText text={paragraph} marks={page.paragraphRuns?.[index]} />}
           </p>
         )
       ))}
