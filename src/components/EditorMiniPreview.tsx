@@ -31,7 +31,7 @@ function pageLabel(page: ReaderPage) {
     case "chapterTitle":
       return page.chapterTitle;
     case "text":
-      return page.chapterTitle;
+      return page.sectionTitle || page.chapterTitle;
     case "image":
       return page.caption || "画像ページ";
     case "youtube":

@@ -1,39 +1,45 @@
-import type { NovelChapter } from "@/lib/types";
+import type { DocumentTocEntry } from "@/lib/documentStructure";
 
 export default function ContentsPage({
-  chapters,
+  bookTitle,
+  entries,
   startIndex,
   part,
   totalParts,
   onJump,
 }: {
-  chapters: NovelChapter[];
+  bookTitle: string;
+  entries: DocumentTocEntry[];
   startIndex: number;
   part: number;
   totalParts: number;
-  onJump: (slug: string) => void;
+  onJump: (headingId: string) => void;
 }) {
   return (
     <div className="contents-page">
+      <p className="contents-book-title">{bookTitle}</p>
       <p className="editorial-label">Complete Edition · {part}/{totalParts}</p>
       <h2>CONTENTS</h2>
       <div className="contents-list">
-        {chapters.map((chapter, index) => (
+        {entries.map((entry, index) => (
           <button
-            key={chapter.slug}
+            key={entry.headingId}
             type="button"
-            className="contents-link"
+            className={`contents-link contents-link-level-${entry.level}`}
             onPointerDown={(event) => event.stopPropagation()}
             onMouseDown={(event) => event.stopPropagation()}
             onTouchStart={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
-              onJump(chapter.slug);
+              onJump(entry.headingId);
             }}
           >
             <span className="contents-index">{String(startIndex + index + 1).padStart(2, "0")}</span>
-            <span className="contents-title">{chapter.title}</span>
-            <span className="contents-arrow" aria-hidden="true">←</span>
+            <span className="contents-title">{entry.title}</span>
+            <span className="contents-page-number">
+              {entry.readerPageNumber === undefined ? "" : String(entry.readerPageNumber).padStart(2, "0")}
+            </span>
+            <span className="contents-arrow" aria-hidden="true">›</span>
           </button>
         ))}
       </div>

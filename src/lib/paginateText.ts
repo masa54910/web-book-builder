@@ -3,6 +3,7 @@ import { normalizeMediaDisplaySize, type BookContentBlock, type MediaDisplaySize
 import type { ImageManifestRow, NovelChapter, ReaderPage } from "./types";
 import { findPageAdjustment, type PageAdjustment } from "./pageAdjustments";
 import { sliceTextMarks, type TextMark } from "./textStyles";
+import { parseDocumentHeading } from "./documentStructure";
 
 const IMAGE_PATTERN = /^\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]$/;
 const YOUTUBE_PATTERN = /^\[\[youtube:([A-Za-z0-9._-]+)(?:\|([A-Za-z0-9_-]{11}))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]$/;
@@ -104,7 +105,11 @@ export function buildReaderPages({
     { id: "title", kind: "title" },
   ];
   const contentsPerPage = Math.max(1, tableOfContentsItemsPerPage);
-  const totalContentsPages = Math.ceil(chapters.length / contentsPerPage);
+  const tocEntryCount = chapters.reduce(
+    (count, chapter) => count + 1 + (chapter.sections?.filter((section) => section.level === 2).length || 0),
+    0,
+  );
+  const totalContentsPages = Math.ceil(tocEntryCount / contentsPerPage);
 
   for (let part = 0; part < totalContentsPages; part += 1) {
     const chapterStart = part * contentsPerPage;
@@ -112,7 +117,9 @@ export function buildReaderPages({
       id: `contents-${part + 1}`,
       kind: "contents",
       chapterStart,
-      chapterEnd: Math.min(chapterStart + contentsPerPage, chapters.length),
+      chapterEnd: Math.min(chapterStart + contentsPerPage, tocEntryCount),
+      tocEntryStart: chapterStart,
+      tocEntryEnd: Math.min(chapterStart + contentsPerPage, tocEntryCount),
       part: part + 1,
       totalParts: totalContentsPages,
     });
@@ -132,6 +139,7 @@ export function buildReaderPages({
       chapterOrder: chapter.order,
       chapterTitle: chapter.title,
       chapterSlug: chapter.slug,
+      headingId: chapter.id,
     });
 
     const segments = chapter.body
@@ -143,6 +151,9 @@ export function buildReaderPages({
     let paragraphSourceBlockIds: string[] = [];
     let cost = 0;
     let textPageIndex = 1;
+    let currentSectionTitle: string | undefined;
+    let currentSectionId: string | undefined;
+    let pendingHeadingId: string | undefined;
 
     const textBlocks = (contentBlocks || []).filter(
       (block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text",
@@ -209,6 +220,8 @@ export function buildReaderPages({
         id: pageId,
         kind: "text",
         chapterTitle: chapter.title,
+        sectionTitle: currentSectionTitle,
+        headingId: pendingHeadingId,
         paragraphs,
         paragraphRuns,
         sourceBlockIds: sourceBlockIdsFor(pageId, paragraphs),
@@ -218,11 +231,21 @@ export function buildReaderPages({
       paragraphRuns = [];
       paragraphSourceBlockIds = [];
       cost = 0;
+      pendingHeadingId = undefined;
     };
 
     for (const entry of segmentEntries) {
       const { segment } = entry;
       if (!segment) continue;
+      const heading = parseDocumentHeading(segment.split("\n", 1)[0]);
+      if (heading && (heading.level === 2 || heading.level === 3)) {
+        if (paragraphs.length) flushTextPage();
+        currentSectionTitle = heading.title;
+        currentSectionId = chapter.sections?.find(
+          (section) => section.title === heading.title && section.level === heading.level,
+        )?.id;
+        pendingHeadingId = currentSectionId;
+      }
       const youtubeMatch = segment.match(YOUTUBE_PATTERN);
       if (youtubeMatch) {
         const storedBlockId = youtubeMatch[1];
@@ -256,12 +279,15 @@ export function buildReaderPages({
           id: `${chapter.slug}-youtube-${sourceId}`,
           kind: "youtube",
           chapterTitle: chapter.title,
+          sectionTitle: currentSectionTitle,
+          headingId: pendingHeadingId,
           videoId,
           originalUrl: youtubeBlock?.originalUrl || `https://www.youtube.com/watch?v=${videoId}`,
           displaySize,
           sourceBlockIds: [sourceId],
         });
         if (adjustmentForSource(sourceId)?.pageBreakAfter) handledBreakAfter.add(sourceId);
+        pendingHeadingId = undefined;
         continue;
       }
       const imageMatch = segment.match(IMAGE_PATTERN);
@@ -304,6 +330,8 @@ export function buildReaderPages({
           id: `${chapter.slug}-image-${imageId}`,
           kind: "image",
           chapterTitle: chapter.title,
+          sectionTitle: currentSectionTitle,
+          headingId: pendingHeadingId,
           imageIndex: image?.image_index || imageId,
           imageId,
           src: imageSource(image),
@@ -316,6 +344,7 @@ export function buildReaderPages({
         if (imageAdjustment?.pageBreakAfter) {
           handledBreakAfter.add(imageSourceId);
         }
+        pendingHeadingId = undefined;
         continue;
       }
 

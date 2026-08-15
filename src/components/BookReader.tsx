@@ -15,6 +15,7 @@ import {
 import { buildReaderPages, toBoundPageOrder } from "@/lib/paginateText";
 import { recordReaderProgress } from "@/lib/readerAnalytics";
 import { buildReaderFolioById } from "@/lib/readerFolio";
+import { buildDocumentTocEntries, documentStructureFromChapters } from "@/lib/documentStructure";
 import { themeClassNames } from "@/lib/themeSystem";
 import type { BookContentBlock } from "@/lib/bookProject";
 import {
@@ -180,6 +181,17 @@ export default function BookReader({
     () => buildReaderFolioById(logicalPages),
     [logicalPages],
   );
+  const tocEntries = useMemo(() => {
+    const pageByHeadingId = new Map<string, { pageIndex: number; pageNumber: number }>();
+    logicalPages.forEach((page, pageIndex) => {
+      if (!("headingId" in page) || !page.headingId || pageByHeadingId.has(page.headingId)) return;
+      pageByHeadingId.set(page.headingId, {
+        pageIndex,
+        pageNumber: logicalFolioById.get(page.id) ?? pageIndex,
+      });
+    });
+    return buildDocumentTocEntries(documentStructureFromChapters(chapters), pageByHeadingId);
+  }, [chapters, logicalFolioById, logicalPages]);
   // Page breaks are applied by buildReaderPages so the next content starts on
   // the following page without rendering a synthetic blank page. Keep this
   // alias so reader controls and page rendering share the same canonical list.
@@ -262,6 +274,13 @@ export default function BookReader({
       if (pageIndex >= 0) goToPage(pageIndex);
     },
     [goToPage, pagesWithAdjustments],
+  );
+  const jumpToHeading = useCallback(
+    (headingId: string) => {
+      const entry = tocEntries.find((item) => item.headingId === headingId);
+      if (entry?.readerPageIndex !== undefined) goToPage(entry.readerPageIndex);
+    },
+    [goToPage, tocEntries],
   );
   const jumpToPrintedPage = useCallback(
     (pageNumber: number) => {
@@ -423,29 +442,38 @@ export default function BookReader({
     return () => window.cancelAnimationFrame(frame);
   }, [displayMode, pageFlip, pagesWithAdjustments]);
 
-  const renderPage = (page: ReaderPage) => {
+  const renderPage = (page: ReaderPage, pageIndex = 0) => {
     let content: React.ReactNode;
     if (page.kind === "cover") content = <CoverPage config={config} />;
     else if (page.kind === "title") content = <TitlePage config={config} />;
     else if (page.kind === "contents") {
       content = (
         <ContentsPage
-          chapters={chapters.slice(page.chapterStart, page.chapterEnd)}
-          startIndex={page.chapterStart}
+          bookTitle={config.title}
+          entries={tocEntries.slice(page.tocEntryStart ?? page.chapterStart, page.tocEntryEnd ?? page.chapterEnd)}
+          startIndex={page.tocEntryStart ?? page.chapterStart}
           part={page.part}
           totalParts={page.totalParts}
-          onJump={(slug) => jumpToId(`chapter-${slug}`)}
+          onJump={jumpToHeading}
         />
       );
     } else if (page.kind === "chapterTitle") {
-      content = <ChapterTitlePage title={page.chapterTitle} order={page.chapterOrder} series={config.title} />;
+      const isSyntheticBookTitle = page.chapterTitle.trim() === config.title.trim();
+      content = (
+        <ChapterTitlePage
+          title={page.chapterTitle}
+          order={page.chapterOrder}
+          series={isSyntheticBookTitle ? "" : config.title}
+          showTitle={!isSyntheticBookTitle}
+        />
+      );
     } else if (page.kind === "text") {
       const chapterIndex = chapters.findIndex((chapter) => chapter.title === page.chapterTitle);
       const previousChapter = chapterIndex > 0 ? chapters[chapterIndex - 1] : undefined;
       content = (
         <TextPage
-          bookTitle={config.title}
           chapterTitle={page.chapterTitle}
+          sectionTitle={page.sectionTitle}
           paragraphs={page.paragraphs}
           paragraphRuns={page.paragraphRuns}
           previousChapterTitle={previousChapter?.title}
@@ -453,6 +481,7 @@ export default function BookReader({
             previousChapter ? () => jumpToId(`chapter-${previousChapter.slug}`) : undefined
           }
           adjustment={adjustmentForPage(pageAdjustments, page)}
+          showRunningHeader={isMobile || pageIndex % 2 === 0}
         />
       );
     } else if (page.kind === "image") {
@@ -615,7 +644,7 @@ export default function BookReader({
               recordReaderProgress(config.bookId, pagesWithAdjustments[event.data], event.data, pagesWithAdjustments.length, cloudBookId);
             }}
           >
-            {pagesWithAdjustments.map(renderPage)}
+            {pagesWithAdjustments.map((page, pageIndex) => renderPage(page, pageIndex))}
           </HTMLFlipBook>
           {sampleBookPresentation ? (
             <button

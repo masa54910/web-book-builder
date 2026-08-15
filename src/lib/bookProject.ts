@@ -18,6 +18,7 @@ import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
 import { isValidYouTubeVideoId } from "@/lib/youtube";
 import { normalizeTextMarks, type TextMark } from "@/lib/textStyles";
+import { findDocumentHeadings, parseDocumentStructure } from "@/lib/documentStructure";
 
 export const BOOK_PROJECT_VERSION = 1;
 
@@ -390,8 +391,15 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
 export function extractChaptersFromText(rawText: string, fallbackTitle: string): NovelChapter[] {
   const text = normalizeLineBreaks(rawText);
   if (!text) return [];
+  const structure = parseDocumentStructure(text, fallbackTitle);
 
-  const headings = [...text.matchAll(/^# (?!#)([^\n]+)$/gm)];
+  const headings = findDocumentHeadings(text)
+    .filter((heading) => heading.level === 1)
+    .map((heading) => ({
+      index: text.split("\n").slice(0, heading.index).join("\n").length + (heading.index ? 1 : 0),
+      raw: heading.line,
+      title: heading.title,
+    }));
   const usedSlugs = new Set<string>();
 
   if (!headings.length) {
@@ -410,13 +418,14 @@ export function extractChaptersFromText(rawText: string, fallbackTitle: string):
 
   return headings.map((heading, index) => {
     const order = index + 1;
-    const title = heading[1].trim() || `第${order}章`;
-    const bodyStart = (heading.index ?? 0) + heading[0].length;
+    const title = heading.title.trim() || `Chapter ${order}`;
+    const bodyStart = heading.index + heading.raw.length;
     const bodyEnd = headings[index + 1]?.index ?? text.length;
-    const prefix = index === 0 ? text.slice(0, heading.index ?? 0).trim() : "";
+    const prefix = index === 0 ? text.slice(0, heading.index).trim() : "";
     const sectionBody = text.slice(bodyStart, bodyEnd).trim();
     const body = [prefix, sectionBody].filter(Boolean).join("\n\n");
     const slug = uniqueSlug(title, order, usedSlugs);
+    const sections = structure.chapters[index]?.sections.map((entry) => ({ id: entry.id, title: entry.title, level: entry.level as 2 | 3 })) || [];
     return {
       id: slug,
       order,
@@ -424,6 +433,7 @@ export function extractChaptersFromText(rawText: string, fallbackTitle: string):
       slug,
       source: "browser-input",
       body,
+      sections: sections.length ? sections : undefined,
     };
   });
 }

@@ -8,6 +8,7 @@ export type NovelChapter = {
   source: string;
   subtitle?: string;
   body: string;
+  sections?: Array<{ id: string; title: string; level: 2 | 3 }>;
 };
 
 export type ImageManifestRow = {
@@ -42,6 +43,8 @@ type ReaderPageShape =
       kind: "contents";
       chapterStart: number;
       chapterEnd: number;
+      tocEntryStart?: number;
+      tocEntryEnd?: number;
       part: number;
       totalParts: number;
     }
@@ -51,11 +54,14 @@ type ReaderPageShape =
       chapterOrder: number;
       chapterTitle: string;
       chapterSlug: string;
+      headingId?: string;
     }
   | {
       id: string;
       kind: "text";
       chapterTitle: string;
+      sectionTitle?: string;
+      headingId?: string;
       paragraphs: string[];
       paragraphRuns?: TextMark[][];
     }
@@ -63,6 +69,8 @@ type ReaderPageShape =
       id: string;
       kind: "image";
       chapterTitle: string;
+      sectionTitle?: string;
+      headingId?: string;
       imageIndex: string;
       imageId: string;
       src?: string;
@@ -75,6 +83,8 @@ type ReaderPageShape =
       id: string;
       kind: "youtube";
       chapterTitle: string;
+      sectionTitle?: string;
+      headingId?: string;
       videoId: string;
       originalUrl: string;
       displaySize?: "small" | "medium" | "large" | "full";

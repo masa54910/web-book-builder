@@ -4,7 +4,7 @@ import type { BookProject } from "@/lib/bookProject";
 import { DEFAULT_PUBLICATION_SETTINGS, type BookStatus, type BookVisibility } from "@/lib/accessControl";
 import { BETA_LIMITS } from "@/lib/limits";
 import { isDemoModeAllowed } from "@/lib/appEnv";
-import { createSlugCandidate, makeUniqueSlug } from "@/lib/slug";
+import { createNewBookSlugCandidate, createSlugCandidate, makeUniqueSlug } from "@/lib/slug";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { parseBookProjectJson } from "@/lib/bookProjectNormalization";
 import { stripRuntimeAssetUrls } from "@/lib/bookProject";
@@ -76,6 +76,51 @@ function browserId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function isSlugUniqueViolation(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: unknown; message?: unknown; details?: unknown };
+  if (candidate.code !== "23505") return false;
+  const text = `${String(candidate.message || "")} ${String(candidate.details || "")}`.toLowerCase();
+  return text.includes("books_slug_key") || text.includes("slug");
+}
+
+async function loadUsedSlugs(supabase: ReturnType<typeof getSupabaseClient>, base: string) {
+  const used = new Set<string>();
+  if (!supabase) {
+    if (!canUseLocalSchemaFallback()) return used;
+    try {
+      const parsed: unknown = JSON.parse(localStorage.getItem(LOCAL_BOOKS_KEY) ?? "[]");
+      if (Array.isArray(parsed)) {
+        parsed.forEach((book) => {
+          if (book && typeof book === "object" && typeof (book as { slug?: unknown }).slug === "string") {
+            used.add((book as { slug: string }).slug);
+          }
+        });
+      }
+    } catch {
+      // Keep the empty set; the local repository is only a development fallback.
+    }
+    return used;
+  }
+
+  // RLS may limit this best-effort lookup to the current owner. The unique
+  // constraint plus the retry loop in saveBook remains the final authority.
+  try {
+    const { data } = await supabase
+      .from("books")
+      .select("slug")
+      .like("slug", `${base}%`)
+      .limit(500);
+    for (const row of data || []) {
+      if (typeof row.slug === "string" && row.slug) used.add(row.slug);
+    }
+  } catch {
+    // Continue with an empty set; the INSERT retry below handles races and
+    // rows hidden by RLS without weakening the database constraint.
+  }
+  return used;
+}
+
 function looksLikeUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
@@ -110,24 +155,21 @@ function toRecord(
   ownerId: string,
   existing?: CloudBookRecord,
   desiredSlug?: string,
+  reservedSlugs?: Set<string>,
 ): CloudBookRecord {
   const persistedProject = stripRuntimeAssetUrls(project);
   const timestamp = now();
-  const usedSlugs = new Set(
+  const usedSlugs = reservedSlugs || new Set(
     isDemoModeAllowed()
       ? readLocalBooks()
           .filter((book) => book.id !== existing?.id)
           .map((book) => book.slug)
       : [],
   );
-  const requestedSlug = desiredSlug || existing?.slug || createSlugCandidate(project.config.title);
-  // A title without ASCII letters (for example a Japanese-only title) maps to
-  // the production-safe fallback "book". New books still need a globally
-  // unique slug, so add a short client-generated suffix for that fallback.
-  // Existing books keep their current slug, and explicit non-fallback slugs
-  // continue through the normal uniqueness/validation path.
-  const slugBase = !existing && requestedSlug === "book" ? `book-${browserId()}` : requestedSlug;
-  const slug = makeUniqueSlug(slugBase, usedSlugs);
+  const requestedSlug = existing
+    ? existing.slug
+    : desiredSlug || createNewBookSlugCandidate(project.config.title);
+  const slug = existing ? existing.slug : makeUniqueSlug(requestedSlug, usedSlugs);
 
   return {
     id: existing?.id || `book-${browserId()}`,
@@ -573,64 +615,88 @@ export async function saveBook(
     throw new Error(`画像は最大${BETA_LIMITS.maxImagesPerBook}枚までです。`);
   }
 
-  const record = toRecord(project, ownerId, existing ?? undefined, desiredSlug);
   const supabase = getSupabaseClient();
+  const slugBase = existing
+    ? existing.slug
+    : desiredSlug || createNewBookSlugCandidate(project.config.title);
+  const usedSlugs = existing ? new Set<string>() : await loadUsedSlugs(supabase, slugBase);
+
   if (!supabase) {
     assertLocalFallbackAllowed();
+    const record = toRecord(project, ownerId, existing ?? undefined, slugBase, usedSlugs);
     const next = readLocalBooks().filter((book) => book.id !== record.id);
     next.push(record);
     writeLocalBooks(next);
     return record;
   }
 
-  try {
-    const payload = {
-      id: record.id.startsWith("book-") ? undefined : record.id,
-      owner_id: ownerId,
-      title: record.title,
-      subtitle: record.subtitle,
-      author_name: record.authorName,
-      author_handle: record.authorHandle,
-      description: record.description,
-      publisher: record.publisher,
-      published_at: record.publishedAt,
-      copyright: record.copyright,
-      slug: record.slug,
-      status: record.status,
-      visibility: record.visibility,
-      binding_direction: record.bindingDirection,
-      theme: record.theme,
-      characters_per_page: record.charactersPerPage,
-      toc_items_per_page: record.tocItemsPerPage,
-      cover_path: record.coverPath,
-      raw_text: record.rawText,
-      book_project_json: record.bookProject,
-      version: record.version,
-      monetization_enabled: record.monetizationEnabled,
-      price_amount: record.priceAmount,
-      currency: record.currency,
-      preview_mode: record.previewMode,
-      preview_value: record.previewValue,
-      updated_at: record.updatedAt,
-    };
-    const { data, error } = await supabase.from("books").upsert(payload).select("*").single();
-    if (error) {
-      logSupabaseIssue({ processingName: "saveBook", target: "books.upsert", error });
-      throw error;
+  const maxSlugRetries = existing ? 0 : 8;
+  for (let attempt = 0; attempt <= maxSlugRetries; attempt += 1) {
+    const record = toRecord(
+      project,
+      ownerId,
+      existing ?? undefined,
+      existing ? existing.slug : makeUniqueSlug(slugBase, usedSlugs),
+      usedSlugs,
+    );
+    try {
+      const payload = {
+        id: record.id.startsWith("book-") ? undefined : record.id,
+        owner_id: ownerId,
+        title: record.title,
+        subtitle: record.subtitle,
+        author_name: record.authorName,
+        author_handle: record.authorHandle,
+        description: record.description,
+        publisher: record.publisher,
+        published_at: record.publishedAt,
+        copyright: record.copyright,
+        slug: record.slug,
+        status: record.status,
+        visibility: record.visibility,
+        binding_direction: record.bindingDirection,
+        theme: record.theme,
+        characters_per_page: record.charactersPerPage,
+        toc_items_per_page: record.tocItemsPerPage,
+        cover_path: record.coverPath,
+        raw_text: record.rawText,
+        book_project_json: record.bookProject,
+        version: record.version,
+        monetization_enabled: record.monetizationEnabled,
+        price_amount: record.priceAmount,
+        currency: record.currency,
+        preview_mode: record.previewMode,
+        preview_value: record.previewValue,
+        updated_at: record.updatedAt,
+      };
+      const { data, error } = await supabase.from("books").upsert(payload).select("*").single();
+      if (error) {
+        if (!isSlugUniqueViolation(error) || attempt >= maxSlugRetries) {
+          logSupabaseIssue({ processingName: "saveBook", target: "books.upsert", error });
+          throw error;
+        }
+        usedSlugs.add(record.slug);
+        continue;
+      }
+      const saved = mapSupabaseBook(data) ?? record;
+      if (!options.skipSideTables) {
+        await syncBookSideTables(saved);
+      }
+      return saved;
+    } catch (error) {
+      if (!isSlugUniqueViolation(error) || attempt >= maxSlugRetries) {
+        logSupabaseIssue({ processingName: "saveBook", target: "books.catch", error });
+        if (!canFallbackToLocal()) throw error;
+        const next = readLocalBooks().filter((book) => book.id !== record.id);
+        next.push(record);
+        writeLocalBooks(next);
+        return record;
+      }
+      usedSlugs.add(record.slug);
     }
-    const saved = mapSupabaseBook(data) ?? record;
-    if (!options.skipSideTables) {
-      await syncBookSideTables(saved);
-    }
-    return saved;
-  } catch (error) {
-    logSupabaseIssue({ processingName: "saveBook", target: "books.catch", error });
-    if (!canFallbackToLocal()) throw error;
-    const next = readLocalBooks().filter((book) => book.id !== record.id);
-    next.push(record);
-    writeLocalBooks(next);
-    return record;
   }
+
+  throw new Error("Unable to allocate a unique public slug");
 }
 
 export async function updatePublication(

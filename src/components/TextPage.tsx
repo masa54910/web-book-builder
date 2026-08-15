@@ -87,28 +87,28 @@ function parseInlineYouTubeToken(paragraph: string) {
 }
 
 export default function TextPage({
-  bookTitle,
   chapterTitle,
+  sectionTitle,
   paragraphs,
   paragraphRuns,
   previousChapterTitle,
   onJumpToPrevious,
   adjustment,
+  showRunningHeader = true,
 }: {
-  bookTitle: string;
   chapterTitle: string;
+  sectionTitle?: string;
   paragraphs: string[];
   paragraphRuns?: TextMark[][];
   previousChapterTitle?: string;
   onJumpToPrevious?: () => void;
   adjustment?: PageAdjustment;
+  showRunningHeader?: boolean;
 }) {
+  const runningHeader = sectionTitle || chapterTitle;
   return (
     <article className={`text-page text-page-spacing-${adjustment?.paragraphSpacing || "normal"}`}>
-      <header className="text-page-header">
-        <span>{bookTitle}</span>
-        <span>{chapterTitle}</span>
-      </header>
+      {showRunningHeader ? <header className="text-page-header"><span>{runningHeader}</span></header> : null}
       {paragraphs.map((paragraph, index) => {
         const key = `${index}-${paragraph.slice(0, 18)}`;
         const inlineImage = parseInlineImageToken(paragraph);

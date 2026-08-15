@@ -16,6 +16,23 @@ export function createSlugCandidate(value: string) {
   return normalized.length >= 3 ? normalized : "book";
 }
 
+function randomSlugToken() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID().replace(/-/g, "").slice(0, 10);
+  }
+  return Math.random().toString(36).slice(2, 12);
+}
+
+/**
+ * Build a new-book slug without falling back to a shared fixed value.
+ * Titles that contain no usable ASCII slug characters receive an entropy
+ * suffix so that two new books can never start from the same fallback.
+ */
+export function createNewBookSlugCandidate(value: string) {
+  const normalized = normalizeSlugInput(value);
+  return normalized.length >= 3 ? normalized : `work-${randomSlugToken()}`;
+}
+
 export function isValidSlug(slug: string) {
   // Keep client validation aligned with the production constraint.
   return /^[a-z0-9][a-z0-9-]{1,78}[a-z0-9]$/.test(

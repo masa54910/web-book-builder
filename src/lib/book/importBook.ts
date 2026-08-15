@@ -1,5 +1,6 @@
 import { parseCsv } from "@/lib/parseCsv";
 import type { ChapterManifestRow, ImageManifestRow, NovelChapter } from "@/lib/types";
+import { findDocumentHeadings, parseDocumentStructure } from "@/lib/documentStructure";
 
 type RawChapterManifestRow = Omit<ChapterManifestRow, "order"> & {
   order: string;
@@ -30,19 +31,25 @@ function normalizeTitle(value: string) {
 
 function extractMarkdownChapters(source: string) {
   const text = source.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
-  const headingPattern = /^# ([^\n]+)$/gm;
-  const headings = [...text.matchAll(headingPattern)];
+  const structure = parseDocumentStructure(text, "本文");
+  const headings = findDocumentHeadings(text)
+    .filter((heading) => heading.level === 1)
+    .map((heading) => ({
+      ...heading,
+      index: text.split("\n").slice(0, heading.index).join("\n").length + (heading.index ? 1 : 0),
+    }));
 
   if (!headings.length) {
     return [{ title: "本文", body: text.trim() }];
   }
 
   return headings.map((heading, index) => {
-    const start = (heading.index ?? 0) + heading[0].length;
+    const start = heading.index + heading.line.length;
     const end = headings[index + 1]?.index ?? text.length;
     return {
-      title: heading[1].trim(),
+      title: heading.title.trim(),
       body: text.slice(start, end).trim(),
+      sections: structure.chapters[index]?.sections || [],
     };
   });
 }
@@ -102,6 +109,11 @@ export function importBook({
         source: definition.source,
         subtitle: definition.subtitle,
         body: detected?.body.trim() ?? "",
+        sections: detected && "sections" in detected ? detected.sections.map((section) => ({
+          id: section.id,
+          title: section.title,
+          level: section.level as 2 | 3,
+        })) : undefined,
       };
     }),
     images: imageManifestCsv ? parseImageManifest(imageManifestCsv) : [],
