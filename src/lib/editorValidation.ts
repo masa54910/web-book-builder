@@ -15,8 +15,8 @@ export type RequiredBookFieldValidation = {
 };
 
 /**
- * The editor uses this as the single gate before save, preview, and publish.
- * Keep the order aligned with the form so the first invalid control receives focus.
+ * The editor has one required field: the public URL (slug). All descriptive
+ * fields are intentionally optional and are preserved as entered when present.
  */
 export function validateRequiredBookFields(input: {
   title: string;
@@ -32,14 +32,6 @@ export function validateRequiredBookFields(input: {
   const hasSlug = input.slug.trim().length > 0;
   const fieldErrors: Partial<Record<RequiredBookFieldKey, string>> = {};
 
-  if (!hasTitle) fieldErrors.title = "タイトルを入力してください。";
-  if (!hasAuthorName) fieldErrors.author = "著者名を入力してください。";
-  if (!hasDescription) fieldErrors.description = "説明文を入力してください。";
-  if (!hasAuthorHandle) {
-    fieldErrors.authorHandle = "作者ハンドルを入力してください。";
-  } else if (!/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])$/.test(input.authorHandle.trim().toLowerCase())) {
-    fieldErrors.authorHandle = "作者ハンドルは半角英数字とハイフンで入力してください。";
-  }
   if (!hasSlug) {
     fieldErrors.slug = "公開URLを入力してください。";
   } else {
@@ -47,12 +39,7 @@ export function validateRequiredBookFields(input: {
     if (slugError) fieldErrors.slug = slugError;
   }
 
-  const firstMissingField = (["title", "author", "slug", "description", "authorHandle"] as const).find(
-    (field) => Boolean(fieldErrors[field]),
-  );
   const isValid = Object.keys(fieldErrors).length === 0;
-  const hasMissingRequiredField = !hasTitle || !hasAuthorName || !hasDescription || !hasAuthorHandle || !hasSlug;
-
   return {
     hasTitle,
     hasAuthorName,
@@ -60,8 +47,8 @@ export function validateRequiredBookFields(input: {
     hasAuthorHandle,
     hasSlug,
     isValid,
-    globalError: hasMissingRequiredField ? "未入力の必須項目があります。" : "",
-    firstMissingField,
+    globalError: isValid ? "" : "公開URLを入力または修正してください。",
+    firstMissingField: isValid ? undefined : "slug",
     fieldErrors,
   };
 }

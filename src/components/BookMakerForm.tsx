@@ -419,7 +419,7 @@ export default function BookMakerForm() {
           <h2>基本情報</h2>
           <div className="maker-grid">
             <label>
-              <span>タイトル 必須</span>
+              <span>タイトル</span>
               <input data-testid="maker-title" value={form.title} onChange={(event) => updateField("title", event.target.value)} />
               {errors.title ? <small className="form-error">{errors.title}</small> : null}
             </label>
@@ -428,7 +428,7 @@ export default function BookMakerForm() {
               <input value={form.subtitle} onChange={(event) => updateField("subtitle", event.target.value)} />
             </label>
             <label>
-              <span>著者名 必須</span>
+              <span>著者名</span>
               <input data-testid="maker-author" value={form.author} onChange={(event) => updateField("author", event.target.value)} />
               {errors.author ? <small className="form-error">{errors.author}</small> : null}
             </label>
@@ -462,7 +462,7 @@ export default function BookMakerForm() {
             </button>
           </div>
           <label>
-            <span>本文 必須</span>
+            <span>本文</span>
             <textarea
               className="manuscript-input"
               data-testid="maker-raw-text"

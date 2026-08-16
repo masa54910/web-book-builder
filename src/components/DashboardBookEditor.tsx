@@ -73,7 +73,7 @@ import {
 import { buildReaderPages } from "@/lib/paginateText";
 import type { ImageManifestRow, ReaderPage } from "@/lib/types";
 import { countContentCharacters } from "@/lib/characterCount";
-import { validateRequiredBookFields, type RequiredBookFieldKey } from "@/lib/editorValidation";
+import { validateRequiredBookFields } from "@/lib/editorValidation";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
 import CharacterAssistant from "@/components/CharacterAssistant";
 import InlineManuscriptEditor from "@/components/InlineManuscriptEditor";
@@ -982,7 +982,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       description: descriptionInputRef.current,
       authorHandle: authorHandleInputRef.current,
       slug: slugInputRef.current,
-    }[validation.firstMissingField || "title"];
+    }[validation.firstMissingField || "slug"];
     firstMissing?.scrollIntoView({ behavior: "smooth", block: "center" });
     firstMissing?.focus({ preventScroll: true });
     return false;
@@ -1000,8 +1000,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       return next;
     });
 
-    if (key === "title" || key === "author" || key === "description" || key === "authorHandle" || key === "slug") {
-      const requiredKey: RequiredBookFieldKey = key === "author" ? "author" : (key as RequiredBookFieldKey);
+    if (key === "slug") {
+      const requiredKey = "slug" as const;
       const nextRequiredState = {
         ...state,
         [key]: value,
@@ -1018,7 +1018,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         const message = validation.fieldErrors[requiredKey];
         if (message) {
           next[requiredKey] = message;
-        } else if (String(value).trim().length > 0) {
+        } else {
           delete next[requiredKey];
         }
         return next;
@@ -1439,23 +1439,21 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         <div className="maker-card">
           <h2>基本情報</h2>
           <div className="maker-grid">
-            <FormField id="book-title" label="タイトル" required error={errors.title}>
+            <FormField id="book-title" label="タイトル" error={errors.title}>
               <input
                 id="book-title"
                 ref={titleInputRef}
                 value={state.title}
-                required
                 onChange={(event) => update("title", event.target.value)}
                 aria-invalid={Boolean(errors.title)}
                 aria-describedby={errors.title ? "book-title-error" : undefined}
               />
             </FormField>
-            <FormField id="book-author-name" label="著者名" required error={errors.author}>
+            <FormField id="book-author-name" label="著者名" error={errors.author}>
               <input
                 id="book-author-name"
                 ref={authorInputRef}
                 value={state.author}
-                required
                 onChange={(event) => update("author", event.target.value)}
                 aria-invalid={Boolean(errors.author)}
                 aria-describedby={errors.author ? "book-author-name-error" : undefined}
@@ -1494,7 +1492,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           <FormField
             id="book-description"
             label="説明文"
-            required
             helpText="作品の紹介やSNS共有、検索結果の説明に使用されます。"
             error={errors.description}
             className="maker-full"
@@ -1504,7 +1501,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               ref={descriptionInputRef}
               rows={3}
               value={state.description}
-              required
               onChange={(event) => update("description", event.target.value)}
               aria-invalid={Boolean(errors.description)}
               aria-describedby={errors.description ? "book-description-error book-description-help" : "book-description-help"}
@@ -1519,7 +1515,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             <FormField
               id="book-author-handle"
               label="作者ハンドル"
-              required
               helpText="作者ページのURLに使用します。半角英数字とハイフンで入力してください。"
               error={errors.authorHandle}
             >
@@ -1527,7 +1522,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
                 id="book-author-handle"
                 ref={authorHandleInputRef}
                 value={state.authorHandle}
-                required
                 aria-invalid={Boolean(errors.authorHandle)}
                 aria-describedby={errors.authorHandle ? "book-author-handle-error book-author-handle-help" : "book-author-handle-help"}
                 onChange={(event) => update("authorHandle", event.target.value.normalize("NFKC").replace(/^@+/, "").toLowerCase())}

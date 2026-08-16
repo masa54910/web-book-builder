@@ -516,31 +516,35 @@ const requiredBase = {
   slug: "safe-book-01",
 };
 const requiredMissingTitle = validateRequiredBookFields({ ...requiredBase, title: "   " });
-assert.equal(requiredMissingTitle.isValid, false);
-assert.equal(requiredMissingTitle.globalError, "未入力の必須項目があります。");
-assert.equal(requiredMissingTitle.fieldErrors.title, "タイトルを入力してください。");
-assert.equal(requiredMissingTitle.firstMissingField, "title");
+assert.equal(requiredMissingTitle.isValid, true);
+assert.equal(requiredMissingTitle.globalError, "");
+assert.equal(requiredMissingTitle.fieldErrors.title, undefined);
+assert.equal(requiredMissingTitle.firstMissingField, undefined);
 
 const requiredMissingAuthor = validateRequiredBookFields({ ...requiredBase, authorName: "  " });
-assert.equal(requiredMissingAuthor.isValid, false);
-assert.equal(requiredMissingAuthor.fieldErrors.author, "著者名を入力してください。");
+assert.equal(requiredMissingAuthor.isValid, true);
+assert.equal(requiredMissingAuthor.fieldErrors.author, undefined);
 
 const requiredMissingDescription = validateRequiredBookFields({ ...requiredBase, description: "\t" });
-assert.equal(requiredMissingDescription.fieldErrors.description, "説明文を入力してください。");
+assert.equal(requiredMissingDescription.isValid, true);
+assert.equal(requiredMissingDescription.fieldErrors.description, undefined);
 
 const requiredMissingAuthorHandle = validateRequiredBookFields({ ...requiredBase, authorHandle: "  " });
-assert.equal(requiredMissingAuthorHandle.fieldErrors.authorHandle, "作者ハンドルを入力してください。");
+assert.equal(requiredMissingAuthorHandle.isValid, true);
+assert.equal(requiredMissingAuthorHandle.fieldErrors.authorHandle, undefined);
 
 const requiredMissingSlug = validateRequiredBookFields({ ...requiredBase, slug: "\n" });
+assert.equal(requiredMissingSlug.isValid, false);
 assert.equal(requiredMissingSlug.fieldErrors.slug, "公開URLを入力してください。");
 
 const invalidHandle = validateRequiredBookFields({ ...requiredBase, authorHandle: "日本語" });
-assert.equal(invalidHandle.isValid, false);
+assert.equal(invalidHandle.isValid, true);
 assert.equal(invalidHandle.globalError, "");
-assert.equal(invalidHandle.fieldErrors.authorHandle, "作者ハンドルは半角英数字とハイフンで入力してください。");
+assert.equal(invalidHandle.fieldErrors.authorHandle, undefined);
 
 const invalidShortHandle = validateRequiredBookFields({ ...requiredBase, authorHandle: "a" });
-assert.equal(invalidShortHandle.fieldErrors.authorHandle, "作者ハンドルは半角英数字とハイフンで入力してください。");
+assert.equal(invalidShortHandle.isValid, true);
+assert.equal(invalidShortHandle.fieldErrors.authorHandle, undefined);
 
 const invalidSlug = validateRequiredBookFields({ ...requiredBase, slug: "my book" });
 assert.equal(invalidSlug.isValid, false);
@@ -550,6 +554,16 @@ const requiredBothPresent = validateRequiredBookFields(requiredBase);
 assert.equal(requiredBothPresent.isValid, true);
 assert.equal(requiredBothPresent.globalError, "");
 assert.deepEqual(requiredBothPresent.fieldErrors, {});
+
+const onlyPublicUrl = validateRequiredBookFields({
+  title: "",
+  authorName: "",
+  description: "",
+  authorHandle: "",
+  slug: "only-public-url",
+});
+assert.equal(onlyPublicUrl.isValid, true, "A public URL is sufficient for the editor gate");
+assert.deepEqual(onlyPublicUrl.fieldErrors, {});
 
 const noteTemplate = buildShareTemplate({
   platform: "note",
@@ -634,9 +648,9 @@ assert.ok(buildReaderLineShareUrl(readerShareInput).includes(encodeURIComponent(
 assert.match(buildReaderLineWebShareUrl(readerShareInput), /^https:\/\/social-plugins\.line\.me\/lineit\/share\?/);
 assert.equal(READER_NOTE_NEW_POST_URL, NOTE_NEW_POST_URL);
 
-// The editor uses this result as the save/publish gate: an invalid payload
-// must return before either canonical command can be called.
-assert.equal(requiredMissingTitle.isValid, false);
+// The editor uses the public URL as the only save/publish gate; descriptive
+// fields may be omitted without blocking canonical commands.
+assert.equal(requiredMissingTitle.isValid, true);
 assert.equal(requiredBothPresent.isValid, true);
 
 const desktopPopover = computeInlineImagePopoverLayout({
@@ -716,7 +730,7 @@ const baseEditorState: EditorDraftState = {
   tableOfContentsItemsPerPage: 6,
   visibility: "private",
   status: "draft",
-  slug: "",
+  slug: "canonical-test-book",
   authorHandle: "",
   authorBio: "",
   authorWebsiteUrl: "",
@@ -821,6 +835,20 @@ if (emptyCoverResult.ok) {
     "",
   );
 }
+
+const optionalMetadataCanonicalResult = buildCanonicalBookPayload({
+  state: {
+    ...baseEditorState,
+    title: "",
+    author: "",
+    description: "",
+    authorHandle: "",
+    slug: "only-public-url",
+  },
+  contentBlocks: [],
+  images: [],
+});
+assert.equal(optionalMetadataCanonicalResult.ok, true, "Canonical save should require only a public URL");
 
 const draftBlocks: BookContentBlock[] = [
   {

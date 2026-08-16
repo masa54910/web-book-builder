@@ -497,12 +497,6 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
   );
   const rawText = contentBlocksToRawText(contentBlocks);
 
-  if (!title) errors.title = "タイトルを入力してください。";
-  if (!author) errors.author = "著者名を入力してください。";
-  if (!rawText && !contentBlocks.some((block) => block.type === "image" || block.type === "youtube")) {
-    errors.rawText = "本文を入力してください。";
-  }
-
   const pendingImage = contentBlocks.find(
     (block) => block.type === "image" && block.uploadState === "pending",
   );
@@ -599,7 +593,7 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
         charactersPerPage: Math.max(180, input.charactersPerPage),
         publisherName: input.publisherName.trim() || "WebBookMaker",
         publishedAt: input.publishedAt.trim() || String(new Date().getFullYear()),
-        copyrightText: input.copyrightText.trim() || `© ${author}`,
+        copyrightText: input.copyrightText.trim() || (author ? `© ${author}` : ""),
         readerMode: "book",
         authorProfile: {
           handle: authorHandle,

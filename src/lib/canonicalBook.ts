@@ -16,6 +16,7 @@ import type { BookThemeSettings } from "@/lib/themeSystem";
 import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
 import type { TextMark } from "@/lib/textStyles";
+import { validateSlug } from "@/lib/slug";
 
 export type CanonicalPublicationStatus = "draft" | "published" | "archived";
 export type CanonicalPublicationVisibility = "private" | "unlisted" | "public";
@@ -286,16 +287,12 @@ export function buildCanonicalBookPayload(
 
   const title = state.title.trim();
   const authorName = state.author.trim();
-  const rawText = contentBlocks
-    .filter((block): block is Extract<CanonicalContentBlock, { type: "text" }> => block.type === "text")
-    .map((block) => block.content)
-    .join("\n")
-    .trim();
 
-  if (!title) errors.title = "タイトルを入力してください。";
-  if (!authorName) errors.author = "作者名を入力してください。";
-  if (!rawText && !contentBlocks.some((block) => block.type === "image" || block.type === "youtube")) {
-    errors.rawText = "本文を入力してください。";
+  if (!state.slug.trim()) {
+    errors.slug = "公開URLを入力してください。";
+  } else {
+    const slugError = validateSlug(state.slug);
+    if (slugError) errors.slug = slugError;
   }
 
   const payload: CanonicalBookPayload = {
