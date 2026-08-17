@@ -9,6 +9,7 @@ import { publicBookBaseUrl } from "@/lib/promotion";
 import {
   contentBlocksFromLegacy,
   contentBlocksToRawText,
+  ensureUniqueContentBlockIds,
   extractChaptersFromText,
   type BookContentBlock,
   type BookProject,
@@ -354,9 +355,17 @@ function imagesFromRecord(record: CloudBookRecord): UploadedBookImage[] {
 function contentBlocksFromRecord(record: CloudBookRecord) {
   const storedBlocks = record.bookProject.contentBlocks;
   if (Array.isArray(storedBlocks) && storedBlocks.length) {
-    return storedBlocks;
+    return ensureUniqueContentBlockIds(storedBlocks);
   }
-  return contentBlocksFromLegacy(record.rawText, imagesFromRecord(record));
+  return ensureUniqueContentBlockIds(contentBlocksFromLegacy(record.rawText, imagesFromRecord(record)));
+}
+
+function stateWithValidBlockAdjustments(state: EditorState, blocks: BookContentBlock[]) {
+  const validIds = new Set(blocks.map((block) => block.id));
+  return {
+    ...state,
+    pageAdjustments: normalizePageAdjustments(state.pageAdjustments).filter((adjustment) => validIds.has(adjustment.blockId)),
+  };
 }
 
 function mergeRestoredImageBlocks(
@@ -382,7 +391,12 @@ function mergeRestoredImageBlocks(
         publicUrl: displayUrl,
       };
     })
-    .filter((block) => block.type !== "image" || isDisplayableImageUrl(block.publicUrl));
+    .filter((block) =>
+      block.type !== "image"
+      || block.uploadState === "pending"
+      || block.uploadState === "error"
+      || isDisplayableImageUrl(block.publicUrl),
+    );
 }
 
 function mergeRestoredImages(
@@ -517,10 +531,14 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [state, setState] = useState<EditorState>(draftSeed.state);
   const [images, setImages] = useState<UploadedBookImage[]>(draftSeed.images);
   const [contentBlocks, setContentBlocks] = useState<BookContentBlock[]>(
-    draftSeed.contentBlocks.length ? draftSeed.contentBlocks : [{ id: "text-001", type: "text", content: "" }],
+    draftSeed.contentBlocks.length
+      ? ensureUniqueContentBlockIds(draftSeed.contentBlocks)
+      : [{ id: "text-001", type: "text", content: "" }],
   );
   const [editorRevision, setEditorRevision] = useState(0);
   const [pendingImageCount, setPendingImageCount] = useState(0);
+  const [stalePendingImageIds, setStalePendingImageIds] = useState<string[]>([]);
+  const [pasteUndoBlocks, setPasteUndoBlocks] = useState<BookContentBlock[] | null>(null);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [editorScrollRequest, setEditorScrollRequest] = useState<{ blockId: string; nonce: number } | null>(null);
@@ -588,10 +606,16 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       }
 
       const materializedProject = await materializeBookProjectAssets(project);
-      setState(stateFromPreviewProject(materializedProject));
+      const restoredPreviewBlocks = ensureUniqueContentBlockIds(contentBlocksFromPreviewProject(materializedProject));
+      setState(stateWithValidBlockAdjustments(stateFromPreviewProject(materializedProject), restoredPreviewBlocks));
       setBookId(materializedProject.config.bookId);
       setImages(imagesFromPreviewProject(materializedProject));
-      setContentBlocks(contentBlocksFromPreviewProject(materializedProject));
+      setContentBlocks(restoredPreviewBlocks);
+      setStalePendingImageIds(
+        restoredPreviewBlocks
+          .filter((block) => block.type === "image" && block.uploadState === "pending")
+          .map((block) => block.id),
+      );
       setEditorRevision((current) => current + 1);
       setDidRestorePreviewDraft(true);
       setPendingScrollRestore(returnState.scrollY);
@@ -653,6 +677,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         const persistedState = fromRecord(materializedBook);
         const persistedImages = imagesFromRecord(materializedBook);
         const persistedBlocks = contentBlocksFromRecord(materializedBook);
+        const normalizedPersistedBlocks = ensureUniqueContentBlockIds(persistedBlocks);
         const autosave = loadAutosaveDraft(materializedBook.id, user.id);
         const persistedAt = Date.parse(materializedBook.updatedAt);
         const autosaveAtValue = autosave ? Date.parse(autosave.savedAt) : Number.NaN;
@@ -670,21 +695,26 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             fields: autosave.fields,
           }));
           if (restored.restored) {
-            const restoredBlocks = mergeRestoredImageBlocks(restored.contentBlocks, persistedBlocks);
+            const restoredBlocks = ensureUniqueContentBlockIds(mergeRestoredImageBlocks(restored.contentBlocks, normalizedPersistedBlocks));
             const restoredImages = restored.images.length
               ? mergeRestoredImages(restored.images, persistedImages)
               : persistedImages;
-            setState({
+            setState(stateWithValidBlockAdjustments({
               ...restored.state,
               coverImage: isDisplayableImageUrl(restored.state.coverImage)
                 ? restored.state.coverImage
                 : persistedState.coverImage,
               coverImageStoragePath:
                 restored.state.coverImageStoragePath || persistedState.coverImageStoragePath,
-            });
+            }, restoredBlocks));
             setBookId(materializedBook.id);
             setImages(restoredImages);
-            setContentBlocks(restoredBlocks.length ? restoredBlocks : persistedBlocks);
+            setContentBlocks(restoredBlocks.length ? restoredBlocks : normalizedPersistedBlocks);
+            setStalePendingImageIds(
+              (restoredBlocks.length ? restoredBlocks : normalizedPersistedBlocks)
+                .filter((block) => block.type === "image" && block.uploadState === "pending")
+                .map((block) => block.id),
+            );
             setAutosaveAt(autosave.savedAt);
             setDirty(true);
             setStatusMessage("前回の編集内容を復元しました。");
@@ -693,10 +723,13 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           }
         }
 
-        setState(persistedState);
+        setState(stateWithValidBlockAdjustments(persistedState, normalizedPersistedBlocks));
         setBookId(materializedBook.id);
         setImages(persistedImages);
-        setContentBlocks(persistedBlocks);
+        setContentBlocks(normalizedPersistedBlocks);
+        setStalePendingImageIds(
+          normalizedPersistedBlocks.filter((block) => block.type === "image" && block.uploadState === "pending").map((block) => block.id),
+        );
         setAutosaveAt(null);
         setEditorRevision((current) => current + 1);
         setStatusMessage("作品を読み込みました。");
@@ -737,9 +770,15 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     }));
     if (!restored.restored) return;
     const restoreTimer = window.setTimeout(() => {
-      setState(restored.state);
       setImages(restored.images);
-      setContentBlocks(restored.contentBlocks);
+      const restoredBlocks = ensureUniqueContentBlockIds(restored.contentBlocks);
+      setState(stateWithValidBlockAdjustments(restored.state, restoredBlocks));
+      setContentBlocks(restoredBlocks);
+      setStalePendingImageIds(
+        restoredBlocks
+          .filter((block) => block.type === "image" && block.uploadState === "pending")
+          .map((block) => block.id),
+      );
       setAutosaveAt(autosave.savedAt);
       setDirty(true);
       setHasRestoredDraft(true);
@@ -1118,15 +1157,24 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   }, [bookId, state.slug, user]);
 
   const syncContentBlocks = (nextBlocks: BookContentBlock[]) => {
-    setContentBlocks(nextBlocks);
-    setImages(uploadedImagesFromBlocks(nextBlocks));
-    setState((current) => ({ ...current, rawText: contentBlocksToRawText(nextBlocks) }));
+    const normalizedBlocks = ensureUniqueContentBlockIds(nextBlocks);
+    setContentBlocks(normalizedBlocks);
+    setImages(uploadedImagesFromBlocks(normalizedBlocks));
+    setState((current) => ({ ...current, rawText: contentBlocksToRawText(normalizedBlocks) }));
     setDirty(true);
   };
 
   const applyImportedContent = (nextBlocks: BookContentBlock[]) => {
     syncContentBlocks(nextBlocks);
     setEditorRevision((current) => current + 1);
+  };
+
+  const handlePasteUndo = () => {
+    if (!pasteUndoBlocks) return;
+    syncContentBlocks(pasteUndoBlocks);
+    setPasteUndoBlocks(null);
+    setEditorRevision((current) => current + 1);
+    setStatusMessage("貼り付け前の原稿へ戻しました");
   };
 
   const buildCanonicalPayload = (): CanonicalBookPayload | null => {
@@ -1212,7 +1260,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       externalSalesLabel: payload.externalSalesLabel,
     }));
     setImages(nextImages);
-    setContentBlocks(nextBlocks);
+    setContentBlocks(ensureUniqueContentBlockIds(nextBlocks));
     setBookId(payload.bookId);
     setEditorRevision((current) => current + 1);
   };
@@ -1398,7 +1446,15 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     setStatusMessage("公開を停止しました。");
   };
 
-  if (isLoading) return <div className="reader-loading">作品を読み込んでいます…</div>;
+  if (isLoading) {
+    return (
+      <div className="reader-loading editor-loading" role="status" aria-live="polite">
+        <span className="editor-loading-spinner" aria-hidden="true" />
+        <strong>作品を読み込んでいます…</strong>
+        <span>編集画面を準備しています。しばらくお待ちください。</span>
+      </div>
+    );
+  }
 
   return (
     <main className="dashboard-page editor-page">
@@ -1560,6 +1616,25 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             />
           </label>
           <p className="maker-note">文章の途中にカーソルを置いて、画像を貼り付け・ドラッグ&ドロップ・選択挿入できます。</p>
+          {pendingImageCount > 0 ? (
+            <div className="editor-pending-warning" role="alert">
+              <strong>画像のアップロードが完了していません。</strong>
+              <span>
+                {stalePendingImageIds.length ? "前回の編集内容から未完了の画像が復元されています。" : ""}
+                {contentBlocks
+                  .filter((block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image" && block.uploadState === "pending")
+                  .map((block) => block.fileName)
+                  .join("、") || "未完了の画像"}
+                。画像をクリックして再アップロードするか、削除してください。
+              </span>
+            </div>
+          ) : null}
+          {pasteUndoBlocks ? (
+            <div className="maker-note inline-paste-undo" role="status">
+              貼り付けた原稿を自動整形しました。
+              <button className="maker-secondary-button" type="button" onClick={handlePasteUndo}>貼り付け前に戻す</button>
+            </div>
+          ) : null}
           <InlineManuscriptEditor
             value={contentBlocks}
             revision={String(editorRevision)}
@@ -1571,6 +1646,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             pageBreakAfterBlockIds={pageBreakAfterBlockIds}
             onInsertPageBreak={handleEditorInsertPageBreak}
             onRemovePageBreak={handleEditorRemovePageBreak}
+            onPasteAutoFormat={(previousBlocks) => setPasteUndoBlocks(previousBlocks)}
           />
           <p className="inline-manuscript-character-count" aria-live="polite">
             <strong>{Math.min(cursorPosition, bodyCharacterCount).toLocaleString("ja-JP")}</strong>

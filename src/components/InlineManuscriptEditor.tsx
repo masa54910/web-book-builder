@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { normalizeMediaDisplaySize, type BookContentBlock, type MediaDisplayMode, type MediaDisplaySize } from "@/lib/bookProject";
+import {
+  contentBlocksFromLegacy,
+  createContentBlockId,
+  ensureUniqueContentBlockIds,
+  normalizeMediaDisplaySize,
+  normalizePastedText,
+  type BookContentBlock,
+  type MediaDisplayMode,
+  type MediaDisplaySize,
+} from "@/lib/bookProject";
 import { isDisplayableImageUrl } from "@/lib/bookAssetStorage";
 import { createPendingImageBlock, insertImageBlocksAtCursor, insertYouTubeBlockAtCursor } from "@/lib/inlineContentBlocks";
 import { countContentCharacters, countUserCharacters } from "@/lib/characterCount";
@@ -41,8 +50,8 @@ function normalizeText(value: string) {
   return value.replace(/\r\n?/g, "\n");
 }
 
-function paragraphId(index: number) {
-  return `paragraph-${String(index + 1).padStart(3, "0")}`;
+function paragraphId() {
+  return createContentBlockId("paragraph");
 }
 
 function parseStyledParagraph(paragraph: HTMLElement) {
@@ -93,8 +102,8 @@ function renderStyledText(parent: HTMLElement, text: string, marks?: TextMark[])
   }
 }
 
-function imageId(index: number) {
-  return `image-${String(index + 1).padStart(3, "0")}`;
+function imageId() {
+  return createContentBlockId("image");
 }
 
 function parseEditorDom(root: HTMLElement): BookContentBlock[] {
@@ -107,7 +116,7 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
     }
     if (child instanceof HTMLElement && child.dataset.nodeType === "image") {
       blocks.push({
-        id: child.dataset.nodeId || imageId(index),
+        id: child.dataset.nodeId || imageId(),
         type: "image",
         storagePath: child.dataset.storagePath || "",
         publicUrl: child.dataset.publicUrl || undefined,
@@ -132,7 +141,7 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
     }
     if (child instanceof HTMLElement && child.dataset.nodeType === "youtube") {
       blocks.push({
-        id: child.dataset.nodeId || `youtube-${index + 1}`,
+        id: child.dataset.nodeId || createContentBlockId("youtube"),
         type: "youtube",
         videoId: child.dataset.videoId || "",
         originalUrl: child.dataset.originalUrl || "",
@@ -144,7 +153,7 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
 
     const styled = child instanceof HTMLElement ? parseStyledParagraph(child) : { content: normalizeText(child.textContent || ""), marks: [] };
     blocks.push({
-      id: child instanceof HTMLElement && child.dataset.nodeId ? child.dataset.nodeId : paragraphId(index),
+      id: child instanceof HTMLElement && child.dataset.nodeId ? child.dataset.nodeId : paragraphId(),
       type: "text",
       content: styled.content,
       marks: styled.marks,
@@ -152,10 +161,10 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
   }
 
   if (!blocks.length) {
-    blocks.push({ id: paragraphId(0), type: "text", content: "" });
+    blocks.push({ id: paragraphId(), type: "text", content: "" });
   }
 
-  return blocks;
+  return ensureUniqueContentBlockIds(blocks);
 }
 
 function createParagraphElement(block: Extract<BookContentBlock, { type: "text" }>) {
@@ -400,6 +409,7 @@ type Props = {
   pageBreakAfterBlockIds?: string[];
   onInsertPageBreak?: (blockId: string) => void;
   onRemovePageBreak?: (blockId: string) => void;
+  onPasteAutoFormat?: (previousBlocks: BookContentBlock[]) => void;
 };
 
 export default function InlineManuscriptEditor({
@@ -413,6 +423,7 @@ export default function InlineManuscriptEditor({
   pageBreakAfterBlockIds = [],
   onInsertPageBreak,
   onRemovePageBreak,
+  onPasteAutoFormat,
 }: Props) {
   const editorRef = useRef<HTMLElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -533,7 +544,7 @@ export default function InlineManuscriptEditor({
   useEffect(() => {
     const nextNodes: BookContentBlock[] = value.length
       ? value
-      : [{ id: paragraphId(0), type: "text", content: "" }];
+      : [{ id: paragraphId(), type: "text", content: "" }];
     nodesRef.current = nextNodes;
     if (
       renderedRevisionRef.current === revision &&
@@ -676,11 +687,10 @@ export default function InlineManuscriptEditor({
   }, [onCursorChange, reportCursor, scrollRequest]);
 
   const removeNode = (nodeId: string) => {
-    const next = nodesRef.current.filter((node) => node.id !== nodeId);
-    emitChange(next.length ? next : [{ id: paragraphId(0), type: "text", content: "" }]);
-    if (rootRef.current) {
-      renderNodes(rootRef.current, next.length ? next : [{ id: paragraphId(0), type: "text", content: "" }], pageBreakAfterBlockIds);
-    }
+    const remaining = nodesRef.current.filter((node) => node.id !== nodeId);
+    const next = remaining.length ? remaining : [{ id: paragraphId(), type: "text" as const, content: "" }];
+    emitChange(next);
+    if (rootRef.current) renderNodes(rootRef.current, next, pageBreakAfterBlockIds);
     setSelectedImageId(null);
     setSelectedYouTubeId(null);
   };
@@ -760,6 +770,62 @@ export default function InlineManuscriptEditor({
     onStatus(message);
   }
 
+  const insertPastedText = (rawText: string) => {
+    const text = normalizePastedText(rawText);
+    if (!text.trim()) return;
+    const parsed = contentBlocksFromLegacy(text, []);
+    const pastedBlocks: BookContentBlock[] = ensureUniqueContentBlockIds(
+      parsed.flatMap((block): BookContentBlock[] => {
+        if (block.type !== "text") return [block];
+        const paragraphs = block.content.split(/\n{2,}/u).filter((content) => content.trim().length > 0);
+        return paragraphs.length
+          ? paragraphs.map((content) => ({ id: createContentBlockId("paragraph"), type: "text" as const, content }))
+          : [{ ...block, id: createContentBlockId("paragraph") }];
+      }),
+    );
+    if (!pastedBlocks.length) return;
+
+    const root = rootRef.current;
+    const activeRange = root ? (savedRangeRef.current ?? cloneSelectionRange(root))?.cloneRange() ?? null : null;
+    const paragraphTarget = root ? findParagraphTarget(root, activeRange) : null;
+    let nextBlocks: BookContentBlock[];
+
+    if (paragraphTarget && activeRange) {
+      const nodeIndex = editorBlockIndex(root as HTMLElement, paragraphTarget);
+      const current = nodeIndex >= 0 ? nodesRef.current[nodeIndex] : undefined;
+      if (current?.type === "text") {
+        const startRange = activeRange.cloneRange();
+        const endRange = activeRange.cloneRange();
+        startRange.collapse(true);
+        endRange.collapse(false);
+        const start = getTextOffsetWithinParagraph(paragraphTarget, startRange);
+        const end = getTextOffsetWithinParagraph(paragraphTarget, endRange);
+        const before = current.content.slice(0, start);
+        const after = current.content.slice(end);
+        const replacement: BookContentBlock[] = [];
+        if (before) replacement.push({ ...current, content: before, marks: sliceTextMarks(current.marks, 0, start) });
+        replacement.push(...pastedBlocks);
+        if (after) replacement.push({ id: createContentBlockId("paragraph"), type: "text", content: after, marks: sliceTextMarks(current.marks, end, current.content.length) });
+        nextBlocks = [...nodesRef.current];
+        nextBlocks.splice(nodeIndex, 1, ...replacement);
+      } else {
+        nextBlocks = [...nodesRef.current, ...pastedBlocks];
+      }
+    } else {
+      nextBlocks = [...nodesRef.current, ...pastedBlocks];
+    }
+
+    onPasteAutoFormat?.(nodesRef.current);
+    nextBlocks = ensureUniqueContentBlockIds(nextBlocks);
+    emitChange(nextBlocks);
+    if (root) {
+      renderNodes(root, nextBlocks, pageBreakAfterBlockIds);
+      const last = root.lastElementChild;
+      if (last) setCaretAfterNode(last);
+    }
+    onStatus("原稿を解析し、見出し・段落構造を更新しました");
+  };
+
   const insertImageFromPicker = () => {
     fileInputRef.current?.click();
   };
@@ -806,7 +872,7 @@ export default function InlineManuscriptEditor({
     if (!current || current.type !== "text") return;
     const split = splitParagraphAtCaret(paragraphTarget, activeRange);
     const youtubeBlock = {
-      id: `youtube-${crypto.randomUUID()}`,
+      id: createContentBlockId("youtube"),
       type: "youtube" as const,
       videoId: parsed.videoId,
       originalUrl: parsed.canonicalUrl,
@@ -1011,9 +1077,15 @@ export default function InlineManuscriptEditor({
             }}
             onPaste={(event) => {
               const files = Array.from(event.clipboardData.files || []).filter(isImageFile);
-              if (!files.length) return;
+              if (files.length) {
+                event.preventDefault();
+                void insertFiles(files, "paste");
+                return;
+              }
+              const text = event.clipboardData.getData("text/plain");
+              if (!text) return;
               event.preventDefault();
-              void insertFiles(files, "paste");
+              insertPastedText(text);
             }}
             onDrop={(event) => {
               const files = Array.from(event.dataTransfer.files || []).filter(isImageFile);

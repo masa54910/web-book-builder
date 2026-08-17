@@ -62,6 +62,30 @@ export type BookContentBlock =
       displaySize?: MediaDisplaySize;
     };
 
+/** Create a stable-looking editor block id without depending on array position. */
+export function createContentBlockId(prefix: string) {
+  const randomUUID = globalThis.crypto?.randomUUID;
+  if (typeof randomUUID === "function") return `${prefix}-${randomUUID.call(globalThis.crypto)}`;
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Keep the first valid occurrence and repair only missing/duplicate ids. */
+export function ensureUniqueContentBlockIds(blocks: BookContentBlock[]) {
+  const used = new Set<string>();
+  return blocks.map((block) => {
+    const original = typeof block.id === "string" ? block.id.trim() : "";
+    if (original && !used.has(original)) {
+      used.add(original);
+      return original === block.id ? block : { ...block, id: original };
+    }
+    const prefix = block.type === "image" ? "image" : block.type === "youtube" ? "youtube" : "paragraph";
+    let next = createContentBlockId(prefix);
+    while (used.has(next)) next = createContentBlockId(prefix);
+    used.add(next);
+    return { ...block, id: next };
+  });
+}
+
 export type UploadedBookImage = {
   id: string;
   fileName: string;
@@ -130,17 +154,17 @@ export type ProjectBuildResult =
 
 const IMAGE_REFERENCE_PATTERN = /\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]/g;
 
-function blockId(prefix: string, index: number) {
-  return `${prefix}-${String(index + 1).padStart(3, "0")}`;
+function blockId(prefix: string) {
+  return createContentBlockId(prefix);
 }
 
-function normalizeBlockId(value: string, fallbackPrefix: string, index: number) {
+function normalizeBlockId(value: string, fallbackPrefix: string) {
   const candidate =
     value
       .normalize("NFKD")
       .toLowerCase()
       .replace(/[^a-z0-9._-]+/g, "-")
-      .replace(/^-+|-+$/g, "") || blockId(fallbackPrefix, index);
+      .replace(/^-+|-+$/g, "") || blockId(fallbackPrefix);
   return candidate;
 }
 
@@ -187,7 +211,7 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
   for (const [index, block] of blocks.entries()) {
     if (block.type === "text") {
       normalized.push({
-        id: normalizeBlockId(block.id, "text", index),
+        id: normalizeBlockId(block.id, "text"),
         type: "text",
         content: typeof block.content === "string" ? block.content : "",
         marks: normalizeTextMarks(typeof block.content === "string" ? block.content : "", block.marks),
@@ -198,7 +222,7 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
     if (block.type === "youtube") {
       if (!isValidYouTubeVideoId(block.videoId)) continue;
       normalized.push({
-        id: normalizeBlockId(block.id, "youtube", index),
+        id: normalizeBlockId(block.id, "youtube"),
         type: "youtube",
         videoId: block.videoId,
         originalUrl: typeof block.originalUrl === "string" ? block.originalUrl : "",
@@ -215,7 +239,7 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
     if (!storagePath) continue;
 
     normalized.push({
-      id: normalizeBlockId(block.id, "image", index),
+      id: normalizeBlockId(block.id, "image"),
       type: "image",
       storagePath,
       publicUrl: typeof block.publicUrl === "string" && block.publicUrl ? block.publicUrl : undefined,
@@ -233,7 +257,16 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
     });
   }
 
-  return normalized;
+  return ensureUniqueContentBlockIds(normalized);
+}
+
+/** Conservative normalization used for plain-text paste. */
+export function normalizePastedText(value: string) {
+  return value
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n");
 }
 
 export function contentBlocksToRawText(blocks: BookContentBlock[]) {
@@ -294,7 +327,7 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
     const textPart = text.slice(cursor, match.index);
     if (textPart.trim()) {
       blocks.push({
-        id: blockId("text", blocks.length),
+        id: blockId("text"),
         type: "text",
         content: textPart,
       });
@@ -305,7 +338,7 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
       const videoId = isValidYouTubeVideoId(match[3] || "") ? match[3] : storedBlockId;
       if (isValidYouTubeVideoId(videoId)) {
         blocks.push({
-          id: match[3] ? storedBlockId : blockId("youtube", blocks.length),
+          id: match[3] ? storedBlockId : blockId("youtube"),
           type: "youtube",
           videoId,
           originalUrl: `https://www.youtube.com/watch?v=${videoId}`,
@@ -339,7 +372,7 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
       });
     } else {
       blocks.push({
-        id: blockId("text", blocks.length),
+        id: blockId("text"),
         type: "text",
         content: match[0],
       });
@@ -351,16 +384,16 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
   const tail = text.slice(cursor);
   if (tail.trim()) {
     blocks.push({
-      id: blockId("text", blocks.length),
+      id: blockId("text"),
       type: "text",
       content: tail,
     });
   }
 
-  for (const [index, image] of images.entries()) {
+  for (const image of images) {
     if (usedImageIds.has(image.id)) continue;
     blocks.push({
-      id: image.id || blockId("image", index),
+      id: image.id || blockId("image"),
       type: "image",
       storagePath: image.storagePath || image.dataUrl,
       publicUrl: image.displayUrl,
@@ -379,7 +412,7 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
 
   if (!blocks.length) {
     blocks.push({
-      id: blockId("text", 0),
+      id: blockId("text"),
       type: "text",
       content: "",
     });

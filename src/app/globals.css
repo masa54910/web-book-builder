@@ -3508,6 +3508,59 @@ button.reader-edit-link:disabled {
   letter-spacing: 0.2em;
 }
 
+.editor-loading {
+  gap: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.editor-loading strong {
+  color: #17365f;
+  font-family: inherit;
+  font-size: 1.05rem;
+}
+
+.editor-loading > span:last-child {
+  color: #6f8095;
+  font-size: 0.9rem;
+}
+
+.editor-loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(38, 132, 205, 0.2);
+  border-top-color: #2684cd;
+  border-radius: 999px;
+  animation: editor-loading-spin 0.8s linear infinite;
+}
+
+@keyframes editor-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+.editor-pending-warning {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid #e5b8a8;
+  border-radius: 10px;
+  background: #fff8f5;
+  color: #7b3427;
+  font-size: 0.9rem;
+}
+
+.editor-pending-warning strong { color: #8d2e1d; }
+
+.inline-paste-undo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
 .theme-modern .book-page {
   --paper: #f6f8fb;
   color: #15202a;

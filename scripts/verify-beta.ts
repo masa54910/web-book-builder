@@ -7,6 +7,8 @@ import {
   buildBookProject,
   contentBlocksFromLegacy,
   contentBlocksToRawText,
+  ensureUniqueContentBlockIds,
+  normalizePastedText,
   type BookContentBlock,
   type UploadedBookImage,
 } from "../src/lib/bookProject";
@@ -62,6 +64,51 @@ assert.deepEqual(sliceTextMarks(coloredMarks, 3, 7).map((mark) => ({ ...mark }))
 ]);
 assert.deepEqual(TEXT_COLORS, ["#111827", "#1677B8", "#EF4444", "#EAB308", "#667085"]);
 assert.deepEqual(Object.values(TEXT_COLOR_LABELS), ["黒", "青", "赤", "黄色", "グレー"]);
+
+const duplicateBlocks: BookContentBlock[] = [
+  { id: "paragraph-001", type: "text", content: "one" },
+  { id: "paragraph-001", type: "text", content: "two" },
+  {
+    id: "image-001",
+    type: "image",
+    storagePath: "images/example.jpg",
+    publicUrl: "https://example.com/example.jpg",
+    fileName: "example.jpg",
+    mimeType: "image/jpeg",
+    width: 100,
+    height: 100,
+    fitMode: "contain",
+    pageMode: "inline",
+    uploadState: "ready",
+  },
+  {
+    id: "image-001",
+    type: "image",
+    storagePath: "images/example-2.jpg",
+    fileName: "example-2.jpg",
+    mimeType: "image/jpeg",
+    width: 100,
+    height: 100,
+    fitMode: "contain",
+    pageMode: "inline",
+    uploadState: "pending",
+  },
+  { id: "youtube-001", type: "youtube", videoId: "dQw4w9WgXcQ", originalUrl: "https://youtu.be/dQw4w9WgXcQ" },
+  { id: "youtube-001", type: "youtube", videoId: "dQw4w9WgXcQ", originalUrl: "https://youtu.be/dQw4w9WgXcQ" },
+];
+const repairedBlocks = ensureUniqueContentBlockIds(duplicateBlocks);
+assert.equal(new Set(repairedBlocks.map((block) => block.id)).size, repairedBlocks.length, "content block ids must be unique");
+assert.equal(repairedBlocks[0].id, "paragraph-001", "the first existing id should be preserved");
+assert.equal(repairedBlocks[1].type, "text");
+assert.equal(repairedBlocks[3].type, "image");
+assert.equal((repairedBlocks[3] as Extract<BookContentBlock, { type: "image" }>).uploadState, "pending", "stale pending image state should be preserved for recovery");
+assert.deepEqual(normalizePastedText("\uFEFFone\r\ntwo\n\n\nthree  \n"), "one\ntwo\n\nthree\n");
+const manyBlocks = ensureUniqueContentBlockIds(Array.from({ length: 128 }, (_, index) => ({
+  id: index % 2 ? "paragraph-duplicate" : `paragraph-${index}`,
+  type: "text" as const,
+  content: String(index),
+})));
+assert.equal(new Set(manyBlocks.map((block) => block.id)).size, 128, "100+ blocks should remain unique");
 
 function blockSignature(blocks: BookContentBlock[]) {
   return blocks.map((block) =>
@@ -1038,6 +1085,8 @@ try {
 
 const globalsCss = fs.readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
 const bookReaderSource = fs.readFileSync(path.join(process.cwd(), "src", "components", "BookReader.tsx"), "utf8");
+const inlineEditorSource = fs.readFileSync(path.join(process.cwd(), "src", "components", "InlineManuscriptEditor.tsx"), "utf8");
+const dashboardEditorSource = fs.readFileSync(path.join(process.cwd(), "src", "components", "DashboardBookEditor.tsx"), "utf8");
 const termsPage = fs.readFileSync(path.join(process.cwd(), "src", "app", "terms", "page.tsx"), "utf8");
 const privacyPage = fs.readFileSync(path.join(process.cwd(), "src", "app", "privacy", "page.tsx"), "utf8");
 const commercePage = fs.readFileSync(path.join(process.cwd(), "src", "app", "commerce", "page.tsx"), "utf8");
@@ -1096,5 +1145,9 @@ assert.match(
   "Reader title should remain black",
 );
 assert.doesNotMatch(bookReaderSource, /reader-author-link|作者のページ/, "Reader masthead should not show the author page link");
+
+assert.doesNotMatch(inlineEditorSource, /paragraphId\(index\)|`paragraph-\$\{index/, "editor ids must not depend on an array index");
+assert.match(inlineEditorSource, /onPasteAutoFormat|normalizePastedText/, "plain-text paste should use the structural formatter");
+assert.match(dashboardEditorSource, /stalePendingImageIds|editor-pending-warning/, "stale pending images should be surfaced in the editor");
 
 console.log("beta verification: OK");
