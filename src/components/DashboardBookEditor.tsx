@@ -72,6 +72,7 @@ import {
   type PageAdjustment,
 } from "@/lib/pageAdjustments";
 import { buildReaderPages } from "@/lib/paginateText";
+import { smartFormatContentBlocks } from "@/lib/smartFormat";
 import type { ImageManifestRow, ReaderPage } from "@/lib/types";
 import { countContentCharacters } from "@/lib/characterCount";
 import { validateRequiredBookFields } from "@/lib/editorValidation";
@@ -539,6 +540,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [pendingImageCount, setPendingImageCount] = useState(0);
   const [stalePendingImageIds, setStalePendingImageIds] = useState<string[]>([]);
   const [pasteUndoBlocks, setPasteUndoBlocks] = useState<BookContentBlock[] | null>(null);
+  const [smartFormatUndoBlocks, setSmartFormatUndoBlocks] = useState<BookContentBlock[] | null>(null);
+  const [smartFormatSummary, setSmartFormatSummary] = useState<string | null>(null);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [editorScrollRequest, setEditorScrollRequest] = useState<{ blockId: string; nonce: number } | null>(null);
@@ -827,7 +830,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const deferredContentBlocks = useDeferredValue(contentBlocks);
   const miniPreviewModel = useMemo(() => {
     const rawText = contentBlocksToRawText(deferredContentBlocks);
-    const chapters = extractChaptersFromText(rawText, state.title || "本文");
+    const chapters = extractChaptersFromText(rawText, state.title || "本文", deferredContentBlocks);
     const imageRows: ImageManifestRow[] = deferredContentBlocks
       .filter((block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image")
       .map((block) => ({
@@ -1175,6 +1178,25 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     setPasteUndoBlocks(null);
     setEditorRevision((current) => current + 1);
     setStatusMessage("貼り付け前の原稿へ戻しました");
+  };
+
+  const handleSmartFormat = () => {
+    if (!contentBlocks.length) return;
+    const result = smartFormatContentBlocks(contentBlocks);
+    setSmartFormatUndoBlocks(contentBlocks);
+    syncContentBlocks(result.blocks);
+    setEditorRevision((current) => current + 1);
+    setSmartFormatSummary(`章：${result.chapters}　小見出し：${result.subheadings}　段落：${result.paragraphs}`);
+    setStatusMessage("文章の内容は変更せず、Webブック向けに整えました。");
+  };
+
+  const handleSmartFormatUndo = () => {
+    if (!smartFormatUndoBlocks) return;
+    syncContentBlocks(smartFormatUndoBlocks);
+    setSmartFormatUndoBlocks(null);
+    setSmartFormatSummary(null);
+    setEditorRevision((current) => current + 1);
+    setStatusMessage("自動整形前の原稿へ戻しました。");
   };
 
   const buildCanonicalPayload = (): CanonicalBookPayload | null => {
@@ -1616,6 +1638,18 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             />
           </label>
           <p className="maker-note">文章の途中にカーソルを置いて、画像を貼り付け・ドラッグ&ドロップ・選択挿入できます。</p>
+          <div className="smart-format-action" aria-label="自動整形">
+            <button className="maker-secondary-button" type="button" onClick={handleSmartFormat} disabled={isSaving || !contentBlocks.length}>
+              自動で整える
+            </button>
+            <span className="maker-note">文章は変更せず、見出し・段落・ページ構成を整えます。</span>
+          </div>
+          {smartFormatSummary ? (
+            <div className="maker-note inline-paste-undo" role="status">
+              {smartFormatSummary}
+              <button className="maker-secondary-button" type="button" onClick={handleSmartFormatUndo}>整形前に戻す</button>
+            </div>
+          ) : null}
           {pendingImageCount > 0 ? (
             <div className="editor-pending-warning" role="alert">
               <strong>画像のアップロードが完了していません。</strong>

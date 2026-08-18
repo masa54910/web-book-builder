@@ -157,6 +157,10 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
       type: "text",
       content: styled.content,
       marks: styled.marks,
+      structureRole:
+        child instanceof HTMLElement && (child.dataset.structureRole === "chapter" || child.dataset.structureRole === "subheading")
+          ? child.dataset.structureRole
+          : undefined,
     });
   }
 
@@ -171,6 +175,9 @@ function createParagraphElement(block: Extract<BookContentBlock, { type: "text" 
   const paragraph = document.createElement("p");
   paragraph.dataset.nodeType = "paragraph";
   paragraph.dataset.nodeId = block.id;
+  if (block.structureRole) paragraph.dataset.structureRole = block.structureRole;
+  if (block.structureRole === "chapter") paragraph.classList.add("smart-format-chapter");
+  if (block.structureRole === "subheading") paragraph.classList.add("smart-format-subheading");
   renderStyledText(paragraph, block.content || "", block.marks);
   if (!block.content) {
     paragraph.append(document.createElement("br"));

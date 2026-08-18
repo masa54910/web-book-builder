@@ -161,3 +161,35 @@ export function documentStructureFromChapters(
     }),
   };
 }
+
+/**
+ * Conservative, local-only classification used by the explicit Smart Format
+ * action.  This intentionally sits beside the normal heading parser so the
+ * two flows share the same normalization and heading vocabulary.
+ */
+export type SmartLineClassification = "chapter" | "subheading" | "paragraph";
+
+const SMART_CHAPTER_LINE = /^(?:第[0-9０-９一二三四五六七八九十百千]+章(?:[\s:：、｜|.・-].*)?|序章|終章|プロローグ|エピローグ|はじめに|おわりに|あとがき|まとめ)$/u;
+// A dedicated visual separator keeps ordinary numbered lists ("1. item")
+// from being promoted to chapters. Smart Format only treats explicit chapter
+// labels such as "01｜タイトル" or "01: タイトル" as chapter candidates.
+const SMART_NUMBERED_CHAPTER = /^(?:0?[1-9]|1[0-9]|2[0-9])[｜|・:：-]+\s*\S.+$/u;
+const LIST_LINE = /^(?:[-*・•]|[0-9０-９]+[.)）]|[①-⑳])\s*/u;
+
+/** Classify one already-normalized, independent line without rewriting it. */
+export function classifySmartLine(line: string, isolated = true): SmartLineClassification {
+  const value = line.replace(/\r$/, "").trim();
+  if (!value) return "paragraph";
+  if (SMART_CHAPTER_LINE.test(value) || SMART_NUMBERED_CHAPTER.test(value)) return "chapter";
+  if (
+    isolated &&
+    value.length <= 40 &&
+    !/[。！？!?]$/u.test(value) &&
+    !LIST_LINE.test(value) &&
+    !/^https?:\/\//i.test(value) &&
+    !/^[「『("].*[」』)"]$/u.test(value)
+  ) {
+    return "subheading";
+  }
+  return "paragraph";
+}

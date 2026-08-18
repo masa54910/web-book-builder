@@ -49,6 +49,7 @@ export type CanonicalContentBlock =
       type: "text";
       content: string;
       marks?: TextMark[];
+      structureRole?: "chapter" | "subheading";
     }
   | {
       id: string;
@@ -231,7 +232,7 @@ export function buildCanonicalBookPayload(
 
   const contentBlocks: CanonicalContentBlock[] = input.contentBlocks.map((block) => {
     if (block.type === "text") {
-      return { id: block.id, type: "text", content: block.content, marks: block.marks };
+      return { id: block.id, type: "text", content: block.content, marks: block.marks, structureRole: block.structureRole };
     }
 
     if (block.type === "youtube") {
@@ -368,7 +369,13 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
 
   const contentBlocks: BookContentBlock[] = payload.contentBlocks.map((block) => {
     if (block.type === "text") {
-      return { id: block.id, type: "text", content: block.content, marks: block.marks };
+      return {
+        id: block.id,
+        type: "text",
+        content: block.content,
+        marks: block.marks,
+        structureRole: block.structureRole,
+      };
     }
     if (block.type === "youtube") {
       return {

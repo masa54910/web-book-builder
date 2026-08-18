@@ -35,6 +35,7 @@ export type BookContentBlock =
       type: "text";
       content: string;
       marks?: TextMark[];
+      structureRole?: "chapter" | "subheading";
     }
   | {
       id: string;
@@ -215,6 +216,7 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
         type: "text",
         content: typeof block.content === "string" ? block.content : "",
         marks: normalizeTextMarks(typeof block.content === "string" ? block.content : "", block.marks),
+        structureRole: block.structureRole === "chapter" || block.structureRole === "subheading" ? block.structureRole : undefined,
       });
       continue;
     }
@@ -421,9 +423,36 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
   return normalizeContentBlocks(blocks);
 }
 
-export function extractChaptersFromText(rawText: string, fallbackTitle: string): NovelChapter[] {
+export function extractChaptersFromText(rawText: string, fallbackTitle: string, structuredBlocks?: BookContentBlock[]): NovelChapter[] {
   const text = normalizeLineBreaks(rawText);
   if (!text) return [];
+
+  const blocksForStructure = structuredBlocks || [];
+  const structuredChapters = blocksForStructure.flatMap((block, index) =>
+    block.type === "text" && block.structureRole === "chapter" ? [{ block, index }] : [],
+  ) || [];
+  if (structuredChapters.length) {
+    const usedSlugs = new Set<string>();
+    const prefixBlocks = blocksForStructure.slice(0, structuredChapters[0].index);
+    return structuredChapters.map(({ block, index }, chapterIndex) => {
+      const nextIndex = structuredChapters[chapterIndex + 1]?.index ?? blocksForStructure.length;
+      const title = block.type === "text" ? block.content.trim() : `Chapter ${chapterIndex + 1}`;
+      const bodyBlocks = [
+        ...(chapterIndex === 0 ? prefixBlocks : []),
+        ...blocksForStructure.slice(index + 1, nextIndex),
+      ];
+      const body = contentBlocksToRawText(bodyBlocks).trim();
+      const slug = uniqueSlug(title || fallbackTitle, chapterIndex + 1, usedSlugs);
+      return {
+        id: slug,
+        order: chapterIndex + 1,
+        title: title || fallbackTitle.trim() || `Chapter ${chapterIndex + 1}`,
+        slug,
+        source: "browser-input",
+        body,
+      };
+    });
+  }
   const structure = parseDocumentStructure(text, fallbackTitle);
 
   const headings = findDocumentHeadings(text)
@@ -587,7 +616,7 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
         }
       : null,
   ].filter((link): link is ExternalLink => Boolean(link?.url));
-  const chapters = extractChaptersFromText(rawText, title);
+  const chapters = extractChaptersFromText(rawText, title, contentBlocks);
   const imageRows = input.contentBlocks?.length
     ? imageRowsFromBlocks(contentBlocks, input.images)
     : buildImageRows(input.images);

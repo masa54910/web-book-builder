@@ -51,6 +51,7 @@ import { buildFacebookShareUrl, buildLineShareTemplate, buildLineShareUrl, build
 import { buildReaderFacebookShareUrl, buildReaderLineShareUrl, buildReaderLineWebShareUrl, buildReaderShareTemplate, buildReaderXShareUrl, READER_NOTE_NEW_POST_URL } from "../src/lib/readerShareTemplates";
 import { xIntentUrl } from "../src/lib/promotion";
 import { applyTextMark, normalizeTextMarks, sliceTextMarks, TEXT_COLORS, TEXT_COLOR_LABELS } from "../src/lib/textStyles";
+import { smartFormatContentBlocks } from "../src/lib/smartFormat";
 
 const styledText = "通常の太字と色";
 const boldMarks = applyTextMark(styledText, [], 3, 5, { bold: true });
@@ -109,6 +110,21 @@ const manyBlocks = ensureUniqueContentBlockIds(Array.from({ length: 128 }, (_, i
   content: String(index),
 })));
 assert.equal(new Set(manyBlocks.map((block) => block.id)).size, 128, "100+ blocks should remain unique");
+
+const smartFormat = smartFormatContentBlocks([
+  { id: "paragraph-smart", type: "text", content: "第1章 はじまり\n駅を出ると潮の匂いがした。\n\n海辺の町\n\n1. 箇条書き項目" },
+]);
+assert.equal(smartFormat.chapters, 1, "explicit chapter labels should become chapters");
+assert.equal(smartFormat.subheadings, 1, "isolated short lines should become subheadings");
+assert.ok(smartFormat.blocks.some((block) => block.type === "text" && block.structureRole === "chapter"));
+assert.ok(smartFormat.blocks.some((block) => block.type === "text" && block.structureRole === "subheading"));
+assert.ok(!smartFormat.blocks.some((block) => block.type === "text" && block.content.startsWith("1. ") && block.structureRole === "chapter"), "numbered lists must remain paragraphs");
+assert.equal(new Set(smartFormat.blocks.map((block) => block.id)).size, smartFormat.blocks.length, "Smart Format must keep block ids unique");
+const mediaLeadingSmartFormat = smartFormatContentBlocks([
+  { id: "image-before", type: "image", storagePath: "images/cover.jpg", fileName: "cover.jpg", mimeType: "image/jpeg", width: 100, height: 100, fitMode: "contain", pageMode: "inline", uploadState: "ready" },
+  { id: "paragraph-after-image", type: "text", content: "第2章\n本文" },
+]);
+assert.equal(mediaLeadingSmartFormat.blocks[1]?.id, "paragraph-after-image", "Smart Format must preserve the first id of each text block");
 
 function blockSignature(blocks: BookContentBlock[]) {
   return blocks.map((block) =>

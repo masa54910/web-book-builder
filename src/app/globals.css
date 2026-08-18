@@ -3561,6 +3561,18 @@ button.reader-edit-link:disabled {
   margin-bottom: 12px;
 }
 
+.smart-format-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0 12px;
+}
+
+.smart-format-action .maker-note {
+  flex: 1 1 280px;
+}
+
 .theme-modern .book-page {
   --paper: #f6f8fb;
   color: #15202a;
