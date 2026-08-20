@@ -539,33 +539,35 @@ export default function BookReader({
             <h1>{config.title}</h1>
           )}
         </div>
-        <div className="reader-masthead-actions">
-          {displayMode === "preview" && backLink?.href ? (
-            <Link className="reader-edit-link reader-preview-return" href={backLink.href}>
-              {backLink.label || "← 戻る"}
-            </Link>
-          ) : null}
-          {displayMode !== "preview" ? (backLink?.href ? (
-            <Link
-              className={`reader-edit-link ${displayMode === "published" ? "reader-author-return" : ""}`}
-              href={backLink.href}
-            >
-              {backLink.label || "← 戻る"}
-            </Link>
-          ) : (
-            <HomeBackLink
-              className="reader-edit-link"
-              destination={backLink?.destination}
-              label={backLink?.label || "ホームへ戻る"}
-            />
-          )) : null}
-          {displayMode !== "preview" && editHref ? (
-            <a className="reader-edit-link" href={editHref}>
-              編集画面へ戻る
-            </a>
-          ) : null}
-          <span className="reader-direction">{directionLabel}</span>
-        </div>
+        {!sampleBookPresentation ? (
+          <div className="reader-masthead-actions">
+            {displayMode === "preview" && backLink?.href ? (
+              <Link className="reader-edit-link reader-preview-return" href={backLink.href}>
+                {backLink.label || "← 戻る"}
+              </Link>
+            ) : null}
+            {displayMode !== "preview" ? (backLink?.href ? (
+              <Link
+                className={`reader-edit-link ${displayMode === "published" ? "reader-author-return" : ""}`}
+                href={backLink.href}
+              >
+                {backLink.label || "← 戻る"}
+              </Link>
+            ) : (
+              <HomeBackLink
+                className="reader-edit-link"
+                destination={backLink?.destination}
+                label={backLink?.label || "ホームへ戻る"}
+              />
+            )) : null}
+            {displayMode !== "preview" && editHref ? (
+              <a className="reader-edit-link" href={editHref}>
+                編集画面へ戻る
+              </a>
+            ) : null}
+            <span className="reader-direction">{directionLabel}</span>
+          </div>
+        ) : null}
       </header>
 
       {displayMode === "preview" ? (

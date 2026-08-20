@@ -2723,7 +2723,22 @@ button.reader-edit-link:disabled {
   color: #77736a;
   font-family: Inter, "Yu Gothic", sans-serif;
   font-size: 12px;
+  line-height: 1.45;
   letter-spacing: 0.02em;
+}
+
+/* Keep each TOC hierarchy visually consistent across every entry. */
+.contents-link-level-1 .contents-title {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.contents-link-level-1 .contents-index,
+.contents-link-level-2 .contents-index,
+.contents-link-level-1 .contents-page-number,
+.contents-link-level-2 .contents-page-number {
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .contents-page-number {
