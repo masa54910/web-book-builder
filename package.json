@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "verify:book": "tsx scripts/verify-reading-order.ts",
-    "test": "tsx scripts/verify-beta.ts"
+    "test": "tsx scripts/verify-beta.ts && tsx scripts/verify-gatec.ts && tsx scripts/verify-gatec-step2b.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",
@@ -18,7 +18,9 @@
     "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-pageflip": "^2.0.3"
+    "react-pageflip": "^2.0.3",
+    "server-only": "^0.0.1",
+    "stripe": "^22.5.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

@@ -137,6 +137,41 @@ a {
   font-weight: 800;
 }
 
+.purchase-page {
+  display: grid;
+  min-height: 100vh;
+  padding: clamp(24px, 6vw, 72px) 16px;
+  place-items: center;
+  color: #13202d;
+  background: linear-gradient(145deg, #fffaf0 0%, #f0f7fb 100%);
+}
+
+.purchase-card {
+  width: min(100%, 520px);
+  padding: clamp(24px, 6vw, 48px);
+  border: 1px solid #d9e6ee;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(19, 32, 45, 0.1);
+  text-align: center;
+}
+
+.purchase-content { display: grid; gap: 16px; justify-items: center; }
+.purchase-content h1 { margin: 0; color: #0b1f38; font-size: clamp(24px, 4vw, 34px); line-height: 1.35; }
+.purchase-content p { margin: 0; color: #53677a; line-height: 1.7; }
+.purchase-status { margin: 0; color: #53677a; }
+.purchase-kicker { color: #168dcc !important; font-weight: 800; letter-spacing: .08em; }
+.purchase-code-block { display: grid; width: 100%; gap: 12px; padding: 20px; border: 1px solid #d9e6ee; border-radius: 12px; background: #f7fbfd; }
+.purchase-code-block span { color: #53677a; font-size: 13px; }
+.purchase-code-block strong { color: #0b1f38; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: clamp(17px, 4vw, 24px); letter-spacing: .04em; overflow-wrap: anywhere; }
+.purchase-note { font-size: 13px; }
+.purchase-button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 10px 18px; border: 1px solid transparent; border-radius: 8px; cursor: pointer; font-weight: 700; text-decoration: none; }
+.purchase-button-primary { color: #fff; background: #0b1f38; }
+.purchase-button-primary:hover { background: #163a62; }
+.purchase-button-secondary { color: #0b1f38; border-color: #b9cfdd; background: #fff; }
+.purchase-button-secondary:hover { background: #eef7fb; }
+.purchase-button:focus-visible { outline: 3px solid rgba(22, 141, 204, .35); outline-offset: 2px; }
+
 .author-owner-nav {
   display: flex;
   align-items: center;
