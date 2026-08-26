@@ -8,6 +8,7 @@ import {
   contentBlocksFromLegacy,
   contentBlocksToRawText,
   ensureUniqueContentBlockIds,
+  extractChaptersFromText,
   normalizePastedText,
   type BookContentBlock,
   type UploadedBookImage,
@@ -18,6 +19,7 @@ import { createSlugCandidate, validateSlug } from "../src/lib/slug";
 import { validateImportFile, validateZipPath } from "../src/lib/fileImport";
 import { buildReaderPages } from "../src/lib/paginateText";
 import { buildReaderFolioById, readerPageNumberLabel } from "../src/lib/readerFolio";
+import type { ImageManifestRow } from "../src/lib/types";
 import { countContentCharacters, countUserCharacters } from "../src/lib/characterCount";
 import { createPendingImageBlock, insertImageBlocksAtCursor, insertYouTubeBlockAtCursor } from "../src/lib/inlineContentBlocks";
 import { parseYouTubeUrl, youtubeEmbedUrl } from "../src/lib/youtube";
@@ -954,6 +956,106 @@ if (paywallCanonicalResult.ok) {
     assert.equal(restoredDraft.contentBlocks[1]?.id, "paywall-boundary");
   }
 }
+
+function assertPaywallNeighborPages(label: string, blocks: BookContentBlock[], images: ImageManifestRow[] = []) {
+  const paywallIndex = blocks.findIndex((block) => block.type === "paywall");
+  assert.ok(paywallIndex > 0 && paywallIndex < blocks.length - 1, `${label}: fixture needs two Paywall neighbours`);
+  const previousBlockId = blocks[paywallIndex - 1]?.id;
+  const nextBlockId = blocks[paywallIndex + 1]?.id;
+  const rawText = contentBlocksToRawText(blocks);
+  const chapters = extractChaptersFromText(rawText, `${label} title`, blocks);
+  const pages = buildReaderPages({
+    chapters,
+    images,
+    contentBlocks: blocks,
+    charactersPerPage: 80,
+    tableOfContentsItemsPerPage: 6,
+    showPaywallPage: true,
+  });
+  const paywallPageIndex = pages.findIndex((page) => page.kind === "paywall");
+  assert.ok(paywallPageIndex >= 0, `${label}: Preview must render the Paywall page`);
+  const previousPageIndex = Math.max(
+    ...pages
+      .map((page, index) => (index < paywallPageIndex && page.sourceBlockIds?.includes(previousBlockId || "") ? index : -1)),
+  );
+  const nextPageIndex = pages.findIndex(
+    (page, index) => index > paywallPageIndex && page.sourceBlockIds?.includes(nextBlockId || ""),
+  );
+  assert.ok(previousPageIndex >= 0, `${label}: previous block must remain before Paywall`);
+  assert.ok(nextPageIndex > paywallPageIndex, `${label}: next block must remain after Paywall`);
+  return { pages, paywallPageIndex, previousPageIndex, nextPageIndex, previousBlockId, nextBlockId };
+}
+
+const chapterMidBlocks: BookContentBlock[] = [
+  { id: "a-heading", type: "text", content: "第一章", structureRole: "chapter" },
+  { id: "a-text", type: "text", content: "本文A" },
+  { id: "b-text", type: "text", content: "本文B" },
+  { id: "a-paywall", type: "paywall" },
+  { id: "c-text", type: "text", content: "本文C" },
+];
+const chapterMidPlacement = assertPaywallNeighborPages("chapter midpoint", chapterMidBlocks);
+assert.equal(chapterMidPlacement.previousBlockId, "b-text");
+assert.equal(chapterMidPlacement.nextBlockId, "c-text");
+
+const h2Blocks: BookContentBlock[] = [
+  { id: "b-heading", type: "text", content: "第一章", structureRole: "chapter" },
+  { id: "h2-heading", type: "text", content: "## 小見出し", structureRole: "subheading" },
+  { id: "h2-text", type: "text", content: "小見出し本文" },
+  { id: "h2-paywall", type: "paywall" },
+  { id: "h2-next", type: "text", content: "小見出し後の本文" },
+];
+assertPaywallNeighborPages("H2 boundary", h2Blocks);
+
+const imageBlocks: BookContentBlock[] = [
+  { id: "c-heading", type: "text", content: "第一章", structureRole: "chapter" },
+  {
+    id: "c-image",
+    type: "image",
+    storagePath: "storage:book-assets/c-image.webp",
+    fileName: "c-image.webp",
+    mimeType: "image/webp",
+    width: 1200,
+    height: 800,
+    fitMode: "contain",
+    pageMode: "full-page",
+  },
+  { id: "c-paywall", type: "paywall" },
+  { id: "c-next", type: "text", content: "画像後の本文" },
+];
+assertPaywallNeighborPages("image boundary", imageBlocks, [{
+  chapter_order: 1,
+  chapter_title: "第一章",
+  image_index: "c-image",
+  image_id: "c-image",
+  image_url: "storage:book-assets/c-image.webp",
+  storage_path: "storage:book-assets/c-image.webp",
+  alt: "画像",
+  caption: "",
+  source_path: "c-image.webp",
+  local_path: "",
+}]);
+
+const chapterBoundaryBlocks: BookContentBlock[] = [
+  { id: "d-heading", type: "text", content: "第一章", structureRole: "chapter" },
+  { id: "d-text", type: "text", content: "旧章の本文" },
+  { id: "d-paywall", type: "paywall" },
+  { id: "e-heading", type: "text", content: "第二章", structureRole: "chapter" },
+  { id: "e-text", type: "text", content: "次章の本文" },
+];
+assertPaywallNeighborPages("chapter boundary before H1", chapterBoundaryBlocks);
+
+const afterChapterHeadingBlocks: BookContentBlock[] = [
+  { id: "f-heading", type: "text", content: "第一章", structureRole: "chapter" },
+  { id: "g-heading", type: "text", content: "第二章", structureRole: "chapter" },
+  { id: "g-paywall", type: "paywall" },
+  { id: "g-text", type: "text", content: "第二章の本文" },
+];
+assertPaywallNeighborPages("chapter boundary after H1", afterChapterHeadingBlocks);
+
+const smartPaywall = smartFormatContentBlocks(chapterMidBlocks).blocks;
+const smartPaywallIndex = smartPaywall.findIndex((block) => block.type === "paywall");
+assert.equal(smartPaywall[smartPaywallIndex - 1]?.id, "b-text", "Smart Format must retain the Paywall previous block");
+assert.equal(smartPaywall[smartPaywallIndex + 1]?.id, "c-text", "Smart Format must retain the Paywall next block");
 
 const emptyCoverResult = buildCanonicalBookPayload({
   state: {

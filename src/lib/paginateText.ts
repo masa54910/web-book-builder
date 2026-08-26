@@ -140,7 +140,34 @@ export function buildReaderPages({
     imageMap.set(`${image.chapter_order}-${image.image_index}`, image);
   }
 
+  // Paywall placement is defined by the ordered contentBlocks sequence, not
+  // by a chapter/page number. The chapter bodies intentionally omit the
+  // Paywall block from rawText, so keep its immediate neighbours here and
+  // insert the marker while the neighbouring block is being paginated.
+  const paywallIndex = (contentBlocks || []).findIndex((block) => block.type === "paywall");
+  const paywall = paywallIndex >= 0 ? contentBlocks?.[paywallIndex] : undefined;
+  const paywallPreviousBlockId = paywallIndex > 0 ? contentBlocks?.[paywallIndex - 1]?.id : undefined;
+  const paywallNextBlockId = paywallIndex >= 0 ? contentBlocks?.[paywallIndex + 1]?.id : undefined;
+  let paywallInserted = false;
+  const structuredChapterBlocks = (contentBlocks || []).filter(
+    (block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text" && block.structureRole === "chapter",
+  );
+  const insertPaywallPage = () => {
+    if (paywallInserted || paywall?.type !== "paywall") return;
+    pages.push({ id: `paywall-${paywall.id}`, kind: "paywall", sourceBlockId: paywall.id });
+    paywallInserted = true;
+  };
+
   for (const chapter of chapters) {
+    const chapterHeadingBlock = structuredChapterBlocks[chapter.order - 1] || structuredChapterBlocks.find(
+      (block) => block.content.trim() === chapter.title.trim(),
+    );
+    const chapterHeadingSourceId = chapterHeadingBlock?.id;
+    // A boundary before the first block (or before a chapter heading whose
+    // previous block was not rendered) must still remain before that heading.
+    if (!paywallInserted && paywallNextBlockId && paywallNextBlockId === chapterHeadingSourceId) {
+      insertPaywallPage();
+    }
     pages.push({
       id: `chapter-${chapter.slug}`,
       kind: "chapterTitle",
@@ -148,7 +175,13 @@ export function buildReaderPages({
       chapterTitle: chapter.title,
       chapterSlug: chapter.slug,
       headingId: chapter.id,
+      sourceBlockIds: chapterHeadingSourceId ? [chapterHeadingSourceId] : undefined,
     });
+    // A Paywall immediately after an H1 belongs after the chapter title page,
+    // never at the start of the chapter's preceding content.
+    if (!paywallInserted && paywallPreviousBlockId === chapterHeadingSourceId) {
+      insertPaywallPage();
+    }
 
     const segments = chapter.body
       .replace(/^(\[\[(?:image|youtube):[^\]]+\]\])$/gm, "\n\n$1\n\n")
@@ -245,6 +278,11 @@ export function buildReaderPages({
     for (const entry of segmentEntries) {
       const { segment } = entry;
       if (!segment) continue;
+      const entrySourceId = entry.source?.id;
+      if (!paywallInserted && paywallNextBlockId && entrySourceId === paywallNextBlockId) {
+        flushTextPage();
+        insertPaywallPage();
+      }
       const heading = parseDocumentHeading(segment.split("\n", 1)[0]);
       if (heading && (heading.level === 2 || heading.level === 3)) {
         if (paragraphs.length) flushTextPage();
@@ -280,6 +318,10 @@ export function buildReaderPages({
             handledBreakAfter.add(sourceId);
             flushTextPage();
           }
+          if (!paywallInserted && paywallPreviousBlockId === sourceId) {
+            flushTextPage();
+            insertPaywallPage();
+          }
           continue;
         }
         flushTextPage();
@@ -296,6 +338,7 @@ export function buildReaderPages({
         });
         if (adjustmentForSource(sourceId)?.pageBreakAfter) handledBreakAfter.add(sourceId);
         pendingHeadingId = undefined;
+        if (!paywallInserted && paywallPreviousBlockId === sourceId) insertPaywallPage();
         continue;
       }
       const imageMatch = segment.match(IMAGE_PATTERN);
@@ -330,6 +373,10 @@ export function buildReaderPages({
             handledBreakAfter.add(imageSourceId);
             flushTextPage();
           }
+          if (!paywallInserted && paywallPreviousBlockId === imageSourceId) {
+            flushTextPage();
+            insertPaywallPage();
+          }
           continue;
         }
 
@@ -353,6 +400,7 @@ export function buildReaderPages({
           handledBreakAfter.add(imageSourceId);
         }
         pendingHeadingId = undefined;
+        if (!paywallInserted && paywallPreviousBlockId === imageSourceId) insertPaywallPage();
         continue;
       }
 
@@ -373,19 +421,26 @@ export function buildReaderPages({
         cost += chunkCost;
       }
       if (shouldBreakAfter(sourceId, entry.index)) flushTextPage();
+      if (
+        !paywallInserted &&
+        sourceId &&
+        paywallPreviousBlockId === sourceId &&
+        lastSegmentIndexBySource.get(sourceId) === entry.index
+      ) {
+        flushTextPage();
+        insertPaywallPage();
+      }
     }
 
     flushTextPage();
   }
 
-  const paywallIndex = (contentBlocks || []).findIndex((block) => block.type === "paywall");
-  const paywall = paywallIndex >= 0 ? contentBlocks?.[paywallIndex] : undefined;
   if (includePaywallPage && paywall?.type === "paywall") {
-    pages.push({ id: `paywall-${paywall.id}`, kind: "paywall", sourceBlockId: paywall.id });
+    insertPaywallPage();
     return pages;
   }
 
-  if (showPaywallPage && paywall?.type === "paywall") {
+  if (showPaywallPage && paywall?.type === "paywall" && !paywallInserted) {
     const previousBlockId = contentBlocks
       ?.slice(0, paywallIndex)
       .reverse()
