@@ -95,6 +95,9 @@ function isDraftContentBlock(value: unknown): value is BookContentBlock {
       typeof block.originalUrl === "string"
     );
   }
+  if (block.type === "paywall") {
+    return typeof block.id === "string";
+  }
   return (
     block.type === "image" &&
     typeof block.id === "string" &&

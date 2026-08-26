@@ -179,8 +179,9 @@ export default function BookReader({
           ? chapters.reduce((count, chapter) => count + 1 + (chapter.sections?.filter((section) => section.level === 2).length || 0), 0) + access.lockedTocEntries.length
           : undefined,
         includePaywallPage: access?.state === "locked",
+        showPaywallPage: displayMode === "preview",
       }),
-    [access, chapters, config.charactersPerPage, config.tableOfContentsItemsPerPage, contentBlocks, images, isMobile, pageAdjustments],
+    [access, chapters, config.charactersPerPage, config.tableOfContentsItemsPerPage, contentBlocks, displayMode, images, isMobile, pageAdjustments],
   );
   const pages = useMemo(
     () => toBoundPageOrder(logicalPages, isMobile, config.bindingDirection),

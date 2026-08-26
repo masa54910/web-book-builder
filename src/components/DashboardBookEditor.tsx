@@ -854,6 +854,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       pageAdjustments: state.pageAdjustments,
       charactersPerPage: Math.max(180, Number(state.charactersPerPage) || 380),
       tableOfContentsItemsPerPage: state.tableOfContentsItemsPerPage,
+      showPaywallPage: true,
     });
     // buildReaderPages applies canonical page-break adjustments directly. Do
     // not add synthetic blank pages here; the mini preview must mirror Reader.
@@ -936,6 +937,10 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       setDirty(true);
       return next;
     });
+    // Paywall insertion is an external structural change. Force the inline
+    // editor to render it immediately; ordinary text edits intentionally keep
+    // the existing DOM to preserve the caret.
+    setEditorRevision((current) => current + 1);
     setStatusMessage("有料境界を追加しました。クリックすると削除できます。");
   }, [activeBlockId]);
 
@@ -948,6 +953,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       setDirty(true);
       return next;
     });
+    setEditorRevision((current) => current + 1);
     setStatusMessage("有料境界を削除しました。");
   }, []);
 

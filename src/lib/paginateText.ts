@@ -93,6 +93,7 @@ export function buildReaderPages({
   charactersPerPage,
   tableOfContentsItemsPerPage,
   includePaywallPage = false,
+  showPaywallPage = false,
   tocEntryCountOverride,
 }: {
   chapters: NovelChapter[];
@@ -102,6 +103,8 @@ export function buildReaderPages({
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
   includePaywallPage?: boolean;
+  /** Render the boundary in an author Preview while keeping later content. */
+  showPaywallPage?: boolean;
   tocEntryCountOverride?: number;
 }): ReaderPage[] {
   const pages: ReaderPage[] = [
@@ -375,10 +378,25 @@ export function buildReaderPages({
     flushTextPage();
   }
 
-  const paywall = (contentBlocks || []).find((block) => block.type === "paywall");
+  const paywallIndex = (contentBlocks || []).findIndex((block) => block.type === "paywall");
+  const paywall = paywallIndex >= 0 ? contentBlocks?.[paywallIndex] : undefined;
   if (includePaywallPage && paywall?.type === "paywall") {
     pages.push({ id: `paywall-${paywall.id}`, kind: "paywall", sourceBlockId: paywall.id });
     return pages;
+  }
+
+  if (showPaywallPage && paywall?.type === "paywall") {
+    const previousBlockId = contentBlocks
+      ?.slice(0, paywallIndex)
+      .reverse()
+      .find((block) => block.type === "text" || block.type === "image" || block.type === "youtube")
+      ?.id;
+    const targetIndex = previousBlockId
+      ? pages.findIndex((page) => "sourceBlockIds" in page && page.sourceBlockIds?.includes(previousBlockId))
+      : -1;
+    const firstChapterIndex = pages.findIndex((page) => page.kind === "chapterTitle");
+    const insertAt = targetIndex >= 0 ? targetIndex + 1 : firstChapterIndex >= 0 ? firstChapterIndex : pages.length;
+    pages.splice(insertAt, 0, { id: `paywall-${paywall.id}`, kind: "paywall", sourceBlockId: paywall.id });
   }
 
   pages.push({ id: "colophon", kind: "colophon" });

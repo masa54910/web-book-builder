@@ -877,6 +877,84 @@ if (youtubeCanonicalResult.ok) {
   assert.equal(restoredYoutube?.displaySize, "large", "Canonical round trip should preserve YouTube display size");
 }
 
+const paywallCanonicalResult = buildCanonicalBookPayload({
+  state: {
+    ...baseEditorState,
+    title: "Paywall canonical test",
+    author: "Verifier",
+    description: "Paywall block round trip",
+  },
+  contentBlocks: [
+    { id: "paywall-free", type: "text", content: "無料本文" },
+    { id: "paywall-boundary", type: "paywall" },
+    { id: "paywall-paid", type: "text", content: "有料本文" },
+  ],
+  images: [],
+});
+assert.equal(paywallCanonicalResult.ok, true, "Canonical payload should accept a Paywall block");
+if (paywallCanonicalResult.ok) {
+  assert.deepEqual(
+    paywallCanonicalResult.payload.contentBlocks.map((block) => block.type),
+    ["text", "paywall", "text"],
+    "Canonical payload must preserve the Paywall block position",
+  );
+  const restoredPaywallBlocks = canonicalPayloadToBookProjectInput(paywallCanonicalResult.payload).contentBlocks || [];
+  assert.deepEqual(
+    restoredPaywallBlocks.map((block) => block.type),
+    ["text", "paywall", "text"],
+    "Canonical round trip must restore the Paywall block",
+  );
+  assert.equal(restoredPaywallBlocks[1]?.id, "paywall-boundary");
+  const previewProject = buildBookProject(canonicalPayloadToBookProjectInput(paywallCanonicalResult.payload));
+  assert.equal(previewProject.ok, true, "Paywall project should build for Preview");
+  if (previewProject.ok) {
+    const previewPages = buildReaderPages({
+      chapters: previewProject.project.chapters,
+      images: previewProject.project.images,
+      contentBlocks: previewProject.project.contentBlocks,
+      charactersPerPage: 380,
+      tableOfContentsItemsPerPage: 6,
+      showPaywallPage: true,
+    });
+    const previewPaywallIndex = previewPages.findIndex((page) => page.kind === "paywall");
+    assert.ok(previewPaywallIndex >= 0, "Author Preview must show the Paywall boundary");
+    assert.equal(previewPages.at(-1)?.kind, "backCover", "Author Preview must keep later content and the back cover");
+
+    // Persisted BookProject JSON, Preview storage, Smart Format, and the
+    // autosave snapshot all use the canonical contentBlocks array as their
+    // source of truth. Each round trip must retain the same ID and position.
+    const reloadedProject = parseBookProjectJson(JSON.parse(JSON.stringify(previewProject.project)));
+    assert.ok(reloadedProject, "Saved BookProject JSON should reload");
+    assert.deepEqual(
+      reloadedProject?.contentBlocks?.map((block) => block.type),
+      ["text", "paywall", "text"],
+      "Save/Reload must preserve the Paywall block",
+    );
+    assert.equal(reloadedProject?.contentBlocks?.[1]?.id, "paywall-boundary");
+
+    const formatted = smartFormatContentBlocks(reloadedProject?.contentBlocks || []);
+    assert.deepEqual(
+      formatted.blocks.map((block) => block.type),
+      ["text", "paywall", "text"],
+      "Smart Format must preserve the Paywall block",
+    );
+    const autosaveFields = buildEditorDraftFields({
+      mode: "edit",
+      state: baseEditorState,
+      images: [],
+      contentBlocks: formatted.blocks,
+      draftId: "paywall-draft",
+    });
+    const restoredDraft = seedFromDraftFields({ mode: "edit", initialState: baseEditorState, fields: autosaveFields });
+    assert.deepEqual(
+      restoredDraft.contentBlocks.map((block) => block.type),
+      ["text", "paywall", "text"],
+      "Autosave restore must preserve the Paywall block",
+    );
+    assert.equal(restoredDraft.contentBlocks[1]?.id, "paywall-boundary");
+  }
+}
+
 const emptyCoverResult = buildCanonicalBookPayload({
   state: {
     ...baseEditorState,
@@ -994,6 +1072,42 @@ const globalWithWindow = globalThis as unknown as {
 const previousWindow = globalWithWindow.window;
 globalWithWindow.window = { localStorage: fakeLocalStorage };
 try {
+  // A newer manual save must win over a stale autosave snapshot. This is the
+  // deterministic persistence check for the editor's save/autosave race:
+  // whichever snapshot is written last is the one restored, including the
+  // Paywall block and its stable ID.
+  const stalePaywallFields = buildEditorDraftFields({
+    mode: "edit",
+    draftId: "book-1",
+    state: baseEditorState,
+    images: [],
+    contentBlocks: [{ id: "text-stale", type: "text", content: "無料本文" }],
+  });
+  const latestPaywallFields = buildEditorDraftFields({
+    mode: "edit",
+    draftId: "book-1",
+    state: baseEditorState,
+    images: [],
+    contentBlocks: [
+      { id: "text-latest", type: "text", content: "無料本文" },
+      { id: "paywall-race", type: "paywall" },
+      { id: "text-paid", type: "text", content: "有料本文" },
+    ],
+  });
+  assert.ok(saveAutosaveDraft({ bookId: "book-1", userId: "user-1", fields: stalePaywallFields }));
+  assert.ok(saveAutosaveDraft({ bookId: "book-1", userId: "user-1", fields: latestPaywallFields }));
+  const latestRestoredFields = loadAutosaveDraft("book-1", "user-1")?.fields;
+  assert.deepEqual(
+    (latestRestoredFields?.contentBlocks as BookContentBlock[]).map((block) => block.type),
+    ["text", "paywall", "text"],
+    "Latest autosave/manual snapshot must retain the Paywall block",
+  );
+  assert.equal(
+    (latestRestoredFields?.contentBlocks as BookContentBlock[])[1]?.id,
+    "paywall-race",
+    "Latest autosave/manual snapshot must retain the Paywall ID",
+  );
+
   const autosaveFields = buildEditorDraftFields({
     mode: "edit",
     draftId: "book-1",
