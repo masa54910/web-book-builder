@@ -83,7 +83,7 @@ export function ensureUniqueContentBlockIds(blocks: BookContentBlock[]) {
       used.add(original);
       return original === block.id ? block : { ...block, id: original };
     }
-    const prefix = block.type === "image" ? "image" : block.type === "youtube" ? "youtube" : "paragraph";
+    const prefix = block.type === "image" ? "image" : block.type === "youtube" ? "youtube" : block.type === "paywall" ? "paywall" : "paragraph";
     let next = createContentBlockId(prefix);
     while (used.has(next)) next = createContentBlockId(prefix);
     used.add(next);

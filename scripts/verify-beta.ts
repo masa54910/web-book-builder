@@ -132,7 +132,9 @@ function blockSignature(blocks: BookContentBlock[]) {
       ? `text:${block.content.replace(/\n+/g, " ").trim()}`
       : block.type === "image"
         ? `image:${block.id}`
-        : `youtube:${block.id}:${block.videoId}`,
+        : block.type === "youtube"
+          ? `youtube:${block.id}:${block.videoId}`
+          : `paywall:${block.id}`,
   );
 }
 
