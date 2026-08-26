@@ -907,6 +907,12 @@ if (paywallCanonicalResult.ok) {
     "Canonical round trip must restore the Paywall block",
   );
   assert.equal(restoredPaywallBlocks[1]?.id, "paywall-boundary");
+  const persistedPaywall = paywallCanonicalResult.payload.contentBlocks[1];
+  assert.equal(persistedPaywall?.type, "paywall");
+  if (persistedPaywall?.type === "paywall") {
+    assert.equal(persistedPaywall.previousBlockId, "paywall-free", "Canonical Paywall must persist its previous anchor");
+    assert.equal(persistedPaywall.nextBlockId, "paywall-paid", "Canonical Paywall must persist its next anchor");
+  }
   const previewProject = buildBookProject(canonicalPayloadToBookProjectInput(paywallCanonicalResult.payload));
   assert.equal(previewProject.ok, true, "Paywall project should build for Preview");
   if (previewProject.ok) {
@@ -955,6 +961,68 @@ if (paywallCanonicalResult.ok) {
     );
     assert.equal(restoredDraft.contentBlocks[1]?.id, "paywall-boundary");
   }
+}
+
+// Production reproduction: legacy Smart Format content may have Markdown H1
+// chapter blocks without structureRole, and an empty paragraph may sit next
+// to the Paywall. The Reader must still resolve the #03 chapter anchor rather
+// than falling back to the first chapter.
+const productionPaywallBlocks: BookContentBlock[] = [
+  { id: "prod-before", type: "text", content: "無料本文" },
+  { id: "prod-empty", type: "text", content: "" },
+  { id: "prod-paywall", type: "paywall" },
+  { id: "prod-chapter-03", type: "text", content: "# 03｜最初の1週間で、機能を半分捨てた" },
+  { id: "prod-after", type: "text", content: "有料本文" },
+];
+const productionCanonical = buildCanonicalBookPayload({
+  state: { ...baseEditorState, title: "Production Paywall reproduction", author: "Verifier" },
+  contentBlocks: productionPaywallBlocks,
+  images: [],
+});
+assert.equal(productionCanonical.ok, true, "Editor Save canonical payload should build for the production reproduction");
+const productionCanonicalBlocks = productionCanonical.ok
+  ? canonicalPayloadToBookProjectInput(productionCanonical.payload).contentBlocks || []
+  : [];
+assert.equal(productionCanonicalBlocks.find((block) => block.type === "paywall")?.nextBlockId, "prod-chapter-03", "Canonical Save/Reload must retain the #03 next anchor");
+const productionProject = buildBookProject({
+  title: "Production Paywall reproduction",
+  slug: "production-paywall-reproduction",
+  subtitle: "",
+  author: "Verifier",
+  description: "",
+  publisherName: "",
+  publishedAt: "",
+  copyrightText: "",
+  rawText: "",
+  bindingDirection: "rtl",
+  theme: "classic",
+  charactersPerPage: 380,
+  tableOfContentsItemsPerPage: 6,
+  images: [],
+  contentBlocks: productionPaywallBlocks,
+});
+assert.equal(productionProject.ok, true, "Production Paywall reproduction project should build");
+if (productionProject.ok) {
+  const persisted = productionProject.project.contentBlocks?.find((block) => block.type === "paywall");
+  assert.equal(persisted?.type, "paywall");
+  if (persisted?.type === "paywall") {
+    assert.equal(persisted.previousBlockId, "prod-before", "Empty paragraphs must not become the previous Paywall anchor");
+    assert.equal(persisted.nextBlockId, "prod-chapter-03", "Paywall next anchor must resolve to #03");
+    assert.equal(persisted.chapterId, "prod-chapter-03", "Paywall chapter anchor must point to the target chapter when inserted before its heading");
+  }
+  const reloaded = parseBookProjectJson(JSON.stringify(productionProject.project));
+  assert.equal(reloaded?.contentBlocks?.find((block) => block.type === "paywall")?.nextBlockId, "prod-chapter-03", "Reload must preserve the Paywall anchor");
+  const pages = buildReaderPages({
+    chapters: productionProject.project.chapters,
+    images: productionProject.project.images,
+    contentBlocks: productionProject.project.contentBlocks,
+    charactersPerPage: 380,
+    tableOfContentsItemsPerPage: 6,
+    showPaywallPage: true,
+  });
+  const paywallPageIndex = pages.findIndex((page) => page.kind === "paywall");
+  const chapter03Index = pages.findIndex((page) => page.kind === "chapterTitle" && page.chapterTitle?.includes("03｜"));
+  assert.equal(paywallPageIndex + 1, chapter03Index, "Production reproduction must place Paywall immediately before #03");
 }
 
 function assertPaywallNeighborPages(label: string, blocks: BookContentBlock[], images: ImageManifestRow[] = []) {

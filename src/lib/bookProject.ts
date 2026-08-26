@@ -18,7 +18,7 @@ import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
 import { isValidYouTubeVideoId } from "@/lib/youtube";
 import { normalizeTextMarks, type TextMark } from "@/lib/textStyles";
-import { findDocumentHeadings, parseDocumentStructure } from "@/lib/documentStructure";
+import { findDocumentHeadings, parseDocumentHeading, parseDocumentStructure } from "@/lib/documentStructure";
 
 export const BOOK_PROJECT_VERSION = 1;
 
@@ -65,6 +65,10 @@ export type BookContentBlock =
   | {
       id: string;
       type: "paywall";
+      /** Stable structural anchors derived from the ordered block sequence. */
+      previousBlockId?: string;
+      nextBlockId?: string;
+      chapterId?: string;
     };
 
 /** Create a stable-looking editor block id without depending on array position. */
@@ -210,6 +214,60 @@ function normalizeLineBreaks(value: string) {
   return value.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").trim();
 }
 
+function isRenderableBlock(block: BookContentBlock) {
+  return block.type !== "text" || Boolean(block.content.trim());
+}
+
+function chapterHeadingBlock(blocks: BookContentBlock[], index: number) {
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    const block = blocks[cursor];
+    if (block.type !== "text") continue;
+    if (block.structureRole === "chapter") return block;
+    const heading = parseDocumentHeading(block.content.split("\n", 1)[0] || "");
+    if (heading?.level === 1) return block;
+  }
+  return undefined;
+}
+
+/**
+ * Recompute Paywall anchors from the canonical ordered block sequence. Empty
+ * editor paragraphs are intentionally skipped because they do not produce a
+ * Reader page and cannot be used as a pagination anchor.
+ */
+export function normalizePaywallAnchors(blocks: BookContentBlock[]) {
+  return blocks.map((block, index) => {
+    if (block.type !== "paywall") return block;
+    let previousBlockId: string | undefined;
+    for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+      if (isRenderableBlock(blocks[cursor])) {
+        previousBlockId = blocks[cursor].id;
+        break;
+      }
+    }
+    let nextBlockId: string | undefined;
+    let nextBlock: BookContentBlock | undefined;
+    for (let cursor = index + 1; cursor < blocks.length; cursor += 1) {
+      if (isRenderableBlock(blocks[cursor])) {
+        nextBlockId = blocks[cursor].id;
+        nextBlock = blocks[cursor];
+        break;
+      }
+    }
+    const nextHeading = nextBlock?.type === "text"
+      ? parseDocumentHeading(nextBlock.content.split("\n", 1)[0] || "")
+      : undefined;
+    const chapter = nextHeading?.level === 1
+      ? nextBlock
+      : chapterHeadingBlock(blocks, index);
+    return {
+      ...block,
+      previousBlockId,
+      nextBlockId,
+      chapterId: chapter?.id,
+    };
+  });
+}
+
 function normalizeContentBlocks(blocks: BookContentBlock[]) {
   const normalized: BookContentBlock[] = [];
   let paywallSeen = false;
@@ -271,7 +329,7 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
     });
   }
 
-  return ensureUniqueContentBlockIds(normalized);
+  return normalizePaywallAnchors(ensureUniqueContentBlockIds(normalized));
 }
 
 /** Conservative normalization used for plain-text paste. */

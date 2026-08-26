@@ -5,6 +5,7 @@ import {
   buildBookProject,
   contentBlocksToRawText,
   normalizeMediaDisplaySize,
+  normalizePaywallAnchors,
   type BookContentBlock,
   type MediaDisplaySize,
   type BookProject,
@@ -72,6 +73,9 @@ export type CanonicalContentBlock =
   | {
       id: string;
       type: "paywall";
+      previousBlockId?: string;
+      nextBlockId?: string;
+      chapterId?: string;
     };
 
 export type CanonicalBookPayload = {
@@ -234,7 +238,7 @@ export function buildCanonicalBookPayload(
     assetMap.set(asset.id, asset);
   }
 
-  const contentBlocks: CanonicalContentBlock[] = input.contentBlocks.map((block) => {
+  const contentBlocks: CanonicalContentBlock[] = normalizePaywallAnchors(input.contentBlocks).map((block) => {
     if (block.type === "text") {
       return { id: block.id, type: "text", content: block.content, marks: block.marks, structureRole: block.structureRole };
     }
@@ -251,7 +255,13 @@ export function buildCanonicalBookPayload(
     }
 
     if (block.type === "paywall") {
-      return { id: block.id, type: "paywall" };
+      return {
+        id: block.id,
+        type: "paywall",
+        previousBlockId: block.previousBlockId,
+        nextBlockId: block.nextBlockId,
+        chapterId: block.chapterId,
+      };
     }
 
     const existing = assetMap.get(block.id);
@@ -392,7 +402,15 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
         displaySize: normalizeMediaDisplaySize(block.displaySize),
       };
     }
-    if (block.type === "paywall") return { id: block.id, type: "paywall" };
+    if (block.type === "paywall") {
+      return {
+        id: block.id,
+        type: "paywall",
+        previousBlockId: block.previousBlockId,
+        nextBlockId: block.nextBlockId,
+        chapterId: block.chapterId,
+      };
+    }
     const asset = assetMap.get(block.assetId);
     return {
       id: block.id,
@@ -512,7 +530,15 @@ export function canonicalContentBlocksToEditorBlocks(
         displaySize: normalizeMediaDisplaySize(block.displaySize),
       };
     }
-    if (block.type === "paywall") return { id: block.id, type: "paywall" };
+    if (block.type === "paywall") {
+      return {
+        id: block.id,
+        type: "paywall",
+        previousBlockId: block.previousBlockId,
+        nextBlockId: block.nextBlockId,
+        chapterId: block.chapterId,
+      };
+    }
     const asset = assetMap.get(block.assetId);
     return {
       id: block.id,

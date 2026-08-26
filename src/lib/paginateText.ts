@@ -1,5 +1,5 @@
 import type { BindingDirection } from "@/config/bookConfig";
-import { normalizeMediaDisplaySize, type BookContentBlock, type MediaDisplaySize } from "./bookProject";
+import { normalizeMediaDisplaySize, normalizePaywallAnchors, type BookContentBlock, type MediaDisplaySize } from "./bookProject";
 import type { ImageManifestRow, NovelChapter, ReaderPage } from "./types";
 import { findPageAdjustment, type PageAdjustment } from "./pageAdjustments";
 import { sliceTextMarks, type TextMark } from "./textStyles";
@@ -85,6 +85,10 @@ function imageSource(image?: ImageManifestRow) {
   return undefined;
 }
 
+function normalizeHeadingTitle(value: string) {
+  return value.normalize("NFKC").replace(/\s+/gu, " ").trim();
+}
+
 export function buildReaderPages({
   chapters,
   images,
@@ -142,16 +146,29 @@ export function buildReaderPages({
 
   // Paywall placement is defined by the ordered contentBlocks sequence, not
   // by a chapter/page number. The chapter bodies intentionally omit the
-  // Paywall block from rawText, so keep its immediate neighbours here and
-  // insert the marker while the neighbouring block is being paginated.
-  const paywallIndex = (contentBlocks || []).findIndex((block) => block.type === "paywall");
-  const paywall = paywallIndex >= 0 ? contentBlocks?.[paywallIndex] : undefined;
-  const paywallPreviousBlockId = paywallIndex > 0 ? contentBlocks?.[paywallIndex - 1]?.id : undefined;
-  const paywallNextBlockId = paywallIndex >= 0 ? contentBlocks?.[paywallIndex + 1]?.id : undefined;
+  // Paywall block from rawText, so resolve the nearest renderable neighbours
+  // here and insert the marker while the anchored block is being paginated.
+  const normalizedContentBlocks = contentBlocks ? normalizePaywallAnchors(contentBlocks) : [];
+  const paywallIndex = normalizedContentBlocks.findIndex((block) => block.type === "paywall");
+  const paywall = paywallIndex >= 0 ? normalizedContentBlocks[paywallIndex] : undefined;
+  const paywallPreviousBlockId = paywall?.type === "paywall" ? paywall.previousBlockId : undefined;
+  const paywallNextBlockId = paywall?.type === "paywall" ? paywall.nextBlockId : undefined;
   let paywallInserted = false;
-  const structuredChapterBlocks = (contentBlocks || []).filter(
+  const structuredChapterBlocks = normalizedContentBlocks.filter(
     (block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text" && block.structureRole === "chapter",
   );
+  const textBlocks = normalizedContentBlocks.filter(
+    (block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text",
+  );
+  const chapterHeadingSourceId = (chapter: NovelChapter) => {
+    const structured = structuredChapterBlocks.find((block) => normalizeHeadingTitle(block.content) === normalizeHeadingTitle(chapter.title));
+    if (structured) return structured.id;
+    const parsed = textBlocks.find((block) => {
+      const heading = parseDocumentHeading(block.content.split("\n", 1)[0] || "");
+      return heading?.level === 1 && normalizeHeadingTitle(heading.title) === normalizeHeadingTitle(chapter.title);
+    });
+    return parsed?.id;
+  };
   const insertPaywallPage = () => {
     if (paywallInserted || paywall?.type !== "paywall") return;
     pages.push({ id: `paywall-${paywall.id}`, kind: "paywall", sourceBlockId: paywall.id });
@@ -159,13 +176,10 @@ export function buildReaderPages({
   };
 
   for (const chapter of chapters) {
-    const chapterHeadingBlock = structuredChapterBlocks[chapter.order - 1] || structuredChapterBlocks.find(
-      (block) => block.content.trim() === chapter.title.trim(),
-    );
-    const chapterHeadingSourceId = chapterHeadingBlock?.id;
+    const chapterHeadingId = chapterHeadingSourceId(chapter);
     // A boundary before the first block (or before a chapter heading whose
     // previous block was not rendered) must still remain before that heading.
-    if (!paywallInserted && paywallNextBlockId && paywallNextBlockId === chapterHeadingSourceId) {
+    if (!paywallInserted && paywallNextBlockId && paywallNextBlockId === chapterHeadingId) {
       insertPaywallPage();
     }
     pages.push({
@@ -175,11 +189,11 @@ export function buildReaderPages({
       chapterTitle: chapter.title,
       chapterSlug: chapter.slug,
       headingId: chapter.id,
-      sourceBlockIds: chapterHeadingSourceId ? [chapterHeadingSourceId] : undefined,
+      sourceBlockIds: chapterHeadingId ? [chapterHeadingId] : undefined,
     });
     // A Paywall immediately after an H1 belongs after the chapter title page,
     // never at the start of the chapter's preceding content.
-    if (!paywallInserted && paywallPreviousBlockId === chapterHeadingSourceId) {
+    if (!paywallInserted && paywallPreviousBlockId === chapterHeadingId) {
       insertPaywallPage();
     }
 
@@ -196,9 +210,6 @@ export function buildReaderPages({
     let currentSectionId: string | undefined;
     let pendingHeadingId: string | undefined;
 
-    const textBlocks = (contentBlocks || []).filter(
-      (block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text",
-    );
     const textSourceFor = (segment: string) =>
       textBlocks.find((block) => block.content.includes(segment));
     const segmentEntries = segments.map((segment, index) => ({
@@ -441,11 +452,7 @@ export function buildReaderPages({
   }
 
   if (showPaywallPage && paywall?.type === "paywall" && !paywallInserted) {
-    const previousBlockId = contentBlocks
-      ?.slice(0, paywallIndex)
-      .reverse()
-      .find((block) => block.type === "text" || block.type === "image" || block.type === "youtube")
-      ?.id;
+    const previousBlockId = paywallPreviousBlockId;
     const targetIndex = previousBlockId
       ? pages.findIndex((page) => "sourceBlockIds" in page && page.sourceBlockIds?.includes(previousBlockId))
       : -1;
