@@ -150,6 +150,10 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
       });
       continue;
     }
+    if (child instanceof HTMLElement && child.dataset.nodeType === "paywall") {
+      blocks.push({ id: child.dataset.nodeId || createContentBlockId("paywall"), type: "paywall" });
+      continue;
+    }
 
     const styled = child instanceof HTMLElement ? parseStyledParagraph(child) : { content: normalizeText(child.textContent || ""), marks: [] };
     blocks.push({
@@ -264,6 +268,16 @@ function createYouTubeElement(block: Extract<BookContentBlock, { type: "youtube"
   return wrapper;
 }
 
+function createPaywallElement(block: Extract<BookContentBlock, { type: "paywall" }>) {
+  const wrapper = document.createElement("div");
+  wrapper.dataset.nodeType = "paywall";
+  wrapper.dataset.nodeId = block.id;
+  wrapper.contentEditable = "false";
+  wrapper.className = "inline-editor-paywall-node";
+  wrapper.textContent = "🔒 ここから有料";
+  return wrapper;
+}
+
 function renderNodes(root: HTMLElement, nodes: BookContentBlock[], pageBreakAfterBlockIds: string[] = []) {
   const fragment = document.createDocumentFragment();
   const breakIds = new Set(pageBreakAfterBlockIds);
@@ -272,8 +286,10 @@ function renderNodes(root: HTMLElement, nodes: BookContentBlock[], pageBreakAfte
       fragment.append(createParagraphElement(block));
     } else if (block.type === "image") {
       fragment.append(createImageElement(block));
-    } else {
+    } else if (block.type === "youtube") {
       fragment.append(createYouTubeElement(block));
+    } else {
+      fragment.append(createPaywallElement(block));
     }
     if (breakIds.has(block.id)) {
       const marker = document.createElement("div");
@@ -416,6 +432,8 @@ type Props = {
   pageBreakAfterBlockIds?: string[];
   onInsertPageBreak?: (blockId: string) => void;
   onRemovePageBreak?: (blockId: string) => void;
+  onInsertPaywall?: () => void;
+  onRemovePaywall?: (blockId: string) => void;
   onPasteAutoFormat?: (previousBlocks: BookContentBlock[]) => void;
 };
 
@@ -430,6 +448,8 @@ export default function InlineManuscriptEditor({
   pageBreakAfterBlockIds = [],
   onInsertPageBreak,
   onRemovePageBreak,
+  onInsertPaywall,
+  onRemovePaywall,
   onPasteAutoFormat,
 }: Props) {
   const editorRef = useRef<HTMLElement | null>(null);
@@ -1000,6 +1020,17 @@ export default function InlineManuscriptEditor({
               >
                 改ページを挿入
               </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={value.some((block) => block.type === "paywall")}
+                onClick={() => {
+                  setIsInsertMenuOpen(false);
+                  onInsertPaywall?.();
+                }}
+              >
+                🔒 ここから有料
+              </button>
             </div>
           ) : null}
         </div>
@@ -1037,6 +1068,11 @@ export default function InlineManuscriptEditor({
               if (pageBreak) {
                 const blockId = pageBreak.dataset.afterBlockId;
                 if (blockId) onRemovePageBreak?.(blockId);
+                return;
+              }
+              const paywall = target.closest("[data-node-type='paywall']") as HTMLElement | null;
+              if (paywall) {
+                onRemovePaywall?.(paywall.dataset.nodeId || "");
                 return;
               }
               const image = target.closest("[data-node-type='image']") as HTMLElement | null;

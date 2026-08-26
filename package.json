@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "verify:book": "tsx scripts/verify-reading-order.ts",
-    "test": "tsx scripts/verify-beta.ts && tsx scripts/verify-gatec.ts && tsx scripts/verify-gatec-step2b.ts"
+    "test": "tsx scripts/verify-beta.ts && tsx scripts/verify-gatec.ts && tsx scripts/verify-gatec-step2b.ts && tsx scripts/verify-paywall-security.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",

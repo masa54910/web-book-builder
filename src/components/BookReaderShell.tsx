@@ -26,6 +26,8 @@ export default function BookReaderShell({
   backLink,
   onCoverDesignChange,
   sampleBookPresentation = false,
+  access,
+  accessSlug,
 }: {
   config: BookConfig;
   chapters: NovelChapter[];
@@ -39,6 +41,8 @@ export default function BookReaderShell({
   shareDisabledReason?: string;
   authorPageHandle?: string | null;
   sampleBookPresentation?: boolean;
+  access?: { state: "free" | "locked" | "unlocked"; paymentUrl?: string; amount?: number; currency?: string; lockedTocEntries?: import("@/lib/documentStructure").DocumentTocEntry[] };
+  accessSlug?: string;
   onCoverDesignChange?: (patch: Partial<CoverDesign>) => void;
   backLink?: {
     destination?: "auto" | "home" | "dashboard";
@@ -62,6 +66,8 @@ export default function BookReaderShell({
       backLink={backLink}
       onCoverDesignChange={onCoverDesignChange}
       sampleBookPresentation={sampleBookPresentation}
+      access={access}
+      accessSlug={accessSlug}
     />
   );
 }

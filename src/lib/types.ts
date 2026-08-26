@@ -94,6 +94,11 @@ type ReaderPageShape =
       kind: "pageBreak";
       sourcePageId: string;
     }
+  | {
+      id: string;
+      kind: "paywall";
+      sourceBlockId: string;
+    }
   | { id: "colophon"; kind: "colophon" }
   | { id: "back-cover"; kind: "backCover" };
 

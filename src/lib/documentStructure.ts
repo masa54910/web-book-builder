@@ -27,6 +27,7 @@ export type DocumentTocEntry = {
   level: 1 | 2;
   readerPageIndex?: number;
   readerPageNumber?: number;
+  locked?: boolean;
 };
 
 function stableSlug(value: string) {

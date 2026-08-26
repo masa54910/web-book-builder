@@ -42,6 +42,8 @@ function pageLabel(page: ReaderPage) {
       return "裏表紙";
     case "pageBreak":
       return "改ページ";
+    case "paywall":
+      return "ここから有料";
     default:
       return "ページ";
   }
@@ -81,6 +83,9 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
   }
   if (page.kind === "colophon" || page.kind === "pageBreak") {
     return <div className="editor-mini-page-lines"><strong>{page.kind === "colophon" ? "奥付" : "改ページ"}</strong><i /><i /></div>;
+  }
+  if (page.kind === "paywall") {
+    return <div className="editor-mini-page-lines"><strong>🔒 ここから有料</strong><i /><i /></div>;
   }
   if (page.kind === "title") {
     return <div className="editor-mini-page-heading"><strong>タイトル</strong><i /><i /></div>;

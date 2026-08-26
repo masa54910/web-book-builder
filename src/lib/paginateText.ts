@@ -92,6 +92,8 @@ export function buildReaderPages({
   pageAdjustments,
   charactersPerPage,
   tableOfContentsItemsPerPage,
+  includePaywallPage = false,
+  tocEntryCountOverride,
 }: {
   chapters: NovelChapter[];
   images: ImageManifestRow[];
@@ -99,16 +101,19 @@ export function buildReaderPages({
   pageAdjustments?: PageAdjustment[];
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
+  includePaywallPage?: boolean;
+  tocEntryCountOverride?: number;
 }): ReaderPage[] {
   const pages: ReaderPage[] = [
     { id: "cover", kind: "cover" },
     { id: "title", kind: "title" },
   ];
   const contentsPerPage = Math.max(1, tableOfContentsItemsPerPage);
-  const tocEntryCount = chapters.reduce(
+  const chapterTocEntryCount = chapters.reduce(
     (count, chapter) => count + 1 + (chapter.sections?.filter((section) => section.level === 2).length || 0),
     0,
   );
+  const tocEntryCount = tocEntryCountOverride ?? chapterTocEntryCount;
   const totalContentsPages = Math.ceil(tocEntryCount / contentsPerPage);
 
   for (let part = 0; part < totalContentsPages; part += 1) {
@@ -368,6 +373,12 @@ export function buildReaderPages({
     }
 
     flushTextPage();
+  }
+
+  const paywall = (contentBlocks || []).find((block) => block.type === "paywall");
+  if (includePaywallPage && paywall?.type === "paywall") {
+    pages.push({ id: `paywall-${paywall.id}`, kind: "paywall", sourceBlockId: paywall.id });
+    return pages;
   }
 
   pages.push({ id: "colophon", kind: "colophon" });

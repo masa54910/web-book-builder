@@ -61,6 +61,10 @@ export type BookContentBlock =
       originalUrl: string;
       displayMode?: MediaDisplayMode;
       displaySize?: MediaDisplaySize;
+    }
+  | {
+      id: string;
+      type: "paywall";
     };
 
 /** Create a stable-looking editor block id without depending on array position. */
@@ -208,6 +212,7 @@ function normalizeLineBreaks(value: string) {
 
 function normalizeContentBlocks(blocks: BookContentBlock[]) {
   const normalized: BookContentBlock[] = [];
+  let paywallSeen = false;
 
   for (const [index, block] of blocks.entries()) {
     if (block.type === "text") {
@@ -231,6 +236,13 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
         displayMode: block.displayMode === "inline" ? "inline" : "full-page",
         displaySize: normalizeMediaDisplaySize(block.displaySize),
       });
+      continue;
+    }
+
+    if (block.type === "paywall") {
+      if (paywallSeen) continue;
+      paywallSeen = true;
+      normalized.push({ id: normalizeBlockId(block.id, "paywall"), type: "paywall" });
       continue;
     }
 
@@ -281,6 +293,8 @@ export function contentBlocksToRawText(blocks: BookContentBlock[]) {
       const mode = block.displayMode === "inline" ? "inline" : "full-page";
       return `[[youtube:${block.id}|${block.videoId}|${mode}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
     }
+
+    if (block.type === "paywall") return "";
 
     const caption = block.caption?.trim();
     const mode = block.pageMode === "inline" ? "inline" : "full-page";

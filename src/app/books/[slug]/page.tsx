@@ -4,11 +4,14 @@ import { createClient } from "@supabase/supabase-js";
 import BookReaderShell from "@/components/BookReaderShell";
 import DemoTopActions from "@/components/demo/DemoTopActions";
 import PublicBookPage from "@/components/PublicBookPage";
+import { loadPublishedReader } from "@/lib/server/publishedReader";
 import { publicBookUrl } from "@/lib/promotion";
 import { loadSampleBookProject } from "@/lib/sampleBook";
 import { SAMPLE_BOOK_SLUG } from "@/lib/sampleBookConstants";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 // Bump this when the server-side card renderer changes so X and other
 // crawlers do not keep using a previously cached image response.
@@ -116,5 +119,6 @@ export default async function PublicBookRoute({ params }: { params: Promise<{ sl
     );
   }
 
-  return <PublicBookPage />;
+  const payload = await loadPublishedReader(decodedSlug);
+  return <PublicBookPage payload={payload} slug={decodedSlug} />;
 }

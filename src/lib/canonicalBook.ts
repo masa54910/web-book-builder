@@ -68,6 +68,10 @@ export type CanonicalContentBlock =
       originalUrl: string;
       displayMode?: "inline" | "full-page";
       displaySize?: MediaDisplaySize;
+    }
+  | {
+      id: string;
+      type: "paywall";
     };
 
 export type CanonicalBookPayload = {
@@ -246,6 +250,10 @@ export function buildCanonicalBookPayload(
       };
     }
 
+    if (block.type === "paywall") {
+      return { id: block.id, type: "paywall" };
+    }
+
     const existing = assetMap.get(block.id);
     const blockAsset = mergeAsset(existing, {
       id: block.id,
@@ -384,6 +392,7 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
         displaySize: normalizeMediaDisplaySize(block.displaySize),
       };
     }
+    if (block.type === "paywall") return { id: block.id, type: "paywall" };
     const asset = assetMap.get(block.assetId);
     return {
       id: block.id,
@@ -503,6 +512,7 @@ export function canonicalContentBlocksToEditorBlocks(
         displaySize: normalizeMediaDisplaySize(block.displaySize),
       };
     }
+    if (block.type === "paywall") return { id: block.id, type: "paywall" };
     const asset = assetMap.get(block.assetId);
     return {
       id: block.id,

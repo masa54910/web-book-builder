@@ -40,6 +40,7 @@ import TextPage from "./TextPage";
 import TitlePage from "./TitlePage";
 import YouTubePage from "./YouTubePage";
 import HomeBackLink from "./HomeBackLink";
+import PaywallPage from "./PaywallPage";
 
 function getSafeLocalStorage() {
   try {
@@ -103,6 +104,8 @@ export default function BookReader({
   backLink,
   onCoverDesignChange,
   sampleBookPresentation = false,
+  access,
+  accessSlug,
 }: {
   config: BookConfig;
   chapters: NovelChapter[];
@@ -123,6 +126,8 @@ export default function BookReader({
   };
   onCoverDesignChange?: (patch: Partial<CoverDesign>) => void;
   sampleBookPresentation?: boolean;
+  access?: { state: "free" | "locked" | "unlocked"; paymentUrl?: string; amount?: number; currency?: string; lockedTocEntries?: import("@/lib/documentStructure").DocumentTocEntry[] };
+  accessSlug?: string;
 }) {
   const flipBookRef = useRef<FlipBookHandle | null>(null);
   const activePageIdRef = useRef<string | null>(null);
@@ -170,8 +175,12 @@ export default function BookReader({
           ? Math.max(220, Math.floor(config.charactersPerPage * 0.82))
           : config.charactersPerPage,
         tableOfContentsItemsPerPage: config.tableOfContentsItemsPerPage,
+        tocEntryCountOverride: access?.lockedTocEntries?.length
+          ? chapters.reduce((count, chapter) => count + 1 + (chapter.sections?.filter((section) => section.level === 2).length || 0), 0) + access.lockedTocEntries.length
+          : undefined,
+        includePaywallPage: access?.state === "locked",
       }),
-    [chapters, config.charactersPerPage, config.tableOfContentsItemsPerPage, contentBlocks, images, isMobile, pageAdjustments],
+    [access, chapters, config.charactersPerPage, config.tableOfContentsItemsPerPage, contentBlocks, images, isMobile, pageAdjustments],
   );
   const pages = useMemo(
     () => toBoundPageOrder(logicalPages, isMobile, config.bindingDirection),
@@ -190,8 +199,8 @@ export default function BookReader({
         pageNumber: logicalFolioById.get(page.id) ?? pageIndex,
       });
     });
-    return buildDocumentTocEntries(documentStructureFromChapters(chapters), pageByHeadingId);
-  }, [chapters, logicalFolioById, logicalPages]);
+    return [...buildDocumentTocEntries(documentStructureFromChapters(chapters), pageByHeadingId), ...(access?.lockedTocEntries || [])];
+  }, [access?.lockedTocEntries, chapters, logicalFolioById, logicalPages]);
   // Page breaks are applied by buildReaderPages so the next content starts on
   // the following page without rendering a synthetic blank page. Keep this
   // alias so reader controls and page rendering share the same canonical list.
@@ -217,10 +226,12 @@ export default function BookReader({
             ? "表紙"
             : page.kind === "title"
               ? "タイトルページ"
-              : page.kind === "contents"
-                ? "目次"
-                : page.kind === "colophon"
-                  ? "奥付"
+                : page.kind === "contents"
+                  ? "目次"
+                  : page.kind === "paywall"
+                    ? "ここから有料"
+                  : page.kind === "colophon"
+                    ? "奥付"
                   : "裏表紙";
       const preview =
         page.kind === "text"
@@ -278,9 +289,14 @@ export default function BookReader({
   const jumpToHeading = useCallback(
     (headingId: string) => {
       const entry = tocEntries.find((item) => item.headingId === headingId);
+      if (entry?.locked) {
+        const paywallIndex = pagesWithAdjustments.findIndex((page) => page.kind === "paywall");
+        if (paywallIndex >= 0) goToPage(paywallIndex);
+        return;
+      }
       if (entry?.readerPageIndex !== undefined) goToPage(entry.readerPageIndex);
     },
-    [goToPage, tocEntries],
+    [goToPage, pagesWithAdjustments, tocEntries],
   );
   const jumpToPrintedPage = useCallback(
     (pageNumber: number) => {
@@ -499,6 +515,8 @@ export default function BookReader({
       content = <YouTubePage videoId={page.videoId} displaySize={page.displaySize} />;
     } else if (page.kind === "pageBreak") {
       content = <div className="page-break-page" aria-label="手動改ページ">ここから新しいページ</div>;
+    } else if (page.kind === "paywall") {
+      content = <PaywallPage slug={accessSlug || config.slug || ""} paymentUrl={access?.paymentUrl} amount={access?.amount} currency={access?.currency} />;
     } else if (page.kind === "colophon") content = <ColophonPage config={config} cloudBookId={cloudBookId} />;
     else content = <CoverPage config={config} back />;
 
@@ -508,7 +526,7 @@ export default function BookReader({
       <BookPage
         key={page.id}
         label={page.kind === "text" || page.kind === "image" || page.kind === "youtube" ? page.chapterTitle : page.kind}
-        folio={hard ? undefined : logicalFolio}
+        folio={hard || page.kind === "paywall" ? undefined : logicalFolio}
         hard={hard}
         bookmarked={bookmarkedPageIds.has(page.id)}
       >

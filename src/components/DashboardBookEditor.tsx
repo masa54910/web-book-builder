@@ -9,6 +9,7 @@ import { publicBookBaseUrl } from "@/lib/promotion";
 import {
   contentBlocksFromLegacy,
   contentBlocksToRawText,
+  createContentBlockId,
   ensureUniqueContentBlockIds,
   extractChaptersFromText,
   type BookContentBlock,
@@ -924,6 +925,32 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     setDirty(true);
   }, []);
 
+  const handleEditorInsertPaywall = useCallback(() => {
+    setContentBlocks((current) => {
+      if (current.some((block) => block.type === "paywall")) return current;
+      const index = activeBlockId ? current.findIndex((block) => block.id === activeBlockId) : -1;
+      const next = [...current];
+      next.splice(index >= 0 ? index + 1 : next.length, 0, { id: createContentBlockId("paywall"), type: "paywall" });
+      setImages(uploadedImagesFromBlocks(next));
+      setState((state) => ({ ...state, rawText: contentBlocksToRawText(next) }));
+      setDirty(true);
+      return next;
+    });
+    setStatusMessage("有料境界を追加しました。クリックすると削除できます。");
+  }, [activeBlockId]);
+
+  const handleEditorRemovePaywall = useCallback((blockId: string) => {
+    if (!blockId) return;
+    setContentBlocks((current) => {
+      const next = current.filter((block) => block.id !== blockId);
+      setImages(uploadedImagesFromBlocks(next));
+      setState((state) => ({ ...state, rawText: contentBlocksToRawText(next) }));
+      setDirty(true);
+      return next;
+    });
+    setStatusMessage("有料境界を削除しました。");
+  }, []);
+
   const activeMiniPageId = useMemo(() => {
     if (!activeBlockId) return null;
     return miniPreviewPages.find((page) => "sourceBlockIds" in page && page.sourceBlockIds?.includes(activeBlockId))?.id || null;
@@ -1680,6 +1707,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             pageBreakAfterBlockIds={pageBreakAfterBlockIds}
             onInsertPageBreak={handleEditorInsertPageBreak}
             onRemovePageBreak={handleEditorRemovePageBreak}
+            onInsertPaywall={handleEditorInsertPaywall}
+            onRemovePaywall={handleEditorRemovePaywall}
             onPasteAutoFormat={(previousBlocks) => setPasteUndoBlocks(previousBlocks)}
           />
           <p className="inline-manuscript-character-count" aria-live="polite">
