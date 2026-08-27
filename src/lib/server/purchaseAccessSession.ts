@@ -7,6 +7,7 @@ import {
   purchaseAccessCookieOptions as cookieOptions,
   verifyPurchaseAccessToken as verifyToken,
 } from "@/lib/purchaseAccessSessionCore";
+import { expectedStripeLivemode } from "./stripeEnvironment";
 
 export { PURCHASE_ACCESS_COOKIE };
 
@@ -17,11 +18,11 @@ function secret() {
 }
 
 export function createPurchaseAccessToken(bookId: string, purchaseId: string) {
-  return createToken(bookId, purchaseId, secret());
+  return createToken(bookId, purchaseId, expectedStripeLivemode(), secret());
 }
 
 export function verifyPurchaseAccessToken(token: string | undefined, bookId: string) {
-  return verifyToken(token, bookId, secret());
+  return verifyToken(token, bookId, expectedStripeLivemode(), secret());
 }
 
 export async function readPurchaseAccessSession(bookId: string) {

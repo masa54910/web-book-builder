@@ -4,6 +4,7 @@ import type Stripe from "stripe";
 
 import { requireStripeClient } from "./stripe";
 import { getSupabaseAdminClient } from "./supabaseAdmin";
+import { expectedStripeLivemode } from "./stripeEnvironment";
 import {
   fulfillCheckoutSession as fulfillCore,
   type CheckoutSessionForFulfillment,
@@ -18,14 +19,17 @@ function requireAdminDatabase() {
   if (!client) throw new Error("Purchase server configuration is unavailable.");
 
   const database: PurchaseDatabase = {
-    async findSaleSettings(paymentLinkId): Promise<SaleSettingsRecord | null> {
+    async findSaleSettings(paymentLinkId, stripeLivemode): Promise<SaleSettingsRecord | null> {
       const { data, error } = await client
         .from("book_sales_settings")
-        .select("book_id,stripe_payment_link_id,stripe_price_id,amount,currency,enabled")
+        .select("book_id,stripe_livemode,stripe_payment_link_id,stripe_price_id,amount,currency,enabled")
         .eq("stripe_payment_link_id", paymentLinkId)
+        .eq("stripe_livemode", stripeLivemode)
         .maybeSingle();
       if (error) throw error;
-      return (data || null) as SaleSettingsRecord | null;
+      return data
+        ? { ...data, stripeLivemode: Boolean((data as { stripe_livemode?: unknown }).stripe_livemode) } as SaleSettingsRecord
+        : null;
     },
     async findBookSlug(bookId) {
       const { data, error } = await client.from("books").select("slug").eq("id", bookId).maybeSingle<{ slug: string | null }>();
@@ -35,15 +39,33 @@ function requireAdminDatabase() {
     async findPurchase(sessionId): Promise<PurchaseRecord | null> {
       const { data, error } = await client
         .from("book_purchases")
-        .select("id,book_id,stripe_checkout_session_id,stripe_payment_intent_id,buyer_email,amount,currency,payment_status,access_code_hash,access_code_ciphertext")
+        .select("id,book_id,stripe_livemode,stripe_checkout_session_id,stripe_payment_intent_id,buyer_email,amount,currency,payment_status,access_code_hash,access_code_ciphertext")
         .eq("stripe_checkout_session_id", sessionId)
         .maybeSingle();
       if (error) throw error;
-      return (data || null) as PurchaseRecord | null;
+      return data
+        ? { ...data, stripeLivemode: Boolean((data as { stripe_livemode?: unknown }).stripe_livemode) } as PurchaseRecord
+        : null;
     },
     async insertPurchase(record) {
-      const { data, error } = await client.from("book_purchases").insert(record).select("id,book_id,stripe_checkout_session_id,stripe_payment_intent_id,buyer_email,amount,currency,payment_status,access_code_hash,access_code_ciphertext").single();
-      return { data: (data || null) as PurchaseRecord | null, error };
+      const { data, error } = await client.from("book_purchases").insert({
+        book_id: record.book_id,
+        stripe_livemode: record.stripeLivemode,
+        stripe_checkout_session_id: record.stripe_checkout_session_id,
+        stripe_payment_intent_id: record.stripe_payment_intent_id,
+        buyer_email: record.buyer_email,
+        amount: record.amount,
+        currency: record.currency,
+        payment_status: record.payment_status,
+        access_code_hash: record.access_code_hash,
+        access_code_ciphertext: record.access_code_ciphertext,
+      }).select("id,book_id,stripe_livemode,stripe_checkout_session_id,stripe_payment_intent_id,buyer_email,amount,currency,payment_status,access_code_hash,access_code_ciphertext").single();
+      return {
+        data: data
+          ? { ...data, stripeLivemode: Boolean((data as { stripe_livemode?: unknown }).stripe_livemode) } as PurchaseRecord
+          : null,
+        error,
+      };
     },
   };
   return database;
@@ -52,6 +74,7 @@ function requireAdminDatabase() {
 function asFulfillmentSession(session: Stripe.Checkout.Session): CheckoutSessionForFulfillment {
   return {
     id: session.id,
+    livemode: session.livemode,
     mode: session.mode,
     status: session.status,
     payment_status: session.payment_status,
@@ -66,7 +89,7 @@ function asFulfillmentSession(session: Stripe.Checkout.Session): CheckoutSession
   };
 }
 
-export async function fulfillCheckoutSession(sessionId: string) {
+export async function fulfillCheckoutSession(sessionId: string, expectedEventLivemode?: boolean) {
   const stripe = requireStripeClient();
   const dependencies: FulfillmentDependencies = {
     retrieveSession: async (id) => {
@@ -74,6 +97,7 @@ export async function fulfillCheckoutSession(sessionId: string) {
       return asFulfillmentSession(session);
     },
     database: requireAdminDatabase(),
+    expectedLivemode: expectedEventLivemode ?? expectedStripeLivemode(),
   };
   return fulfillCore(sessionId, dependencies);
 }

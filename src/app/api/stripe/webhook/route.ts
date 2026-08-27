@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireStripeClient } from "@/lib/server/stripe";
 import { FulfillmentError, fulfillCheckoutSession } from "@/lib/server/purchaseFulfillment";
+import { expectedStripeLivemode } from "@/lib/server/stripeEnvironment";
 
 export const runtime = "nodejs";
 
@@ -22,9 +23,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   }
 
+  try {
+    if (event.livemode !== expectedStripeLivemode()) return NextResponse.json({ received: false }, { status: 400 });
+  } catch {
+    return NextResponse.json({ received: false }, { status: 503 });
+  }
+
   const session = event.data.object as import("stripe").default.Checkout.Session;
   try {
-    await fulfillCheckoutSession(session.id);
+    await fulfillCheckoutSession(session.id, event.livemode);
     return NextResponse.json({ received: true });
   } catch (error) {
     if (error instanceof FulfillmentError) return NextResponse.json({ received: false }, { status: 400 });

@@ -14,6 +14,7 @@ process.env.PURCHASE_CODE_ENCRYPTION_KEY = "0123456789abcdef0123456789abcdef0123
 const sessionId = "cs_test_gatec_step2b_001";
 const saleSettings: SaleSettingsRecord = {
   book_id: "book-1",
+  stripeLivemode: false,
   stripe_payment_link_id: "plink_test_gatec",
   stripe_price_id: "price_test_gatec",
   amount: 980,
@@ -24,6 +25,7 @@ const saleSettings: SaleSettingsRecord = {
 function validSession(overrides: Partial<CheckoutSessionForFulfillment> = {}): CheckoutSessionForFulfillment {
   return {
     id: sessionId,
+    livemode: false,
     mode: "payment",
     status: "complete",
     payment_status: "paid",
@@ -41,7 +43,11 @@ function setup(options: { session?: CheckoutSessionForFulfillment; settings?: Sa
   let purchase: PurchaseRecord | null = null;
   let raceOnce = options.race ?? false;
   const database: PurchaseDatabase = {
-    async findSaleSettings() { return options.settings === undefined ? saleSettings : options.settings; },
+    async findSaleSettings(paymentLinkId, stripeLivemode) {
+      const settings = options.settings === undefined ? saleSettings : options.settings;
+      if (!settings || settings.stripe_payment_link_id !== paymentLinkId || settings.stripeLivemode !== stripeLivemode) return null;
+      return settings;
+    },
     async findBookSlug(bookId) { return bookId === "book-1" ? "gatec-sample-book" : null; },
     async findPurchase() { return purchase; },
     async insertPurchase(record) {
@@ -59,6 +65,7 @@ function setup(options: { session?: CheckoutSessionForFulfillment; settings?: Sa
     dependencies: {
       retrieveSession: async () => options.session || validSession(),
       database,
+      expectedLivemode: false,
     },
   };
 }
@@ -79,11 +86,13 @@ async function main() {
     { label: "wrong price", overrides: { line_items: { data: [{ price: { id: "price_other" } }] } } },
     { label: "wrong amount", overrides: { amount_total: 981 } },
     { label: "wrong currency", overrides: { currency: "usd" } },
+    { label: "wrong Stripe environment", overrides: { livemode: true } },
   ];
   for (const { label, overrides } of cases) {
     await assert.rejects(() => fulfillCheckoutSession(sessionId, setup({ session: validSession(overrides) }).dependencies), label);
   }
   await assert.rejects(() => fulfillCheckoutSession(sessionId, setup({ settings: { ...saleSettings, enabled: false } }).dependencies), "disabled");
+  await assert.rejects(() => fulfillCheckoutSession(sessionId, setup({ settings: { ...saleSettings, stripeLivemode: true } }).dependencies), "settings environment mismatch");
   await assert.rejects(() => fulfillCheckoutSession("not-a-session", first.dependencies), "invalid session");
 
   const raced = setup({ race: true });

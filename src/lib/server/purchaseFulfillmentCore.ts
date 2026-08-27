@@ -7,6 +7,7 @@ import {
 
 export type CheckoutSessionForFulfillment = {
   id: string;
+  livemode: boolean;
   mode: string | null;
   status: string | null;
   payment_status: string | null;
@@ -24,6 +25,7 @@ export type CheckoutSessionForFulfillment = {
 
 export type SaleSettingsRecord = {
   book_id: string;
+  stripeLivemode: boolean;
   stripe_payment_link_id: string;
   stripe_price_id: string;
   amount: number;
@@ -34,6 +36,7 @@ export type SaleSettingsRecord = {
 export type PurchaseRecord = {
   id?: string;
   book_id: string;
+  stripeLivemode: boolean;
   stripe_checkout_session_id: string;
   stripe_payment_intent_id: string | null;
   buyer_email: string | null;
@@ -45,7 +48,7 @@ export type PurchaseRecord = {
 };
 
 export type PurchaseDatabase = {
-  findSaleSettings(paymentLinkId: string): Promise<SaleSettingsRecord | null>;
+  findSaleSettings(paymentLinkId: string, stripeLivemode: boolean): Promise<SaleSettingsRecord | null>;
   findBookSlug(bookId: string): Promise<string | null>;
   findPurchase(sessionId: string): Promise<PurchaseRecord | null>;
   insertPurchase(record: PurchaseRecord): Promise<{ data: PurchaseRecord | null; error: unknown | null }>;
@@ -54,6 +57,7 @@ export type PurchaseDatabase = {
 export type FulfillmentDependencies = {
   retrieveSession(sessionId: string): Promise<CheckoutSessionForFulfillment>;
   database: PurchaseDatabase;
+  expectedLivemode?: boolean;
 };
 
 export type FulfillmentResult = {
@@ -105,7 +109,11 @@ function normalizedCurrency(value: string | null | undefined): string {
 async function restoreExistingPurchase(
   purchase: PurchaseRecord,
   database: PurchaseDatabase,
+  expectedLivemode?: boolean,
 ): Promise<FulfillmentResult> {
+  if (expectedLivemode !== undefined && purchase.stripeLivemode !== expectedLivemode) {
+    throw new FulfillmentError("purchase_unavailable");
+  }
   let accessCode: string;
   try {
     accessCode = decryptAccessCode(purchase.access_code_ciphertext);
@@ -131,12 +139,15 @@ export async function fulfillCheckoutSession(
   if (!validateCheckoutSessionId(rawSessionId)) throw new FulfillmentError("invalid_session");
 
   const session = await dependencies.retrieveSession(rawSessionId);
+  if (dependencies.expectedLivemode !== undefined && session.livemode !== dependencies.expectedLivemode) {
+    throw new FulfillmentError("payment_mismatch");
+  }
   if (session.id !== rawSessionId || session.mode !== "payment" || session.status !== "complete" || session.payment_status !== "paid") {
     throw new FulfillmentError("session_not_paid");
   }
 
   const existingPurchase = await dependencies.database.findPurchase(rawSessionId);
-  if (existingPurchase) return restoreExistingPurchase(existingPurchase, dependencies.database);
+  if (existingPurchase) return restoreExistingPurchase(existingPurchase, dependencies.database, dependencies.expectedLivemode);
 
   const paymentLinkId = session.payment_link;
   const sessionPriceId = priceId(session);
@@ -146,9 +157,10 @@ export async function fulfillCheckoutSession(
     throw new FulfillmentError("payment_mismatch");
   }
 
-  const settings = await dependencies.database.findSaleSettings(paymentLinkId);
+  const settings = await dependencies.database.findSaleSettings(paymentLinkId, session.livemode);
   if (!settings || !settings.enabled) throw new FulfillmentError("sales_settings_not_found");
   if (
+    settings.stripeLivemode !== session.livemode ||
     settings.stripe_payment_link_id !== paymentLinkId ||
     settings.stripe_price_id !== sessionPriceId ||
     settings.amount !== sessionAmount ||
@@ -163,6 +175,7 @@ export async function fulfillCheckoutSession(
   const accessCode = generateAccessCode();
   const record: PurchaseRecord = {
     book_id: settings.book_id,
+    stripeLivemode: session.livemode,
     stripe_checkout_session_id: rawSessionId,
     stripe_payment_intent_id: paymentIntentId(session.payment_intent),
     buyer_email: session.customer_details?.email || null,
@@ -177,7 +190,7 @@ export async function fulfillCheckoutSession(
   if (error) {
     if (isUniqueViolation(error)) {
       const concurrentPurchase = await dependencies.database.findPurchase(rawSessionId);
-      if (concurrentPurchase) return restoreExistingPurchase(concurrentPurchase, dependencies.database);
+      if (concurrentPurchase) return restoreExistingPurchase(concurrentPurchase, dependencies.database, dependencies.expectedLivemode);
     }
     throw new FulfillmentError("purchase_unavailable");
   }

@@ -7,6 +7,7 @@ import { normalizeAuthorPageHandle } from "@/lib/authorPage";
 import { filterPublishedProject, visibleContentBlockIds } from "@/lib/publishedReaderSecurity";
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
 import { requireStripeClient } from "@/lib/server/stripe";
+import { expectedStripeLivemode } from "@/lib/server/stripeEnvironment";
 import { readPurchaseAccessSession } from "@/lib/server/purchaseAccessSession";
 import type { ImageManifestRow } from "@/lib/types";
 import type { PublishedReaderPayload } from "@/lib/publishedReaderTypes";
@@ -70,12 +71,13 @@ export async function loadPublishedReader(slug: string): Promise<PublishedReader
   if (!project) return null;
   const originalBlocks = project.contentBlocks || [];
   const paywallIndex = originalBlocks.findIndex((block) => block.type === "paywall");
-  const { data: settings } = await admin.from("book_sales_settings").select("enabled,amount,currency,stripe_payment_link_id").eq("book_id", row.id).maybeSingle();
+  const expectedLivemode = expectedStripeLivemode();
+  const { data: settings } = await admin.from("book_sales_settings").select("enabled,amount,currency,stripe_payment_link_id,stripe_livemode").eq("book_id", row.id).eq("stripe_livemode", expectedLivemode).maybeSingle();
   const salesEnabled = Boolean(settings?.enabled);
   const session = paywallIndex >= 0 ? await readPurchaseAccessSession(String(row.id)) : null;
   let unlocked = false;
   if (session?.purchaseId) {
-    const { data: purchase } = await admin.from("book_purchases").select("id,payment_status,revoked_at").eq("id", session.purchaseId).eq("book_id", row.id).eq("payment_status", "paid").is("revoked_at", null).maybeSingle();
+    const { data: purchase } = await admin.from("book_purchases").select("id,payment_status,revoked_at,stripe_livemode").eq("id", session.purchaseId).eq("book_id", row.id).eq("stripe_livemode", expectedLivemode).eq("payment_status", "paid").is("revoked_at", null).maybeSingle();
     unlocked = Boolean(purchase);
   }
   const locked = salesEnabled && paywallIndex >= 0 && !unlocked;

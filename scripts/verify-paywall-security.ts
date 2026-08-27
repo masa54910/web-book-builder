@@ -77,11 +77,12 @@ const salesDisabled = filterPublishedProject(noPaywallProject, -1, false);
 assert.equal(JSON.stringify(salesDisabled.project).includes(SECRET), true, "books without a paywall remain fully readable");
 
 const issuedAt = 1_700_000_000_000;
-const token = createPurchaseAccessToken("fixture-book", "purchase-1", SESSION_SECRET, issuedAt);
-assert.equal(verifyPurchaseAccessToken(token, "fixture-book", SESSION_SECRET, issuedAt + 1)?.purchaseId, "purchase-1");
-assert.equal(verifyPurchaseAccessToken(token, "other-book", SESSION_SECRET, issuedAt + 1), null, "session must be book-scoped");
-assert.equal(verifyPurchaseAccessToken(`${token}tampered`, "fixture-book", SESSION_SECRET, issuedAt + 1), null, "tampered session must be rejected");
-assert.equal(verifyPurchaseAccessToken(token, "fixture-book", SESSION_SECRET, issuedAt + 30 * 24 * 60 * 60 * 1000 + 1), null, "expired session must be rejected");
+const token = createPurchaseAccessToken("fixture-book", "purchase-1", false, SESSION_SECRET, issuedAt);
+assert.equal(verifyPurchaseAccessToken(token, "fixture-book", false, SESSION_SECRET, issuedAt + 1)?.purchaseId, "purchase-1");
+assert.equal(verifyPurchaseAccessToken(token, "other-book", false, SESSION_SECRET, issuedAt + 1), null, "session must be book-scoped");
+assert.equal(verifyPurchaseAccessToken(token, "fixture-book", true, SESSION_SECRET, issuedAt + 1), null, "session must be Stripe-environment scoped");
+assert.equal(verifyPurchaseAccessToken(`${token}tampered`, "fixture-book", false, SESSION_SECRET, issuedAt + 1), null, "tampered session must be rejected");
+assert.equal(verifyPurchaseAccessToken(token, "fixture-book", false, SESSION_SECRET, issuedAt + 30 * 24 * 60 * 60 * 1000 + 1), null, "expired session must be rejected");
 const cookie = purchaseAccessCookieOptions("fixture-book", true);
 assert.equal(cookie.httpOnly, true);
 assert.equal(cookie.secure, true);
