@@ -4752,7 +4752,7 @@
 .heroInfoCard {
   display: grid;
   max-width: 700px;
-  margin-top: 20px;
+  margin-top: 28px;
   padding: 12px 18px;
   border: 1px solid rgba(120, 174, 218, .24);
   border-radius: 12px;
@@ -4997,7 +4997,7 @@
 
 @media (max-width: 640px) {
   .heroInfoCard {
-    margin-top: 16px;
+    margin-top: 20px;
     padding: 8px 12px;
   }
 
@@ -5338,7 +5338,13 @@
   -webkit-text-fill-color: var(--wb-blue);
 }
 
-.heroInfoCard,
+.heroInfoCard {
+  border-color: var(--wb-border);
+  border-radius: var(--wb-radius-lg);
+  background: linear-gradient(145deg, #ffffff 0%, #ffffff 58%, #f5f9fd 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .98), 0 12px 26px rgba(52, 112, 169, .08);
+}
+
 .inputMessageCard {
   border-color: var(--wb-border);
   border-radius: var(--wb-radius-lg);
@@ -5819,6 +5825,85 @@
   pointer-events: none;
 }
 
+.aboutCtaRow {
+  display: flex;
+  justify-content: center;
+  width: min(100%, 820px);
+  margin: 0 auto 16px;
+}
+
+.aboutCta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 410px);
+  min-height: 56px;
+  padding: 9px 30px;
+  border: 1px solid var(--wb-border);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ffffff 0%, #f1f3f5 100%);
+  color: var(--wb-navy);
+  box-shadow: var(--wb-shadow-small);
+  text-decoration: none;
+  transition: transform var(--wb-transition), box-shadow var(--wb-transition), border-color var(--wb-transition);
+}
+
+.aboutCta > span:first-child {
+  position: absolute;
+  left: 14px;
+  font-size: 16px;
+}
+
+.aboutCtaText {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  text-align: center;
+}
+
+.aboutCta strong {
+  font-size: 24px;
+  line-height: 1.35;
+  font-family: "Noto Serif JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.aboutCta small {
+  color: var(--wb-muted-text);
+  font-size: 16px;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.aboutCtaArrow {
+  position: absolute;
+  right: 14px;
+  color: #fff;
+  filter: grayscale(1) brightness(0) invert(1)
+    drop-shadow(1px 0 0 #111827)
+    drop-shadow(-1px 0 0 #111827)
+    drop-shadow(0 1px 0 #111827)
+    drop-shadow(0 -1px 0 #111827);
+  font-size: 22px;
+  line-height: 1;
+  transition: transform var(--wb-transition);
+}
+
+.aboutCta:hover,
+.aboutCta:focus-visible {
+  border-color: var(--wb-blue);
+  box-shadow: var(--wb-shadow-medium);
+  transform: translateY(-2px);
+}
+
+.aboutCta:hover .aboutCtaArrow,
+.aboutCta:focus-visible .aboutCtaArrow {
+  transform: translateX(3px);
+}
+
 .sampleGuideArrow {
   font-size: clamp(28px, 2.4vw, 36px);
   font-weight: 400;
@@ -5917,6 +6002,14 @@
 }
 
 @media (max-width: 640px) {
+  .aboutCtaRow { width: 100%; margin-bottom: 12px; }
+  .aboutCta { width: 100%; min-height: 56px; padding: 10px 28px; }
+  .aboutCta > span:first-child { left: 10px; font-size: 14px; }
+  .aboutCtaText { gap: 3px; }
+  .aboutCta strong { font-size: 18px; }
+  .aboutCta small { font-size: 13px; }
+  .aboutCtaArrow { right: 10px; font-size: 20px; }
+
   .heroBook .sampleGuide {
     gap: 2px;
     font-size: 13px;

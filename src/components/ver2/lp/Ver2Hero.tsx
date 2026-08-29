@@ -158,6 +158,17 @@ export default function Ver2Hero({
           </div>
         </div>
 
+        <div className={styles.aboutCtaRow}>
+          <Link className={styles.aboutCta} href="/about">
+            <span aria-hidden="true">📖</span>
+            <span className={styles.aboutCtaText}>
+              <strong>記事でWebBookMakerを知る</strong>
+              <small>WebBookMakerでできることを詳しく紹介</small>
+            </span>
+            <span className={styles.aboutCtaArrow} aria-hidden="true">👆</span>
+          </Link>
+        </div>
+
         <div className={styles.heroRecommendations}>
           <div className={styles.recommendHeading}>
             <div className={styles.recommendLabel}>こんな方におすすめ</div>
