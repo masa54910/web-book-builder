@@ -1,7 +1,7 @@
 import type { ThemeId } from "@/lib/productTypes";
 
 export type BookThemeSettings = {
-  background: "paper" | "ivory" | "cafe" | "night" | "green";
+  background: "paper" | "ivory" | "cafe" | "night" | "green" | "white";
   fontFamily: "mincho" | "gothic" | "serif" | "sans";
   fontScale: "small" | "medium" | "large";
   lineHeight: "tight" | "normal" | "relaxed";

@@ -2,6 +2,7 @@ import {
   contentBlocksFromLegacy,
   contentBlocksToRawText,
   type BookContentBlock,
+  type BookColumnChildBlock,
   type UploadedBookImage,
 } from "@/lib/bookProject";
 import type { SupportedLocale } from "@/lib/localization";
@@ -84,6 +85,17 @@ function isUsableDisplayReference(value: unknown) {
 function isDraftContentBlock(value: unknown): value is BookContentBlock {
   if (typeof value !== "object" || value === null) return false;
   const block = value as Partial<BookContentBlock>;
+  if (block.type === "columns") {
+    const columns = value as { id?: unknown; ratio?: unknown; left?: { blocks?: unknown }; right?: { blocks?: unknown } };
+    const validChild = (child: unknown) => {
+      if (!child || typeof child !== "object") return false;
+      const candidate = child as Partial<BookColumnChildBlock>;
+      if (candidate.type === "text") return typeof candidate.id === "string" && typeof candidate.content === "string";
+      if (candidate.type === "youtube") return typeof candidate.id === "string" && typeof candidate.videoId === "string" && isValidYouTubeVideoId(candidate.videoId) && typeof candidate.originalUrl === "string";
+      return candidate.type === "image" && typeof candidate.id === "string" && typeof candidate.storagePath === "string" && typeof candidate.fileName === "string" && typeof candidate.mimeType === "string";
+    };
+    return typeof columns.id === "string" && (columns.ratio === "50-50" || columns.ratio === "40-60" || columns.ratio === "60-40") && Array.isArray(columns.left?.blocks) && Array.isArray(columns.right?.blocks) && columns.left.blocks.every(validChild) && columns.right.blocks.every(validChild);
+  }
   if (block.type === "text") {
     return typeof block.id === "string" && typeof block.content === "string";
   }
@@ -128,18 +140,26 @@ export function buildEditorDraftFields(input: {
     })
     .filter((image) => Boolean(image.storagePath || image.dataUrl || image.displayUrl));
 
-  const safeContentBlocks: BookContentBlock[] = input.contentBlocks
-    .map((block) => {
+  const sanitizeBlock = (block: BookContentBlock): BookContentBlock | null => {
+      if (block.type === "columns") {
+        const sanitizeChild = (child: BookColumnChildBlock) => sanitizeBlock(child as BookContentBlock) as BookColumnChildBlock | null;
+        return {
+          ...block,
+          left: { blocks: block.left.blocks.map(sanitizeChild).filter((child): child is BookColumnChildBlock => Boolean(child)) },
+          right: { blocks: block.right.blocks.map(sanitizeChild).filter((child): child is BookColumnChildBlock => Boolean(child)) },
+        };
+      }
       if (block.type !== "image") return block;
       const storagePath = isUsableStorageReference(block.storagePath) ? block.storagePath : "";
       const publicUrl = isUsableDisplayReference(block.publicUrl) ? block.publicUrl : undefined;
+      if (!storagePath && !publicUrl) return null;
       return {
         ...block,
         storagePath,
         publicUrl,
       };
-    })
-    .filter((block) => block.type !== "image" || Boolean(block.storagePath || block.publicUrl));
+  };
+  const safeContentBlocks: BookContentBlock[] = input.contentBlocks.map(sanitizeBlock).filter((block): block is BookContentBlock => Boolean(block));
 
   const safeState = {
     ...input.state,
@@ -206,6 +226,7 @@ export function seedFromDraftFields(input: {
       rawText.trim() ||
       draftImages.length ||
       draftBlocks.length > 1 ||
+      draftBlocks.some((block) => block.type === "columns") ||
       asString(fields.coverImage).trim() ||
       asString(fields.coverImageStoragePath).trim() ||
       hasCustomCoverDesign,

@@ -14,8 +14,21 @@ export function countUserCharacters(value: string) {
   return Array.from(value).length;
 }
 
-export function countContentCharacters(blocks: Array<{ type: string; content?: string }>) {
+type CountableBlock = {
+  type: string;
+  content?: string;
+  left?: { blocks?: CountableBlock[] };
+  right?: { blocks?: CountableBlock[] };
+};
+
+export function countContentCharacters(blocks: CountableBlock[]): number {
   return blocks.reduce((total, block) => {
-    return total + (block.type === "text" ? countUserCharacters(block.content || "") : 0);
+    if (block.type === "text") return total + countUserCharacters(block.content || "");
+    if (block.type === "columns") {
+      return total
+        + countContentCharacters(block.left?.blocks || [])
+        + countContentCharacters(block.right?.blocks || []);
+    }
+    return total;
   }, 0);
 }

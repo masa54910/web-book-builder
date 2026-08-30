@@ -6,7 +6,9 @@ import {
   contentBlocksToRawText,
   normalizeMediaDisplaySize,
   normalizePaywallAnchors,
+  normalizeColumnsRatio,
   type BookContentBlock,
+  type BookColumnChildBlock,
   type MediaDisplaySize,
   type BookProject,
   type BookProjectInput,
@@ -76,7 +78,19 @@ export type CanonicalContentBlock =
       previousBlockId?: string;
       nextBlockId?: string;
       chapterId?: string;
+    }
+  | {
+      id: string;
+      type: "columns";
+      ratio: "50-50" | "40-60" | "60-40";
+      left: { blocks: CanonicalColumnChildBlock[] };
+      right: { blocks: CanonicalColumnChildBlock[] };
     };
+
+export type CanonicalColumnChildBlock =
+  | Extract<CanonicalContentBlock, { type: "text" }>
+  | Extract<CanonicalContentBlock, { type: "image" }>
+  | Extract<CanonicalContentBlock, { type: "youtube" }>;
 
 export type CanonicalBookPayload = {
   bookId?: string;
@@ -238,9 +252,19 @@ export function buildCanonicalBookPayload(
     assetMap.set(asset.id, asset);
   }
 
-  const contentBlocks: CanonicalContentBlock[] = normalizePaywallAnchors(input.contentBlocks).map((block) => {
+  const toCanonicalBlock = (block: BookContentBlock | BookColumnChildBlock): CanonicalContentBlock | CanonicalColumnChildBlock => {
     if (block.type === "text") {
       return { id: block.id, type: "text", content: block.content, marks: block.marks, structureRole: block.structureRole };
+    }
+
+    if (block.type === "columns") {
+      return {
+        id: block.id,
+        type: "columns",
+        ratio: normalizeColumnsRatio(block.ratio),
+        left: { blocks: block.left.blocks.map((child) => toCanonicalBlock(child) as CanonicalColumnChildBlock) },
+        right: { blocks: block.right.blocks.map((child) => toCanonicalBlock(child) as CanonicalColumnChildBlock) },
+      };
     }
 
     if (block.type === "youtube") {
@@ -291,7 +315,9 @@ export function buildCanonicalBookPayload(
       altText: block.altText,
       fitMode: block.fitMode,
     };
-  });
+  };
+
+  const contentBlocks: CanonicalContentBlock[] = normalizePaywallAnchors(input.contentBlocks).map((block) => toCanonicalBlock(block) as CanonicalContentBlock);
 
   const coverValue = state.coverImageStoragePath || state.coverImage;
   const coverAsset = coverValue
@@ -385,7 +411,7 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
   const assetMap = new Map(payload.assets.map((asset) => [asset.id, asset]));
   if (payload.coverAsset) assetMap.set(payload.coverAsset.id, payload.coverAsset);
 
-  const contentBlocks: BookContentBlock[] = payload.contentBlocks.map((block) => {
+  const fromCanonicalBlock = (block: CanonicalContentBlock | CanonicalColumnChildBlock): BookContentBlock | BookColumnChildBlock => {
     if (block.type === "text") {
       return {
         id: block.id,
@@ -393,6 +419,15 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
         content: block.content,
         marks: block.marks,
         structureRole: block.structureRole,
+      };
+    }
+    if (block.type === "columns") {
+      return {
+        id: block.id,
+        type: "columns",
+        ratio: normalizeColumnsRatio(block.ratio),
+        left: { blocks: block.left.blocks.map((child) => fromCanonicalBlock(child) as BookColumnChildBlock) },
+        right: { blocks: block.right.blocks.map((child) => fromCanonicalBlock(child) as BookColumnChildBlock) },
       };
     }
     if (block.type === "youtube") {
@@ -428,7 +463,9 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
       displaySize: block.displaySize,
       uploadState: "ready",
     };
-  });
+  };
+
+  const contentBlocks: BookContentBlock[] = payload.contentBlocks.map((block) => fromCanonicalBlock(block) as BookContentBlock);
 
   const images = payload.assets.map(toUploadedImage);
   const rawText = contentBlocksToRawText(contentBlocks);
@@ -489,11 +526,16 @@ export function mergeSavedProjectIntoCanonicalPayload(
     const path = image.storage_path || image.image_url;
     if (id && path) pathByAssetId.set(id, path);
   }
-  for (const block of project.contentBlocks || []) {
-    if (block.type === "image" && block.storagePath) {
-      pathByAssetId.set(block.id, block.storagePath);
+  const collectImagePaths = (blocks: BookContentBlock[]) => {
+    for (const block of blocks) {
+      if (block.type === "image" && block.storagePath) pathByAssetId.set(block.id, block.storagePath);
+      if (block.type === "columns") {
+        collectImagePaths(block.left.blocks as BookContentBlock[]);
+        collectImagePaths(block.right.blocks as BookContentBlock[]);
+      }
     }
-  }
+  };
+  collectImagePaths(project.contentBlocks || []);
 
   return {
     ...payload,
@@ -521,8 +563,17 @@ export function canonicalContentBlocksToEditorBlocks(
   payload: CanonicalBookPayload,
 ): BookContentBlock[] {
   const assetMap = new Map(payload.assets.map((asset) => [asset.id, asset]));
-  return payload.contentBlocks.map((block) => {
+  const toEditorBlock = (block: CanonicalContentBlock | CanonicalColumnChildBlock): BookContentBlock | BookColumnChildBlock => {
     if (block.type === "text") return block;
+    if (block.type === "columns") {
+      return {
+        id: block.id,
+        type: "columns",
+        ratio: normalizeColumnsRatio(block.ratio),
+        left: { blocks: block.left.blocks.map((child) => toEditorBlock(child) as BookColumnChildBlock) },
+        right: { blocks: block.right.blocks.map((child) => toEditorBlock(child) as BookColumnChildBlock) },
+      };
+    }
     if (block.type === "youtube") {
       return {
         ...block,
@@ -556,7 +607,8 @@ export function canonicalContentBlocksToEditorBlocks(
       displaySize: block.displaySize,
       uploadState: "ready" as const,
     };
-  });
+  };
+  return payload.contentBlocks.map((block) => toEditorBlock(block) as BookContentBlock);
 }
 
 export function canonicalAssetsToUploadedImages(

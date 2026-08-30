@@ -1,4 +1,4 @@
-import { contentBlocksToRawText, extractChaptersFromText, type BookContentBlock, type BookProject } from "@/lib/bookProject";
+import { contentBlocksToRawText, extractChaptersFromText, flattenContentBlocks, type BookContentBlock, type BookProject } from "@/lib/bookProject";
 
 /**
  * Remove paid content before any reader payload or asset URL is materialized.
@@ -13,13 +13,13 @@ export function filterPublishedProject(project: BookProject, paywallIndex: numbe
 }
 
 export function visibleContentBlockIds(blocks: BookContentBlock[]) {
-  return new Set(blocks.map((block) => block.id));
+  return new Set(flattenContentBlocks(blocks).map((block) => block.id));
 }
 
 export function restrictProjectToBlocks(project: BookProject, blocks: BookContentBlock[]) {
   const visibleIds = visibleContentBlockIds(blocks);
   const visibleImageIds = new Set(
-    blocks.filter((block) => block.type === "image").map((block) => block.id),
+    flattenContentBlocks(blocks).filter((block) => block.type === "image").map((block) => block.id),
   );
   return {
     ...project,

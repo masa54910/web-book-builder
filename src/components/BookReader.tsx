@@ -41,6 +41,7 @@ import TitlePage from "./TitlePage";
 import YouTubePage from "./YouTubePage";
 import HomeBackLink from "./HomeBackLink";
 import PaywallPage from "./PaywallPage";
+import ColumnsPage from "./ColumnsPage";
 
 function getSafeLocalStorage() {
   try {
@@ -241,9 +242,11 @@ export default function BookReader({
             ? page.caption || `本文画像 ${page.imageIndex}`
             : page.kind === "youtube"
               ? "YouTube動画"
-            : page.kind === "chapterTitle"
-              ? "章扉"
-              : chapterTitle;
+              : page.kind === "columns"
+                ? "2カラム"
+                : page.kind === "chapterTitle"
+                  ? "章扉"
+                  : chapterTitle;
       return {
         pageIndex,
         pageNumber: logicalFolioById.get(page.id) ?? pageIndex,
@@ -514,6 +517,8 @@ export default function BookReader({
       );
     } else if (page.kind === "youtube") {
       content = <YouTubePage videoId={page.videoId} displaySize={page.displaySize} />;
+    } else if (page.kind === "columns") {
+      content = <ColumnsPage ratio={page.ratio} left={page.left} right={page.right} columnsBlockId={page.columnsBlockId} />;
     } else if (page.kind === "pageBreak") {
       content = <div className="page-break-page" aria-label="手動改ページ">ここから新しいページ</div>;
     } else if (page.kind === "paywall") {
@@ -526,7 +531,7 @@ export default function BookReader({
     return (
       <BookPage
         key={page.id}
-        label={page.kind === "text" || page.kind === "image" || page.kind === "youtube" ? page.chapterTitle : page.kind}
+        label={page.kind === "text" || page.kind === "image" || page.kind === "youtube" || page.kind === "columns" ? page.chapterTitle : page.kind}
         folio={hard || page.kind === "paywall" ? undefined : logicalFolio}
         hard={hard}
         bookmarked={bookmarkedPageIds.has(page.id)}

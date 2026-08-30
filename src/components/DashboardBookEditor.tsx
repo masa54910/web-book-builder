@@ -9,10 +9,13 @@ import { publicBookBaseUrl } from "@/lib/promotion";
 import {
   contentBlocksFromLegacy,
   contentBlocksToRawText,
+  createColumnsBlock,
   createContentBlockId,
   ensureUniqueContentBlockIds,
+  flattenContentBlocks,
   extractChaptersFromText,
   type BookContentBlock,
+  type BookColumnChildBlock,
   type BookProject,
   type UploadedBookImage,
 } from "@/lib/bookProject";
@@ -59,7 +62,7 @@ import { normalizeSlugInput, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
 import { safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
 import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
-import { colorPresets, contrastRatio, getThemePreset, themePresets, type BookThemeSettings } from "@/lib/themeSystem";
+import { contrastRatio, type BookThemeSettings } from "@/lib/themeSystem";
 import { buildEditorDraftFields, seedFromDraftFields } from "@/lib/editorDraftState";
 import {
   DEFAULT_COVER_DESIGN,
@@ -72,7 +75,7 @@ import {
   upsertPageAdjustment,
   type PageAdjustment,
 } from "@/lib/pageAdjustments";
-import { buildReaderPages } from "@/lib/paginateText";
+import { buildReaderPages, uniqueReaderPages } from "@/lib/paginateText";
 import { smartFormatContentBlocks } from "@/lib/smartFormat";
 import type { ImageManifestRow, ReaderPage } from "@/lib/types";
 import { countContentCharacters } from "@/lib/characterCount";
@@ -80,7 +83,6 @@ import { validateRequiredBookFields } from "@/lib/editorValidation";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
 import CharacterAssistant from "@/components/CharacterAssistant";
 import InlineManuscriptEditor from "@/components/InlineManuscriptEditor";
-import BookCover from "@/components/BookCover";
 import HomeBackLink from "@/components/HomeBackLink";
 import Button from "@/components/ui/Button";
 import FormField from "@/components/ui/FormField";
@@ -238,21 +240,28 @@ function isImageFile(file: File) {
 
 function uploadedImagesFromBlocks(blocks: BookContentBlock[]): UploadedBookImage[] {
   const next: UploadedBookImage[] = [];
-  for (const [index, block] of blocks.entries()) {
-    if (block.type !== "image") continue;
-    next.push({
-      id: block.id,
-      fileName: block.fileName,
-      dataUrl: block.publicUrl || block.storagePath,
-      storagePath: block.storagePath,
-      displayUrl: block.publicUrl,
-      mimeType: block.mimeType,
-      size: 0,
-      caption: block.caption || "",
-      insertChapter: "1",
-      orderInChapter: index + 1,
-    });
-  }
+  const visit = (items: BookContentBlock[]) => {
+    for (const block of items) {
+      if (block.type === "columns") {
+        visit([...block.left.blocks as BookContentBlock[], ...block.right.blocks as BookContentBlock[]]);
+        continue;
+      }
+      if (block.type !== "image") continue;
+      next.push({
+        id: block.id,
+        fileName: block.fileName,
+        dataUrl: block.publicUrl || block.storagePath,
+        storagePath: block.storagePath,
+        displayUrl: block.publicUrl,
+        mimeType: block.mimeType,
+        size: 0,
+        caption: block.caption || "",
+        insertChapter: "1",
+        orderInChapter: next.length + 1,
+      });
+    }
+  };
+  visit(blocks);
   return next;
 }
 
@@ -274,6 +283,7 @@ const BACKGROUND_HEX_BY_TYPE: Record<BookThemeSettings["background"], string> = 
   cafe: "#f1e1cf",
   green: "#e8f0ea",
   night: "#1f2528",
+  white: "#ffffff",
 };
 
 function ensureAaTextColor(textColor: string, background: BookThemeSettings["background"]) {
@@ -363,7 +373,7 @@ function contentBlocksFromRecord(record: CloudBookRecord) {
 }
 
 function stateWithValidBlockAdjustments(state: EditorState, blocks: BookContentBlock[]) {
-  const validIds = new Set(blocks.map((block) => block.id));
+  const validIds = new Set(flattenContentBlocks(blocks).map((block) => block.id));
   return {
     ...state,
     pageAdjustments: normalizePageAdjustments(state.pageAdjustments).filter((adjustment) => validIds.has(adjustment.blockId)),
@@ -375,12 +385,24 @@ function mergeRestoredImageBlocks(
   persistedBlocks: BookContentBlock[],
 ) {
   const persistedImages = new Map(
-    persistedBlocks
-      .filter((block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image")
-      .map((block) => [block.id, block]),
+    (() => {
+      const images: Extract<BookContentBlock, { type: "image" }>[] = [];
+      const collect = (blocks: BookContentBlock[]) => blocks.forEach((block) => {
+        if (block.type === "image") images.push(block);
+        else if (block.type === "columns") collect([...block.left.blocks as BookContentBlock[], ...block.right.blocks as BookContentBlock[]]);
+      });
+      collect(persistedBlocks);
+      return images;
+    })().map((block) => [block.id, block] as const),
   );
-  return restoredBlocks
-    .map((block) => {
+  const mergeBlock = (block: BookContentBlock): BookContentBlock | null => {
+      if (block.type === "columns") {
+        return {
+          ...block,
+          left: { blocks: block.left.blocks.map((child) => mergeBlock(child as BookContentBlock)).filter((child): child is BookColumnChildBlock => Boolean(child)) },
+          right: { blocks: block.right.blocks.map((child) => mergeBlock(child as BookContentBlock)).filter((child): child is BookColumnChildBlock => Boolean(child)) },
+        };
+      }
       if (block.type !== "image") return block;
       const persisted = persistedImages.get(block.id);
       const displayUrl = isDisplayableImageUrl(block.publicUrl)
@@ -392,8 +414,8 @@ function mergeRestoredImageBlocks(
         storagePath,
         publicUrl: displayUrl,
       };
-    })
-    .filter((block) =>
+  };
+  return restoredBlocks.map(mergeBlock).filter((block): block is BookContentBlock => Boolean(block)).filter((block) =>
       block.type !== "image"
       || block.uploadState === "pending"
       || block.uploadState === "error"
@@ -715,7 +737,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             setImages(restoredImages);
             setContentBlocks(restoredBlocks.length ? restoredBlocks : normalizedPersistedBlocks);
             setStalePendingImageIds(
-              (restoredBlocks.length ? restoredBlocks : normalizedPersistedBlocks)
+              flattenContentBlocks(restoredBlocks.length ? restoredBlocks : normalizedPersistedBlocks)
                 .filter((block) => block.type === "image" && block.uploadState === "pending")
                 .map((block) => block.id),
             );
@@ -832,7 +854,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const miniPreviewModel = useMemo(() => {
     const rawText = contentBlocksToRawText(deferredContentBlocks);
     const chapters = extractChaptersFromText(rawText, state.title || "本文", deferredContentBlocks);
-    const imageRows: ImageManifestRow[] = deferredContentBlocks
+    const imageRows: ImageManifestRow[] = flattenContentBlocks(deferredContentBlocks)
       .filter((block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image")
       .map((block) => ({
         chapter_order: 1,
@@ -858,7 +880,10 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     });
     // buildReaderPages applies canonical page-break adjustments directly. Do
     // not add synthetic blank pages here; the mini preview must mirror Reader.
-    return { logicalPages, pages: logicalPages };
+    // Both Reader and Mini Preview consume this single, ID-unique page set;
+    // never append the previous render's pages during editor updates.
+    const uniquePages = uniqueReaderPages(logicalPages);
+    return { logicalPages: uniquePages, pages: uniquePages };
   }, [deferredContentBlocks, state.charactersPerPage, state.pageAdjustments, state.tableOfContentsItemsPerPage, state.title]);
   const miniPreviewPages = miniPreviewModel.pages;
   const miniPreviewLogicalPages = miniPreviewModel.logicalPages;
@@ -869,14 +894,15 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       ? miniPreviewPages.find((candidate) => candidate.id === page.sourcePageId) || page
       : page;
     const sourceIds = "sourceBlockIds" in pageForSources ? pageForSources.sourceBlockIds || [] : [];
-    const directTarget = sourceIds.find((sourceId) => contentBlocks.some((block) => block.id === sourceId));
+    const allContentBlocks = flattenContentBlocks(contentBlocks);
+    const directTarget = sourceIds.find((sourceId) => allContentBlocks.some((block) => block.id === sourceId));
     let targetBlockId = directTarget;
 
     if (!targetBlockId && pageIndex >= 0) {
       for (let index = pageIndex + 1; index < miniPreviewPages.length; index += 1) {
         const candidate = miniPreviewPages[index];
         if (!("sourceBlockIds" in candidate)) continue;
-        const nextTarget = candidate.sourceBlockIds?.find((sourceId) => contentBlocks.some((block) => block.id === sourceId));
+        const nextTarget = candidate.sourceBlockIds?.find((sourceId) => allContentBlocks.some((block) => block.id === sourceId));
         if (nextTarget) {
           targetBlockId = nextTarget;
           break;
@@ -957,6 +983,21 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     setStatusMessage("有料境界を削除しました。");
   }, []);
 
+  const handleEditorInsertColumns = useCallback(() => {
+    setContentBlocks((current) => {
+      const columns = createColumnsBlock();
+      const index = activeBlockId ? current.findIndex((block) => block.id === activeBlockId) : -1;
+      const next = [...current];
+      next.splice(index >= 0 ? index + 1 : next.length, 0, columns);
+      setImages(uploadedImagesFromBlocks(next));
+      setState((state) => ({ ...state, rawText: contentBlocksToRawText(next) }));
+      setDirty(true);
+      return next;
+    });
+    setEditorRevision((current) => current + 1);
+    setStatusMessage("2カラムを挿入しました。左右の本文を編集できます。");
+  }, [activeBlockId]);
+
   const activeMiniPageId = useMemo(() => {
     if (!activeBlockId) return null;
     return miniPreviewPages.find((page) => "sourceBlockIds" in page && page.sourceBlockIds?.includes(activeBlockId))?.id || null;
@@ -967,24 +1008,25 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
   const estimatedPages = useMemo(() => {
     const charsPerPage = Math.max(180, Number(state.charactersPerPage) || 380);
-    const characterCount = contentBlocks
+    const paginationBlocks = flattenContentBlocks(contentBlocks);
+    const characterCount = paginationBlocks
       .filter((block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text")
       .reduce((sum, block) => sum + block.content.trim().length, 0);
-    const imagePages = contentBlocks.filter((block) => block.type === "image" && block.pageMode !== "inline").length;
-    const videoPages = contentBlocks.filter((block) => block.type === "youtube" && block.displayMode !== "inline").length;
+    const imagePages = paginationBlocks.filter((block) => block.type === "image" && block.pageMode !== "inline").length;
+    const videoPages = paginationBlocks.filter((block) => block.type === "youtube" && block.displayMode !== "inline").length;
     const textPages = characterCount ? Math.max(1, Math.ceil(characterCount / charsPerPage)) : 0;
     return textPages + imagePages + videoPages;
   }, [contentBlocks, state.charactersPerPage]);
 
   const textPages = useMemo(() => {
     const charsPerPage = Math.max(180, Number(state.charactersPerPage) || 380);
-    const characterCount = contentBlocks
+    const characterCount = flattenContentBlocks(contentBlocks)
       .filter((block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text")
       .reduce((sum, block) => sum + block.content.trim().length, 0);
     return characterCount ? Math.max(1, Math.ceil(characterCount / charsPerPage)) : 0;
   }, [contentBlocks, state.charactersPerPage]);
 
-  const imagePages = useMemo(() => contentBlocks.filter((block) => block.type === "image").length, [contentBlocks]);
+  const imagePages = useMemo(() => flattenContentBlocks(contentBlocks).filter((block) => block.type === "image").length, [contentBlocks]);
 
   const autosaveDraftFields = useMemo(
     () =>
@@ -1132,28 +1174,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       return;
     }
     update("accentColor", normalizeColorHex(value, state.accentColor));
-  };
-
-  const applyThemePreset = (themeId: ThemeId) => {
-    const preset = getThemePreset(themeId);
-    setState((current) => {
-      const nextTextColor = ensureAaTextColor(preset.settings.textColor, preset.settings.background);
-      return {
-        ...current,
-        theme: themeId,
-        fontFamily: preset.settings.fontFamily,
-        fontScale: preset.settings.fontScale,
-        lineHeight: preset.settings.lineHeight,
-        marginScale: preset.settings.marginScale,
-        pageWidth: preset.settings.pageWidth,
-        background: preset.settings.background,
-        textColor: nextTextColor,
-        accentColor: preset.settings.accentColor,
-        coverStyle: preset.settings.coverStyle,
-        imageLayout: preset.settings.imageLayout,
-      };
-    });
-    setDirty(true);
   };
 
   useEffect(() => {
@@ -1688,7 +1708,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               <strong>画像のアップロードが完了していません。</strong>
               <span>
                 {stalePendingImageIds.length ? "前回の編集内容から未完了の画像が復元されています。" : ""}
-                {contentBlocks
+                {flattenContentBlocks(contentBlocks)
                   .filter((block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image" && block.uploadState === "pending")
                   .map((block) => block.fileName)
                   .join("、") || "未完了の画像"}
@@ -1715,6 +1735,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             onRemovePageBreak={handleEditorRemovePageBreak}
             onInsertPaywall={handleEditorInsertPaywall}
             onRemovePaywall={handleEditorRemovePaywall}
+            onInsertColumns={handleEditorInsertColumns}
             onPasteAutoFormat={(previousBlocks) => setPasteUndoBlocks(previousBlocks)}
           />
           <p className="inline-manuscript-character-count" aria-live="polite">
@@ -1727,35 +1748,13 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         </div>
         </div>
 
-        <aside className="editor-side-column" aria-label="リアルタイムプレビューと設定">
-          <section className="maker-card live-preview-card">
-            <p className="maker-kicker">Realtime preview</p>
-            <h2>{state.title || "無題のWebブック"}</h2>
-            <p>{state.description || "説明文を入力すると、公開時の紹介文として使われます。"}</p>
+        <aside className="editor-side-column" aria-label="設定とMini Preview">
+          <section className="maker-card editor-status-card">
             <p className="maker-note">
               推定ページ数: {estimatedPages} / 20ページ
               <br />
               文章: {textPages}ページ / 挿絵: {imagePages}ページ / 自動保存: {autosaveLabel}
             </p>
-            <div
-              className={`mini-book-preview theme-${state.theme} book-bg-${state.background} book-font-${state.fontFamily} book-size-${state.fontScale} book-leading-${state.lineHeight} book-cover-style-${state.coverStyle} book-image-layout-${state.imageLayout}`}
-              style={{
-                color: state.textColor,
-                borderColor: state.accentColor,
-              }}
-            >
-              <BookCover
-                data={{
-                  title: state.title || "TITLE",
-                  subtitle: state.subtitle,
-                  author: state.author || "Author",
-                  coverImage: state.coverImage,
-                  coverDesign: state.coverDesign,
-                  coverStyle: state.coverStyle,
-                  accentColor: state.accentColor,
-                }}
-              />
-            </div>
           </section>
 
           <EditorMiniPreview
@@ -1765,7 +1764,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             onPageClick={handleMiniPageClick}
           />
 
-        <div className="maker-card">
+        <div className="maker-card editor-cover-settings">
           <h2>表紙画像</h2>
           <div className="cover-picker">
             <div className="cover-preview">
@@ -1792,7 +1791,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           </div>
         </div>
 
-        <div className="maker-card">
+        <div className="maker-card editor-design-settings">
           <h2>デザイン・公開設定</h2>
           <div className="maker-grid">
             <label>
@@ -1808,16 +1807,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               <select value={state.bindingDirection} onChange={(event) => update("bindingDirection", event.target.value as "rtl" | "ltr")}>
                 <option value="rtl">右綴じ</option>
                 <option value="ltr">左綴じ</option>
-              </select>
-            </label>
-            <label>
-              <span>テーマ</span>
-              <select value={state.theme} onChange={(event) => applyThemePreset(event.target.value as ThemeId)}>
-                {themePresets.map((preset) => (
-                  <option key={preset.id} value={preset.id}>
-                    {preset.name}{preset.plan === "plus" ? "（Plus）" : ""}
-                  </option>
-                ))}
               </select>
             </label>
             <label>
@@ -1869,15 +1858,12 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
                 <option value="cafe">カフェ</option>
                 <option value="green">グリーン</option>
                 <option value="night">ナイト</option>
+                <option value="white">ホワイト</option>
               </select>
             </label>
             <label>
               <span>本文テキスト色</span>
               <input value={state.textColor} onChange={(event) => updateColor("textColor", event.target.value)} placeholder="#2f251d" />
-            </label>
-            <label>
-              <span>アクセント色</span>
-              <input value={state.accentColor} onChange={(event) => updateColor("accentColor", event.target.value)} placeholder="#6bb9ad" />
             </label>
             <label>
               <span>表紙スタイル</span>
@@ -1911,25 +1897,6 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
                 <option value="public">公開</option>
               </select>
             </label>
-          </div>
-          <div className="theme-color-presets">
-            {colorPresets.map((preset) => (
-              <button
-                key={preset.name}
-                className="maker-small-button"
-                type="button"
-                onClick={() => {
-                  setState((current) => ({
-                    ...current,
-                    textColor: ensureAaTextColor(preset.text, current.background),
-                    accentColor: preset.accent,
-                  }));
-                  setDirty(true);
-                }}
-              >
-                {preset.name}
-              </button>
-            ))}
           </div>
           {colorContrast < 4.5 ? (
             <p className="maker-note form-error">配色コントラストが低めです（{colorContrast.toFixed(2)}）。本文可読性のため 4.5 以上を推奨します。</p>

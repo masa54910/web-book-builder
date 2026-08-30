@@ -36,6 +36,8 @@ function pageLabel(page: ReaderPage) {
       return page.caption || "画像ページ";
     case "youtube":
       return "YouTube動画";
+    case "columns":
+      return "2カラム";
     case "colophon":
       return "奥付";
     case "backCover":
@@ -71,6 +73,28 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
   }
   if (page.kind === "youtube") {
     return <div className="editor-mini-page-youtube"><span aria-hidden="true">▶</span><strong>YouTube動画</strong></div>;
+  }
+  if (page.kind === "columns") {
+    const columnsGrid = page.ratio === "40-60" ? "2fr 3fr" : page.ratio === "60-40" ? "3fr 2fr" : "1fr 1fr";
+    const renderPane = (children: typeof page.left) => (
+      <div className="editor-mini-columns-pane" style={{ display: "grid", minWidth: 0, overflow: "hidden" }}>
+        {children.map((child) => child.kind === "text" ? (
+          <p key={child.id}>
+            {child.paragraphs.map((paragraph, index) => (
+              <span key={`${child.id}-${index}`}>
+                {index > 0 ? " " : ""}
+                <MiniStyledText text={paragraph} marks={child.paragraphRuns?.[index]} />
+              </span>
+            ))}
+          </p>
+        ) : child.kind === "image" ? (
+          <MiniImageMarker inline key={child.id} />
+        ) : (
+          <span className="editor-mini-inline-youtube" key={child.id}><span aria-hidden="true">▶</span></span>
+        ))}
+      </div>
+    );
+    return <div className="editor-mini-columns" data-columns-ratio={page.ratio} style={{ display: "grid", gridTemplateColumns: columnsGrid, minWidth: 0, overflow: "hidden" }}>{renderPane(page.left)}{renderPane(page.right)}</div>;
   }
   if (page.kind === "cover" || page.kind === "backCover") {
     return <div className="editor-mini-page-cover"><span>{page.kind === "cover" ? "WebBook" : ""}</span></div>;
@@ -143,6 +167,7 @@ export default function EditorMiniPreview({
             <article
               className={`editor-mini-page ${activePageId === page.id ? "is-active" : ""} ${clickable ? "is-clickable" : ""}`}
               key={page.id}
+              data-page-id={page.id}
               role={clickable ? "button" : undefined}
               tabIndex={clickable ? 0 : undefined}
               aria-current={activePageId === page.id ? "page" : undefined}

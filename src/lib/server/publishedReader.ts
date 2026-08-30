@@ -1,7 +1,7 @@
 import "server-only";
 
 import { unstable_noStore } from "next/cache";
-import type { BookContentBlock, BookProject } from "@/lib/bookProject";
+import { flattenContentBlocks, type BookContentBlock, type BookProject } from "@/lib/bookProject";
 import { parseBookProjectJson } from "@/lib/bookProjectNormalization";
 import { normalizeAuthorPageHandle } from "@/lib/authorPage";
 import { filterPublishedProject, visibleContentBlockIds } from "@/lib/publishedReaderSecurity";
@@ -35,7 +35,7 @@ async function resolveImageUrl(value: string | undefined, admin: ReturnType<type
 async function materializeFreeAssets(project: BookProject, visibleBlocks: BookContentBlock[], admin: ReturnType<typeof requireSupabaseAdminClient>) {
   const isFiltered = visibleBlocks.length !== (project.contentBlocks || []).length;
   const visibleBlockIds = visibleContentBlockIds(visibleBlocks);
-  const ids = new Set(visibleBlocks.filter((block) => block.type === "image").map((block) => block.id));
+  const ids = new Set(flattenContentBlocks(visibleBlocks).filter((block) => block.type === "image").map((block) => block.id));
   const images: ImageManifestRow[] = [];
   for (const image of project.images) {
     const id = image.image_id || image.image_index;
@@ -43,10 +43,18 @@ async function materializeFreeAssets(project: BookProject, visibleBlocks: BookCo
     const storagePath = image.storage_path || image.image_url;
     images.push({ ...image, image_url: storagePath, storage_path: storagePath || undefined, public_url: await resolveImageUrl(storagePath || image.public_url, admin) || undefined });
   }
-  const contentBlocks = await Promise.all(visibleBlocks.map(async (block): Promise<BookContentBlock> => {
+  const materializeBlock = async (block: BookContentBlock): Promise<BookContentBlock> => {
+    if (block.type === "columns") {
+      return {
+        ...block,
+        left: { blocks: await Promise.all(block.left.blocks.map((child) => materializeBlock(child as BookContentBlock) as Promise<typeof child>)) },
+        right: { blocks: await Promise.all(block.right.blocks.map((child) => materializeBlock(child as BookContentBlock) as Promise<typeof child>)) },
+      };
+    }
     if (block.type !== "image") return block;
     return { ...block, publicUrl: await resolveImageUrl(block.storagePath || block.publicUrl, admin) || undefined };
-  }));
+  };
+  const contentBlocks = await Promise.all(visibleBlocks.map(materializeBlock));
   return {
     ...project,
     config: {

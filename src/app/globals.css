@@ -1498,6 +1498,69 @@ a {
   cursor: pointer;
 }
 
+.inline-editor-columns {
+  margin: 18px 0;
+  border: 1px solid #c8dbea;
+  border-radius: 10px;
+  background: #f7fbfe;
+  overflow: hidden;
+}
+.inline-editor-columns-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #dce8f1;
+  background: #edf6fb;
+  color: #315a78;
+  font-size: 12px;
+}
+.inline-editor-columns-toolbar span { font-weight: 700; margin-right: auto; }
+.inline-editor-columns-toolbar select,
+.inline-editor-columns-toolbar button {
+  min-height: 28px;
+  border: 1px solid #c4d8e8;
+  border-radius: 5px;
+  background: #fff;
+  color: #214766;
+  font: inherit;
+  padding: 3px 8px;
+}
+.inline-editor-columns-toolbar button { cursor: pointer; }
+.inline-editor-columns-toolbar button:hover,
+.inline-editor-columns-toolbar button:focus-visible { border-color: #198dcc; }
+.inline-editor-columns-panes { display: grid; gap: 1px; background: #dce8f1; }
+.inline-editor-columns-ratio-50-50 .inline-editor-columns-panes { grid-template-columns: 1fr 1fr; }
+.inline-editor-columns-ratio-40-60 .inline-editor-columns-panes { grid-template-columns: 2fr 3fr; }
+.inline-editor-columns-ratio-60-40 .inline-editor-columns-panes { grid-template-columns: 3fr 2fr; }
+.inline-editor-columns-pane {
+  min-height: 84px;
+  padding: 12px;
+  background: #fff;
+  outline: none;
+}
+
+.inline-editor-column-add {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 1px dashed rgba(21, 107, 158, .35);
+  border-radius: 8px;
+  background: rgba(245, 251, 255, .8);
+  color: #156b9e;
+  font-size: 12px;
+  cursor: pointer;
+}
+.inline-editor-column-add:hover,
+.inline-editor-column-add:focus-visible {
+  border-color: #156b9e;
+  background: #fff;
+}
+.inline-editor-columns-pane:focus { box-shadow: inset 0 0 0 2px rgba(25,141,204,.25); }
+.inline-editor-columns-pane p { margin: 0 0 8px; }
+.inline-editor-columns-pane p:last-child { margin-bottom: 0; }
+
 .inline-manuscript-popover-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2873,6 +2936,102 @@ button.reader-edit-link:disabled {
   letter-spacing: 0.025em;
 }
 
+/* A ColumnsBlock is one physical reader page with two internal panes. */
+.columns-reader-page {
+  --columns-grid: 1fr 1fr;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--columns-grid);
+  gap: 18px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 38px 34px 48px;
+  color: var(--book-text-color, #1d1f1f);
+  background: transparent;
+}
+
+.columns-reader-pane {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.columns-reader-pane[data-columns-side="right"] {
+  padding-left: 18px;
+  border-left: 1px solid rgba(54, 58, 57, 0.14);
+}
+
+.columns-reader-divider {
+  display: none;
+}
+
+.columns-reader-child {
+  min-width: 0;
+  margin: 0 0 18px;
+}
+
+.columns-reader-child-text .text-page {
+  height: auto;
+  padding: 0;
+  font-size: clamp(11px, 1.2vw, 14px);
+  line-height: 1.75;
+}
+
+.columns-reader-child-text .text-paragraph {
+  margin-bottom: 0.9em;
+}
+
+.columns-reader-child-image {
+  width: var(--media-display-width, 100%);
+  max-width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.columns-reader-child-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+.columns-reader-child-image small {
+  display: block;
+  margin-top: 5px;
+  color: #77736a;
+  font: 10px/1.45 Inter, "Yu Gothic", sans-serif;
+}
+
+.columns-reader-child-youtube .youtube-page {
+  height: auto;
+  padding: 0;
+}
+
+.columns-reader-child-youtube .youtube-player-shell {
+  width: 100%;
+}
+
+.columns-reader-overflow-warning {
+  position: absolute;
+  right: 18px;
+  bottom: 12px;
+  left: 18px;
+  margin: 0;
+  padding: 5px 8px;
+  border: 1px solid rgba(164, 102, 44, 0.3);
+  border-radius: 4px;
+  color: #7b4b22;
+  background: rgba(255, 247, 230, 0.94);
+  font: 700 9px/1.4 Inter, "Yu Gothic", sans-serif;
+  text-align: center;
+}
+
 .text-page-spacing-compact .text-paragraph {
   margin-bottom: 0.5em;
 }
@@ -3848,6 +4007,15 @@ button.reader-edit-link:disabled {
   top: 14px;
 }
 
+/* Keep the editor's status, cover controls and design controls at the top of
+   the side column; the Mini Preview follows them as the single live preview. */
+.editor-side-column > .editor-status-card { order: 1; }
+.editor-side-column > .editor-cover-settings,
+.editor-side-column > .editor-design-settings { order: 2; }
+.editor-side-column > .editor-mini-preview { order: 3; }
+
+.editor-status-card .maker-note { margin: 0; }
+
 .editor-mini-preview {
   display: grid;
   gap: 12px;
@@ -3948,6 +4116,56 @@ button.reader-edit-link:disabled {
 .editor-mini-page-frame > * {
   width: 100%;
   min-height: 104px;
+}
+
+/* Mini preview representation for a canonical two-column page.  Keep the
+   miniature pane structure visible without allowing long text/media to push
+   the preview card wider than its grid cell. */
+.editor-mini-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  width: 100%;
+  min-width: 0;
+  min-height: 104px;
+  overflow: hidden;
+}
+
+.editor-mini-columns[data-columns-ratio="40-60"] {
+  grid-template-columns: 2fr 3fr;
+}
+
+.editor-mini-columns[data-columns-ratio="60-40"] {
+  grid-template-columns: 3fr 2fr;
+}
+
+.editor-mini-columns-pane {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+  min-height: 104px;
+  padding: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(31,78,112,.14);
+  border-radius: 4px;
+  background: rgba(241,249,254,.72);
+  color: #314b62;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.editor-mini-columns-pane p {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.editor-mini-columns-pane .editor-mini-image-marker,
+.editor-mini-columns-pane .editor-mini-inline-youtube {
+  max-width: 100%;
 }
 
 .editor-mini-page-lines,
@@ -4982,6 +5200,18 @@ button.reader-edit-link:disabled {
   background-color: #1f2528;
 }
 
+.book-bg-white .book-page,
+.book-bg-white .mini-book-preview {
+  --paper: #ffffff;
+  background-color: #ffffff;
+}
+
+/* The editor preview carries the background token on the preview node itself. */
+.mini-book-preview.book-bg-white {
+  --paper: #ffffff;
+  background-color: #ffffff;
+}
+
 .book-font-gothic .text-page,
 .book-font-gothic .mini-book-preview {
   font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif;
@@ -5207,6 +5437,9 @@ button.reader-edit-link:disabled {
     min-height: 360px;
     padding: 14px 14px 18px;
   }
+  .inline-editor-columns-panes { grid-template-columns: 1fr !important; }
+  .inline-editor-columns-toolbar { flex-wrap: wrap; }
+  .inline-editor-columns-toolbar span { flex-basis: 100%; margin-right: 0; }
 
   .inline-manuscript-layout {
     grid-template-columns: 42px minmax(0, 1fr);

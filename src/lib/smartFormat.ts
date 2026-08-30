@@ -38,6 +38,12 @@ export function smartFormatContentBlocks(input: BookContentBlock[]): SmartFormat
   let paragraphs = 0;
 
   for (const block of input) {
+    if (block.type === "columns") {
+      // Columns are already an explicit layout boundary. Smart Format must
+      // preserve the block and its left-to-right child order verbatim.
+      next.push(block);
+      continue;
+    }
     if (block.type !== "text") {
       next.push(block);
       continue;

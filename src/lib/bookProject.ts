@@ -29,15 +29,15 @@ export function normalizeMediaDisplaySize(value: unknown): MediaDisplaySize {
   return value === "small" || value === "large" || value === "full" ? value : "medium";
 }
 
-export type BookContentBlock =
-  | {
+export type BookContentTextBlock = {
       id: string;
       type: "text";
       content: string;
       marks?: TextMark[];
       structureRole?: "chapter" | "subheading";
-    }
-  | {
+    };
+
+export type BookContentImageBlock = {
       id: string;
       type: "image";
       storagePath: string;
@@ -53,15 +53,33 @@ export type BookContentBlock =
       displaySize?: MediaDisplaySize;
       uploadState?: "pending" | "ready" | "error";
       errorMessage?: string;
-    }
-  | {
+    };
+
+export type BookContentYouTubeBlock = {
       id: string;
       type: "youtube";
       videoId: string;
       originalUrl: string;
       displayMode?: MediaDisplayMode;
       displaySize?: MediaDisplaySize;
-    }
+    };
+
+/** Columns intentionally allow only renderable media/text children. */
+export type BookColumnChildBlock = BookContentTextBlock | BookContentImageBlock | BookContentYouTubeBlock;
+export type ColumnsRatio = "50-50" | "40-60" | "60-40";
+
+export type BookColumnsBlock = {
+  id: string;
+  type: "columns";
+  ratio: ColumnsRatio;
+  left: { blocks: BookColumnChildBlock[] };
+  right: { blocks: BookColumnChildBlock[] };
+};
+
+export type BookContentBlock =
+  | BookContentTextBlock
+  | BookContentImageBlock
+  | BookContentYouTubeBlock
   | {
       id: string;
       type: "paywall";
@@ -69,7 +87,8 @@ export type BookContentBlock =
       previousBlockId?: string;
       nextBlockId?: string;
       chapterId?: string;
-    };
+    }
+  | BookColumnsBlock;
 
 /** Create a stable-looking editor block id without depending on array position. */
 export function createContentBlockId(prefix: string) {
@@ -81,18 +100,55 @@ export function createContentBlockId(prefix: string) {
 /** Keep the first valid occurrence and repair only missing/duplicate ids. */
 export function ensureUniqueContentBlockIds(blocks: BookContentBlock[]) {
   const used = new Set<string>();
-  return blocks.map((block) => {
+  const repair = (block: BookContentBlock | BookColumnChildBlock): BookContentBlock | BookColumnChildBlock => {
     const original = typeof block.id === "string" ? block.id.trim() : "";
+    const prefix = block.type === "image" ? "image" : block.type === "youtube" ? "youtube" : block.type === "paywall" ? "paywall" : block.type === "columns" ? "columns" : "paragraph";
+    let nextBlock: BookContentBlock | BookColumnChildBlock = block;
     if (original && !used.has(original)) {
       used.add(original);
-      return original === block.id ? block : { ...block, id: original };
+      nextBlock = original === block.id ? block : { ...block, id: original } as typeof block;
+    } else {
+      let next = createContentBlockId(prefix);
+      while (used.has(next)) next = createContentBlockId(prefix);
+      used.add(next);
+      nextBlock = { ...block, id: next } as typeof block;
     }
-    const prefix = block.type === "image" ? "image" : block.type === "youtube" ? "youtube" : block.type === "paywall" ? "paywall" : "paragraph";
-    let next = createContentBlockId(prefix);
-    while (used.has(next)) next = createContentBlockId(prefix);
-    used.add(next);
-    return { ...block, id: next };
-  });
+    if (nextBlock.type !== "columns") return nextBlock;
+    return {
+      ...nextBlock,
+      left: { blocks: nextBlock.left.blocks.map((child) => repair(child) as BookColumnChildBlock) },
+      right: { blocks: nextBlock.right.blocks.map((child) => repair(child) as BookColumnChildBlock) },
+    };
+  };
+  return blocks.map((block) => repair(block) as BookContentBlock);
+}
+
+export function flattenContentBlocks(blocks: BookContentBlock[]): BookContentBlock[] {
+  return blocks.flatMap((block) => block.type === "columns"
+    ? [block, ...flattenContentBlocks(block.left.blocks as BookContentBlock[]), ...flattenContentBlocks(block.right.blocks as BookContentBlock[])]
+    : [block]);
+}
+
+export function normalizeColumnsRatio(value: unknown): ColumnsRatio {
+  return value === "40-60" || value === "60-40" ? value : "50-50";
+}
+
+export function createColumnsBlock(): BookColumnsBlock {
+  return {
+    id: createContentBlockId("columns"),
+    type: "columns",
+    ratio: "50-50",
+    left: { blocks: [{ id: createContentBlockId("paragraph"), type: "text", content: "" }] },
+    right: { blocks: [{ id: createContentBlockId("paragraph"), type: "text", content: "" }] },
+  };
+}
+
+export function swapColumnsBlock(block: BookColumnsBlock): BookColumnsBlock {
+  return { ...block, left: block.right, right: block.left };
+}
+
+export function unwrapColumnsBlock(block: BookColumnsBlock): BookContentBlock[] {
+  return [...(block.left.blocks as BookContentBlock[]), ...(block.right.blocks as BookContentBlock[])];
 }
 
 export type UploadedBookImage = {
@@ -215,7 +271,9 @@ function normalizeLineBreaks(value: string) {
 }
 
 function isRenderableBlock(block: BookContentBlock) {
-  return block.type !== "text" || Boolean(block.content.trim());
+  if (block.type === "text") return Boolean(block.content.trim());
+  if (block.type === "columns") return block.left.blocks.length > 0 || block.right.blocks.length > 0;
+  return true;
 }
 
 function chapterHeadingBlock(blocks: BookContentBlock[], index: number) {
@@ -273,6 +331,55 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
   let paywallSeen = false;
 
   for (const [index, block] of blocks.entries()) {
+    if (block.type === "columns") {
+      const normalizeChild = (child: BookColumnChildBlock, childIndex: number): BookColumnChildBlock | null => {
+        if (child?.type === "text") {
+          return {
+            id: typeof child.id === "string" ? child.id : blockId("paragraph"),
+            type: "text",
+            content: typeof child.content === "string" ? child.content : "",
+            marks: normalizeTextMarks(typeof child.content === "string" ? child.content : "", child.marks),
+            structureRole: child.structureRole === "chapter" || child.structureRole === "subheading" ? child.structureRole : undefined,
+          };
+        }
+        if (child?.type === "youtube") {
+          if (!isValidYouTubeVideoId(child.videoId)) return null;
+          return {
+            id: typeof child.id === "string" ? child.id : blockId("youtube"),
+            type: "youtube",
+            videoId: child.videoId,
+            originalUrl: typeof child.originalUrl === "string" ? child.originalUrl : `https://www.youtube.com/watch?v=${child.videoId}`,
+            displayMode: child.displayMode === "inline" ? "inline" : "full-page",
+            displaySize: normalizeMediaDisplaySize(child.displaySize),
+          };
+        }
+        if (child?.type !== "image") return null;
+        const storagePath = typeof child.storagePath === "string" && child.storagePath ? child.storagePath : child.publicUrl || "";
+        const uploadState = child.uploadState === "pending" || child.uploadState === "error" || child.uploadState === "ready" ? child.uploadState : undefined;
+        if (!storagePath && uploadState !== "pending" && uploadState !== "error") return null;
+        return {
+          id: typeof child.id === "string" ? child.id : blockId("image"),
+          type: "image",
+          storagePath,
+          publicUrl: typeof child.publicUrl === "string" && child.publicUrl ? child.publicUrl : undefined,
+          fileName: child.fileName || `image-${index + childIndex + 1}`,
+          mimeType: child.mimeType || "image/jpeg",
+          width: Number.isFinite(child.width) && child.width > 0 ? child.width : 1200,
+          height: Number.isFinite(child.height) && child.height > 0 ? child.height : 800,
+          caption: child.caption?.trim() || undefined,
+          altText: child.altText?.trim() || undefined,
+          fitMode: child.fitMode === "cover" ? "cover" : "contain",
+          pageMode: child.pageMode === "inline" ? "inline" : "full-page",
+          displaySize: normalizeMediaDisplaySize(child.displaySize),
+          uploadState,
+          errorMessage: child.errorMessage?.trim() || undefined,
+        };
+      };
+      const left = Array.isArray(block.left?.blocks) ? block.left.blocks.map(normalizeChild).filter((child): child is BookColumnChildBlock => Boolean(child)) : [];
+      const right = Array.isArray(block.right?.blocks) ? block.right.blocks.map(normalizeChild).filter((child): child is BookColumnChildBlock => Boolean(child)) : [];
+      normalized.push({ id: normalizeBlockId(block.id, "columns"), type: "columns", ratio: normalizeColumnsRatio(block.ratio), left: { blocks: left }, right: { blocks: right } });
+      continue;
+    }
     if (block.type === "text") {
       normalized.push({
         id: normalizeBlockId(block.id, "text"),
@@ -308,7 +415,8 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
       typeof block.storagePath === "string" && block.storagePath
         ? block.storagePath
         : block.publicUrl || "";
-    if (!storagePath) continue;
+    const uploadState = block.uploadState === "pending" || block.uploadState === "error" || block.uploadState === "ready" ? block.uploadState : undefined;
+    if (!storagePath && uploadState !== "pending" && uploadState !== "error") continue;
 
     normalized.push({
       id: normalizeBlockId(block.id, "image"),
@@ -324,7 +432,7 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
       fitMode: block.fitMode === "cover" ? "cover" : "contain",
       pageMode: block.pageMode === "inline" ? "inline" : "full-page",
       displaySize: normalizeMediaDisplaySize(block.displaySize),
-      uploadState: block.uploadState,
+      uploadState,
       errorMessage: block.errorMessage?.trim() || undefined,
     });
   }
@@ -341,8 +449,14 @@ export function normalizePastedText(value: string) {
     .replace(/\n{3,}/g, "\n\n");
 }
 
-export function contentBlocksToRawText(blocks: BookContentBlock[]) {
-  const parts = blocks.map((block) => {
+export function contentBlocksToRawText(blocks: BookContentBlock[]): string {
+  const parts: string[] = blocks.map((block) => {
+    if (block.type === "columns") {
+      return contentBlocksToRawText([
+        ...(block.left.blocks as BookContentBlock[]),
+        ...(block.right.blocks as BookContentBlock[]),
+      ]);
+    }
     if (block.type === "text") {
       return block.content;
     }
@@ -380,11 +494,21 @@ export function stripRuntimeAssetUrls(project: BookProject): BookProject {
       ...image,
       public_url: undefined,
     })),
-    contentBlocks: project.contentBlocks?.map((block) =>
-      block.type === "image"
+    contentBlocks: project.contentBlocks?.map((block) => {
+      if (block.type === "columns") {
+        const stripChild = (child: BookColumnChildBlock) => child.type === "image"
+          ? { ...child, publicUrl: undefined }
+          : child;
+        return {
+          ...block,
+          left: { blocks: block.left.blocks.map(stripChild) },
+          right: { blocks: block.right.blocks.map(stripChild) },
+        };
+      }
+      return block.type === "image"
         ? { ...block, publicUrl: undefined }
-        : block,
-    ),
+        : block;
+    }),
   };
 }
 
@@ -594,8 +718,7 @@ function buildImageRows(images: UploadedBookImage[]): ImageManifestRow[] {
 
 function imageRowsFromBlocks(blocks: BookContentBlock[], legacyImages: UploadedBookImage[]) {
   const legacyById = new Map(legacyImages.map((image) => [image.id, image]));
-
-  return blocks
+  return flattenContentBlocks(blocks)
     .filter((block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image")
     .map((block) => {
       const legacy = legacyById.get(block.id);
@@ -631,13 +754,13 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
   );
   const rawText = contentBlocksToRawText(contentBlocks);
 
-  const pendingImage = contentBlocks.find(
+  const pendingImage = flattenContentBlocks(contentBlocks).find(
     (block) => block.type === "image" && block.uploadState === "pending",
   );
   if (pendingImage) {
     errors.rawText = "画像の読み込みが完了してから保存してください。";
   }
-  const failedImage = contentBlocks.find(
+  const failedImage = flattenContentBlocks(contentBlocks).find(
     (block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image" && block.uploadState === "error",
   );
   if (failedImage) {

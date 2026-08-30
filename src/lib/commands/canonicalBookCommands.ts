@@ -7,7 +7,7 @@ import {
   type CanonicalPublicationStatus,
   type CanonicalPublicationVisibility,
 } from "@/lib/canonicalBook";
-import type { BookProject } from "@/lib/bookProject";
+import type { BookContentBlock, BookProject } from "@/lib/bookProject";
 import {
   assertBookCreationAvailable,
   getBook,
@@ -42,6 +42,18 @@ export class CanonicalBookCommandError extends Error {
 }
 
 function projectWithoutAssets(project: BookProject): BookProject {
+  const stripBlock = (block: BookContentBlock): BookContentBlock => {
+    if (block.type === "columns") {
+      return {
+        ...block,
+        left: { blocks: block.left.blocks.map((child) => stripBlock(child as BookContentBlock) as typeof child) },
+        right: { blocks: block.right.blocks.map((child) => stripBlock(child as BookContentBlock) as typeof child) },
+      };
+    }
+    return block.type === "image"
+      ? { ...block, storagePath: "", publicUrl: undefined, uploadState: "ready" }
+      : block;
+  };
   return {
     ...project,
     config: {
@@ -50,16 +62,7 @@ function projectWithoutAssets(project: BookProject): BookProject {
       coverImageUrl: undefined,
     },
     images: [],
-    contentBlocks: project.contentBlocks?.map((block) =>
-      block.type === "image"
-        ? {
-            ...block,
-            storagePath: "",
-            publicUrl: undefined,
-            uploadState: "ready",
-          }
-        : block,
-    ),
+    contentBlocks: project.contentBlocks?.map(stripBlock),
   };
 }
 

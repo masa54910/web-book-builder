@@ -6,9 +6,16 @@ import {
   contentBlocksFromLegacy,
   createContentBlockId,
   ensureUniqueContentBlockIds,
+  flattenContentBlocks,
   normalizeMediaDisplaySize,
   normalizePastedText,
+  normalizeColumnsRatio,
+  swapColumnsBlock,
+  unwrapColumnsBlock,
+  type BookColumnChildBlock,
+  type BookColumnsBlock,
   type BookContentBlock,
+  type ColumnsRatio,
   type MediaDisplayMode,
   type MediaDisplaySize,
 } from "@/lib/bookProject";
@@ -69,6 +76,10 @@ function parseStyledParagraph(paragraph: HTMLElement) {
     const next: Partial<TextMark> = { ...inherited };
     const tag = node.tagName.toLowerCase();
     if (tag === "strong" || tag === "b") next.bold = true;
+    if (tag === "br") {
+      content += "\n";
+      return;
+    }
     const dataColor = node.dataset.textColor || node.style.color;
     if ((TEXT_COLORS as readonly string[]).includes(dataColor)) next.color = dataColor as TextColor;
     const size = node.dataset.fontSize;
@@ -109,6 +120,61 @@ function imageId() {
 function parseEditorDom(root: HTMLElement): BookContentBlock[] {
   const blocks: BookContentBlock[] = [];
   const children = Array.from(root.children);
+
+  const parseColumnPane = (pane: HTMLElement): BookColumnChildBlock[] => {
+    const parsed: BookColumnChildBlock[] = [];
+    for (const [index, child] of Array.from(pane.children).entries()) {
+      if (!(child instanceof HTMLElement)) continue;
+      if (child.dataset.columnAdd) continue;
+      if (child.dataset.nodeType === "image") {
+        const storagePath = child.dataset.storagePath || child.dataset.publicUrl || "";
+        const uploadState = child.dataset.uploadState === "pending" || child.dataset.uploadState === "error" || child.dataset.uploadState === "ready"
+          ? child.dataset.uploadState
+          : undefined;
+        if (!storagePath && uploadState !== "pending" && uploadState !== "error") continue;
+        parsed.push({
+          id: child.dataset.nodeId || imageId(),
+          type: "image",
+          storagePath,
+          publicUrl: child.dataset.publicUrl || undefined,
+          fileName: child.dataset.fileName || `column-image-${index + 1}`,
+          mimeType: child.dataset.mimeType || "image/jpeg",
+          width: Number(child.dataset.width || 1200),
+          height: Number(child.dataset.height || 800),
+          caption: child.dataset.caption || undefined,
+          altText: child.dataset.altText || undefined,
+          fitMode: child.dataset.fitMode === "cover" ? "cover" : "contain",
+          pageMode: child.dataset.pageMode === "inline" ? "inline" : "full-page",
+          displaySize: normalizeMediaDisplaySize(child.dataset.displaySize),
+          uploadState,
+          errorMessage: child.dataset.errorMessage || undefined,
+        });
+        continue;
+      }
+      if (child.dataset.nodeType === "youtube") {
+        const videoId = child.dataset.videoId || "";
+        if (!videoId) continue;
+        parsed.push({
+          id: child.dataset.nodeId || createContentBlockId("youtube"),
+          type: "youtube",
+          videoId,
+          originalUrl: child.dataset.originalUrl || `https://www.youtube.com/watch?v=${videoId}`,
+          displayMode: child.dataset.displayMode === "inline" ? "inline" : "full-page",
+          displaySize: normalizeMediaDisplaySize(child.dataset.displaySize),
+        });
+        continue;
+      }
+      const styled = parseStyledParagraph(child);
+      parsed.push({
+        id: child.dataset.nodeId || paragraphId(),
+        type: "text",
+        content: styled.content,
+        marks: styled.marks,
+        structureRole: child.dataset.structureRole === "chapter" || child.dataset.structureRole === "subheading" ? child.dataset.structureRole : undefined,
+      });
+    }
+    return parsed;
+  };
 
   for (const [index, child] of children.entries()) {
     if (child instanceof HTMLElement && child.dataset.nodeType === "page-break") {
@@ -152,6 +218,18 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
     }
     if (child instanceof HTMLElement && child.dataset.nodeType === "paywall") {
       blocks.push({ id: child.dataset.nodeId || createContentBlockId("paywall"), type: "paywall" });
+      continue;
+    }
+    if (child instanceof HTMLElement && child.dataset.nodeType === "columns") {
+      const left = child.querySelector<HTMLElement>("[data-column-side='left']");
+      const right = child.querySelector<HTMLElement>("[data-column-side='right']");
+      blocks.push({
+        id: child.dataset.nodeId || createContentBlockId("columns"),
+        type: "columns",
+        ratio: normalizeColumnsRatio(child.dataset.ratio),
+        left: { blocks: left ? parseColumnPane(left) : [] },
+        right: { blocks: right ? parseColumnPane(right) : [] },
+      });
       continue;
     }
 
@@ -278,6 +356,70 @@ function createPaywallElement(block: Extract<BookContentBlock, { type: "paywall"
   return wrapper;
 }
 
+function createColumnsElement(block: BookColumnsBlock) {
+  const wrapper = document.createElement("div");
+  wrapper.dataset.nodeType = "columns";
+  wrapper.dataset.nodeId = block.id;
+  wrapper.dataset.ratio = block.ratio;
+  wrapper.className = `inline-editor-columns inline-editor-columns-ratio-${block.ratio}`;
+  wrapper.contentEditable = "false";
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "inline-editor-columns-toolbar";
+  const label = document.createElement("span");
+  label.textContent = "2カラム";
+  const ratio = document.createElement("select");
+  ratio.dataset.columnAction = "ratio";
+  ratio.dataset.columnId = block.id;
+  ratio.setAttribute("aria-label", "カラム比率");
+  for (const value of ["50-50", "40-60", "60-40"] as ColumnsRatio[]) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    option.selected = value === block.ratio;
+    ratio.append(option);
+  }
+  const swap = document.createElement("button");
+  swap.type = "button";
+  swap.dataset.columnAction = "swap";
+  swap.dataset.columnId = block.id;
+  swap.textContent = "左右を入れ替え";
+  const unwrap = document.createElement("button");
+  unwrap.type = "button";
+  unwrap.dataset.columnAction = "unwrap";
+  unwrap.dataset.columnId = block.id;
+  unwrap.textContent = "解除";
+  toolbar.append(label, ratio, swap, unwrap);
+
+  const panes = document.createElement("div");
+  panes.className = "inline-editor-columns-panes";
+  const createPane = (side: "left" | "right", children: BookColumnChildBlock[]) => {
+    const pane = document.createElement("div");
+    pane.dataset.columnSide = side;
+    pane.className = `inline-editor-columns-pane inline-editor-columns-pane-${side}`;
+    pane.contentEditable = "true";
+    for (const child of children) {
+      pane.append(child.type === "text" ? createParagraphElement(child) : child.type === "image" ? createImageElement(child) : createYouTubeElement(child));
+    }
+    if (!children.length) {
+      const empty = createParagraphElement({ id: paragraphId(), type: "text", content: "" });
+      pane.append(empty);
+    }
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "inline-editor-column-add";
+    add.dataset.columnAdd = side;
+    add.dataset.columnId = block.id;
+    add.contentEditable = "false";
+    add.textContent = "＋ 内容を追加";
+    pane.append(add);
+    return pane;
+  };
+  panes.append(createPane("left", block.left.blocks), createPane("right", block.right.blocks));
+  wrapper.append(toolbar, panes);
+  return wrapper;
+}
+
 function renderNodes(root: HTMLElement, nodes: BookContentBlock[], pageBreakAfterBlockIds: string[] = []) {
   const fragment = document.createDocumentFragment();
   const breakIds = new Set(pageBreakAfterBlockIds);
@@ -288,6 +430,8 @@ function renderNodes(root: HTMLElement, nodes: BookContentBlock[], pageBreakAfte
       fragment.append(createImageElement(block));
     } else if (block.type === "youtube") {
       fragment.append(createYouTubeElement(block));
+    } else if (block.type === "columns") {
+      fragment.append(createColumnsElement(block));
     } else {
       fragment.append(createPaywallElement(block));
     }
@@ -369,6 +513,92 @@ function findParagraphTarget(root: HTMLElement, range?: Range | null) {
   return null;
 }
 
+type ColumnParagraphTarget = {
+  columnId: string;
+  side: "left" | "right";
+  childIndex: number;
+  paragraph: HTMLElement;
+};
+
+function findColumnParagraphTarget(root: HTMLElement, paragraph: HTMLElement): ColumnParagraphTarget | null {
+  const pane = paragraph.closest<HTMLElement>("[data-column-side]");
+  const column = pane?.closest<HTMLElement>("[data-node-type='columns']");
+  if (!pane || !column || !root.contains(column)) return null;
+  const side = pane.dataset.columnSide;
+  const columnId = column.dataset.nodeId;
+  if ((side !== "left" && side !== "right") || !columnId) return null;
+  const childIndex = Array.from(pane.children).indexOf(paragraph);
+  return childIndex >= 0 ? { columnId, side, childIndex, paragraph } : null;
+}
+
+function updateColumnChild(
+  blocks: BookContentBlock[],
+  target: Pick<ColumnParagraphTarget, "columnId" | "side" | "childIndex">,
+  update: (child: BookColumnChildBlock) => BookColumnChildBlock,
+) {
+  return blocks.map((block) => {
+    if (block.type !== "columns" || block.id !== target.columnId) return block;
+    const children = [...block[target.side].blocks];
+    const child = children[target.childIndex];
+    if (!child) return block;
+    children[target.childIndex] = update(child);
+    return { ...block, [target.side]: { blocks: children } } as BookColumnsBlock;
+  });
+}
+
+type ColumnInsertTarget = {
+  columnId: string;
+  side: "left" | "right";
+  childIndex: number;
+};
+
+function insertColumnChild(blocks: BookContentBlock[], target: ColumnInsertTarget, child: BookColumnChildBlock) {
+  return blocks.map((block) => {
+    if (block.type !== "columns" || block.id !== target.columnId) return block;
+    const children = [...block[target.side].blocks];
+    children.splice(Math.max(0, Math.min(target.childIndex, children.length)), 0, child);
+    return { ...block, [target.side]: { blocks: children } } as BookColumnsBlock;
+  });
+}
+
+function findContentBlockById(blocks: BookContentBlock[], nodeId: string): BookContentBlock | null {
+  for (const block of blocks) {
+    if (block.id === nodeId) return block;
+    if (block.type === "columns") {
+      const nested = findContentBlockById(block.left.blocks as BookContentBlock[], nodeId) || findContentBlockById(block.right.blocks as BookContentBlock[], nodeId);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
+function updateContentBlockById(blocks: BookContentBlock[], nodeId: string, patch: Partial<BookContentBlock>): BookContentBlock[] {
+  return blocks.map((block) => {
+    if (block.id === nodeId) return { ...block, ...patch } as BookContentBlock;
+    if (block.type !== "columns") return block;
+    return {
+      ...block,
+      left: { blocks: updateContentBlockById(block.left.blocks as BookContentBlock[], nodeId, patch) as BookColumnChildBlock[] },
+      right: { blocks: updateContentBlockById(block.right.blocks as BookContentBlock[], nodeId, patch) as BookColumnChildBlock[] },
+    };
+  });
+}
+
+function removeContentBlockById(blocks: BookContentBlock[], nodeId: string): BookContentBlock[] {
+  const next: BookContentBlock[] = [];
+  for (const block of blocks) {
+    if (block.id === nodeId) continue;
+    if (block.type === "columns") {
+      next.push({
+        ...block,
+        left: { blocks: removeContentBlockById(block.left.blocks as BookContentBlock[], nodeId) as BookColumnChildBlock[] },
+        right: { blocks: removeContentBlockById(block.right.blocks as BookContentBlock[], nodeId) as BookColumnChildBlock[] },
+      });
+    } else next.push(block);
+  }
+  return next;
+}
+
 function setParagraphSelection(paragraph: HTMLElement, start: number, end: number) {
   const range = document.createRange();
   const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
@@ -434,6 +664,7 @@ type Props = {
   onRemovePageBreak?: (blockId: string) => void;
   onInsertPaywall?: () => void;
   onRemovePaywall?: (blockId: string) => void;
+  onInsertColumns?: () => void;
   onPasteAutoFormat?: (previousBlocks: BookContentBlock[]) => void;
 };
 
@@ -450,12 +681,14 @@ export default function InlineManuscriptEditor({
   onRemovePageBreak,
   onInsertPaywall,
   onRemovePaywall,
+  onInsertColumns,
   onPasteAutoFormat,
 }: Props) {
   const editorRef = useRef<HTMLElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
+  const columnInsertTargetRef = useRef<ColumnInsertTarget | null>(null);
   const nodesRef = useRef<BookContentBlock[]>(value);
   const renderedRevisionRef = useRef<string | null>(null);
   const renderedBreakSignatureRef = useRef("");
@@ -522,9 +755,31 @@ export default function InlineManuscriptEditor({
   const emitChange = useCallback((next: BookContentBlock[]) => {
     nodesRef.current = next;
     onChange(next);
-    const nextPending = next.filter((block) => block.type === "image" && block.uploadState === "pending").length;
+    const nextPending = flattenContentBlocks(next).filter((block) => block.type === "image" && block.uploadState === "pending").length;
     onPendingChange(nextPending);
   }, [onChange, onPendingChange]);
+
+  const handleColumnsAction = useCallback((id: string, action: "ratio" | "swap" | "unwrap", ratio?: ColumnsRatio) => {
+    const index = nodesRef.current.findIndex((block) => block.id === id && block.type === "columns");
+    if (index < 0) return;
+    const current = nodesRef.current[index];
+    if (current.type !== "columns") return;
+    let next: BookContentBlock[];
+    if (action === "unwrap") {
+      next = [...nodesRef.current.slice(0, index), ...unwrapColumnsBlock(current), ...nodesRef.current.slice(index + 1)];
+    } else {
+      const updated = action === "swap"
+        ? swapColumnsBlock(current)
+        : { ...current, ratio: normalizeColumnsRatio(ratio) };
+      next = [...nodesRef.current];
+      next[index] = updated;
+    }
+    const normalized = ensureUniqueContentBlockIds(next);
+    emitChange(normalized);
+    const root = rootRef.current;
+    if (root) renderNodes(root, normalized, pageBreakAfterBlockIds);
+    onStatus(action === "unwrap" ? "2カラムを解除しました。" : action === "swap" ? "左右のカラムを入れ替えました。" : "カラム比率を変更しました。");
+  }, [emitChange, onStatus, pageBreakAfterBlockIds]);
 
   const applyMarkToSelection = useCallback((patch: Partial<Pick<TextMark, "bold" | "color" | "fontSize">>) => {
     const root = rootRef.current;
@@ -532,6 +787,45 @@ export default function InlineManuscriptEditor({
     if (!root || !range || range.collapsed) return;
     const paragraph = findParagraphTarget(root, range);
     if (!paragraph) return;
+
+    // Columns children are rendered inside their own pane rather than as
+    // direct editor children. Resolve the selected paragraph back to its
+    // canonical column/side/child before falling back to the top-level path.
+    const nestedTarget = findColumnParagraphTarget(root, paragraph);
+    if (nestedTarget) {
+      const column = nodesRef.current.find((block): block is BookColumnsBlock =>
+        block.type === "columns" && block.id === nestedTarget.columnId,
+      );
+      const child = column?.[nestedTarget.side].blocks[nestedTarget.childIndex];
+      if (!child || child.type !== "text") return;
+
+      const start = getTextOffsetWithinParagraph(paragraph, range);
+      const endRange = range.cloneRange();
+      endRange.collapse(false);
+      const end = getTextOffsetWithinParagraph(paragraph, endRange);
+      const from = Math.min(start, end);
+      const to = Math.max(start, end);
+      const nextPatch = patch.bold === true
+        ? { ...patch, bold: !marksCoverRange(child.marks, from, to, "bold") }
+        : patch;
+      const next = updateColumnChild(nodesRef.current, nestedTarget, (current) => (
+        current.id === child.id && current.type === "text"
+          ? { ...current, marks: applyTextMark(current.content, current.marks, from, to, nextPatch) }
+          : current
+      ));
+      emitChange(next);
+      renderNodes(root, next, pageBreakAfterBlockIds);
+      const rendered = root.querySelector<HTMLElement>(
+        `[data-node-type="columns"][data-node-id="${CSS.escape(nestedTarget.columnId)}"] [data-column-side="${nestedTarget.side}"] [data-node-id="${CSS.escape(child.id)}"]`,
+      );
+      if (rendered) {
+        const restored = setParagraphSelection(rendered, from, to);
+        savedRangeRef.current = restored?.cloneRange() || null;
+      }
+      captureSelectionRange();
+      return;
+    }
+
     const nodeIndex = editorBlockIndex(root, paragraph);
     const block = nodeIndex >= 0 ? nodesRef.current[nodeIndex] : undefined;
     if (!block || block.type !== "text") return;
@@ -555,16 +849,16 @@ export default function InlineManuscriptEditor({
   }, [captureSelectionRange, emitChange, pageBreakAfterBlockIds]);
 
   const pendingCount = useMemo(
-    () => value.filter((block) => block.type === "image" && block.uploadState === "pending").length,
+    () => flattenContentBlocks(value).filter((block) => block.type === "image" && block.uploadState === "pending").length,
     [value],
   );
 
   const selectedImage = useMemo(
-    () => value.find((block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image" && block.id === selectedImageId) ?? null,
+    () => selectedImageId ? findContentBlockById(value, selectedImageId) as Extract<BookContentBlock, { type: "image" }> | null : null,
     [selectedImageId, value],
   );
   const selectedYouTube = useMemo(
-    () => value.find((block): block is Extract<BookContentBlock, { type: "youtube" }> => block.type === "youtube" && block.id === selectedYouTubeId) ?? null,
+    () => selectedYouTubeId ? findContentBlockById(value, selectedYouTubeId) as Extract<BookContentBlock, { type: "youtube" }> | null : null,
     [selectedYouTubeId, value],
   );
 
@@ -590,7 +884,7 @@ export default function InlineManuscriptEditor({
   }, [pageBreakAfterBlockIds, pageBreakSignature, reportCursor, revision, value]);
 
   const updateNode = (nodeId: string, patch: Partial<BookContentBlock>) => {
-    const next = nodesRef.current.map((node) => (node.id === nodeId ? { ...node, ...patch } as BookContentBlock : node));
+    const next = updateContentBlockById(nodesRef.current, nodeId, patch);
     emitChange(next);
     if (rootRef.current) renderNodes(rootRef.current, next, pageBreakAfterBlockIds);
   };
@@ -714,7 +1008,7 @@ export default function InlineManuscriptEditor({
   }, [onCursorChange, reportCursor, scrollRequest]);
 
   const removeNode = (nodeId: string) => {
-    const remaining = nodesRef.current.filter((node) => node.id !== nodeId);
+    const remaining = removeContentBlockById(nodesRef.current, nodeId);
     const next = remaining.length ? remaining : [{ id: paragraphId(), type: "text" as const, content: "" }];
     emitChange(next);
     if (rootRef.current) renderNodes(rootRef.current, next, pageBreakAfterBlockIds);
@@ -753,7 +1047,7 @@ export default function InlineManuscriptEditor({
         }
       }
     } finally {
-      const nextPending = nodesRef.current.filter((block) => block.type === "image" && block.uploadState === "pending").length;
+      const nextPending = flattenContentBlocks(nodesRef.current).filter((block) => block.type === "image" && block.uploadState === "pending").length;
       onPendingChange(nextPending);
     }
   }
@@ -766,7 +1060,50 @@ export default function InlineManuscriptEditor({
     const activeRange = (dropRange ?? savedRangeRef.current ?? selectionRange)?.cloneRange() ?? null;
     const paragraphTarget = findParagraphTarget(root, activeRange);
 
+    const columnTarget = columnInsertTargetRef.current;
+    if (columnTarget) {
+      columnInsertTargetRef.current = null;
+      const pendingImages = files.map((file) =>
+        createPendingImageBlock(`pending-${crypto.randomUUID()}`, file.name, file.type),
+      );
+      const nextBlocks = pendingImages.reduce(
+        (current, image, index) => insertColumnChild(current, { ...columnTarget, childIndex: columnTarget.childIndex + index }, image),
+        nodesRef.current,
+      );
+      emitChange(ensureUniqueContentBlockIds(nextBlocks));
+      const rendered = nodesRef.current;
+      if (rootRef.current) renderNodes(rootRef.current, rendered, pageBreakAfterBlockIds);
+      if (pendingImages.length) setSelectedImageId(pendingImages[pendingImages.length - 1].id);
+      await finishUpload(files, pendingImages.map((image) => image.id));
+      return;
+    }
+
     if (paragraphTarget && activeRange) {
+      const nestedTarget = findColumnParagraphTarget(root, paragraphTarget);
+      if (nestedTarget) {
+        const column = nodesRef.current.find((block): block is BookColumnsBlock => block.type === "columns" && block.id === nestedTarget.columnId);
+        const current = column?.[nestedTarget.side].blocks[nestedTarget.childIndex];
+        if (current?.type === "text") {
+          const split = splitParagraphAtCaret(paragraphTarget, activeRange);
+          const pendingImages = files.map((file) => createPendingImageBlock(`pending-${crypto.randomUUID()}`, file.name, file.type));
+          const replacement: BookColumnChildBlock[] = [];
+          if (split.before) replacement.push({ ...current, content: split.before, marks: sliceTextMarks(current.marks, 0, split.before.length) });
+          replacement.push(...pendingImages);
+          if (split.after) replacement.push({ id: paragraphId(), type: "text", content: split.after, marks: sliceTextMarks(current.marks, split.before.length, current.content.length) });
+          let nextBlocks = nodesRef.current.map((block) => {
+            if (block.type !== "columns" || block.id !== nestedTarget.columnId) return block;
+            const children = [...block[nestedTarget.side].blocks];
+            children.splice(nestedTarget.childIndex, 1, ...replacement);
+            return { ...block, [nestedTarget.side]: { blocks: children } } as BookColumnsBlock;
+          });
+          nextBlocks = ensureUniqueContentBlockIds(nextBlocks);
+          emitChange(nextBlocks);
+          renderNodes(root, nextBlocks, pageBreakAfterBlockIds);
+          if (pendingImages.length) setSelectedImageId(pendingImages[pendingImages.length - 1].id);
+          await finishUpload(files, pendingImages.map((image) => image.id));
+          return;
+        }
+      }
       const nodeIndex = editorBlockIndex(root, paragraphTarget);
       if (nodeIndex >= 0) {
         const currentParagraph = nodesRef.current[nodeIndex];
@@ -815,11 +1152,49 @@ export default function InlineManuscriptEditor({
     const root = rootRef.current;
     const activeRange = root ? (savedRangeRef.current ?? cloneSelectionRange(root))?.cloneRange() ?? null : null;
     const paragraphTarget = root ? findParagraphTarget(root, activeRange) : null;
+    const columnTarget = root && paragraphTarget ? findColumnParagraphTarget(root, paragraphTarget) : null;
     let nextBlocks: BookContentBlock[];
 
     if (paragraphTarget && activeRange) {
+      if (!root) return;
       const nodeIndex = editorBlockIndex(root as HTMLElement, paragraphTarget);
       const current = nodeIndex >= 0 ? nodesRef.current[nodeIndex] : undefined;
+      if (columnTarget) {
+        const column = nodesRef.current.find((block): block is BookColumnsBlock => block.type === "columns" && block.id === columnTarget.columnId);
+        const columnChild = column?.[columnTarget.side].blocks[columnTarget.childIndex];
+        if (columnChild?.type === "text") {
+          const startRange = activeRange.cloneRange();
+          const endRange = activeRange.cloneRange();
+          startRange.collapse(true);
+          endRange.collapse(false);
+          const start = getTextOffsetWithinParagraph(paragraphTarget, startRange);
+          const end = getTextOffsetWithinParagraph(paragraphTarget, endRange);
+          const before = columnChild.content.slice(0, start);
+          const after = columnChild.content.slice(end);
+          const replacement: BookColumnChildBlock[] = [];
+          if (before) replacement.push({ ...columnChild, content: before, marks: sliceTextMarks(columnChild.marks, 0, start) });
+          replacement.push(...pastedBlocks.filter((block): block is Extract<BookContentBlock, { type: "text" }> => block.type === "text"));
+          if (after) replacement.push({ id: createContentBlockId("paragraph"), type: "text", content: after, marks: sliceTextMarks(columnChild.marks, end, columnChild.content.length) });
+          nextBlocks = updateColumnChild(nodesRef.current, columnTarget, () => replacement[0] || { ...columnChild, content: "" });
+          if (replacement.length > 1) {
+            nextBlocks = nextBlocks.map((block) => {
+              if (block.type !== "columns" || block.id !== columnTarget.columnId) return block;
+              const children = [...block[columnTarget.side].blocks];
+              children.splice(columnTarget.childIndex, 1, ...replacement);
+              return { ...block, [columnTarget.side]: { blocks: children } };
+            });
+          }
+          onPasteAutoFormat?.(nodesRef.current);
+          nextBlocks = ensureUniqueContentBlockIds(nextBlocks);
+          emitChange(nextBlocks);
+          renderNodes(root, nextBlocks, pageBreakAfterBlockIds);
+          const selector = `[data-node-type='columns'][data-node-id="${CSS.escape(columnTarget.columnId)}"] [data-column-side="${columnTarget.side}"] [data-node-id="${CSS.escape((replacement.at(-1) || columnChild).id)}"]`;
+          const last = root.querySelector<HTMLElement>(selector);
+          if (last) setCaretAtStartNode(last);
+          onStatus("カラム内へテキストを貼り付けました。");
+          return;
+        }
+      }
       if (current?.type === "text") {
         const startRange = activeRange.cloneRange();
         const endRange = activeRange.cloneRange();
@@ -886,12 +1261,60 @@ export default function InlineManuscriptEditor({
 
     const root = rootRef.current;
     if (!root) return;
+    const columnTarget = columnInsertTargetRef.current;
+    if (columnTarget) {
+      columnInsertTargetRef.current = null;
+      const youtubeBlock = {
+        id: createContentBlockId("youtube"),
+        type: "youtube" as const,
+        videoId: parsed.videoId,
+        originalUrl: parsed.canonicalUrl,
+        displayMode: youtubeDisplayMode,
+        displaySize: youtubeDisplaySize,
+      };
+      const nextBlocks = insertColumnChild(nodesRef.current, columnTarget, youtubeBlock);
+      emitChange(ensureUniqueContentBlockIds(nextBlocks));
+      renderNodes(root, nodesRef.current, pageBreakAfterBlockIds);
+      setSelectedYouTubeId(youtubeBlock.id);
+      setIsYouTubeModalOpen(false);
+      return;
+    }
     const activeRange = (savedRangeRef.current ?? cloneSelectionRange(root))?.cloneRange() ?? null;
     const paragraphTarget = findParagraphTarget(root, activeRange);
     if (!paragraphTarget || !activeRange) {
       const message = "動画を入れる位置にカーソルを置いてください。";
       setYoutubeError(message);
       onStatus(message);
+      return;
+    }
+    const nestedTarget = findColumnParagraphTarget(root, paragraphTarget);
+    if (nestedTarget) {
+      const column = nodesRef.current.find((block): block is BookColumnsBlock => block.type === "columns" && block.id === nestedTarget.columnId);
+      const current = column?.[nestedTarget.side].blocks[nestedTarget.childIndex];
+      if (!current || current.type !== "text") return;
+      const split = splitParagraphAtCaret(paragraphTarget, activeRange);
+      const replacement: BookColumnChildBlock[] = [];
+      if (split.before) replacement.push({ ...current, content: split.before, marks: sliceTextMarks(current.marks, 0, split.before.length) });
+      const youtubeBlock = {
+        id: createContentBlockId("youtube"),
+        type: "youtube" as const,
+        videoId: parsed.videoId,
+        originalUrl: parsed.canonicalUrl,
+        displayMode: youtubeDisplayMode,
+        displaySize: youtubeDisplaySize,
+      };
+      replacement.push(youtubeBlock);
+      if (split.after) replacement.push({ id: paragraphId(), type: "text", content: split.after, marks: sliceTextMarks(current.marks, split.before.length, current.content.length) });
+      const nextBlocks = ensureUniqueContentBlockIds(nodesRef.current.map((block) => {
+        if (block.type !== "columns" || block.id !== nestedTarget.columnId) return block;
+        const children = [...block[nestedTarget.side].blocks];
+        children.splice(nestedTarget.childIndex, 1, ...replacement);
+        return { ...block, [nestedTarget.side]: { blocks: children } } as BookColumnsBlock;
+      }));
+      emitChange(nextBlocks);
+      renderNodes(root, nextBlocks, pageBreakAfterBlockIds);
+      setSelectedYouTubeId(youtubeBlock.id);
+      setIsYouTubeModalOpen(false);
       return;
     }
     const nodeIndex = editorBlockIndex(root, paragraphTarget);
@@ -980,6 +1403,23 @@ export default function InlineManuscriptEditor({
               <button
                 type="button"
                 role="menuitem"
+                onClick={() => {
+                  const target = columnInsertTargetRef.current;
+                  setIsInsertMenuOpen(false);
+                  if (!target) return;
+                  columnInsertTargetRef.current = null;
+                  const child = { id: paragraphId(), type: "text" as const, content: "" };
+                  const next = ensureUniqueContentBlockIds(insertColumnChild(nodesRef.current, target, child));
+                  emitChange(next);
+                  if (rootRef.current) renderNodes(rootRef.current, next, pageBreakAfterBlockIds);
+                  onStatus("カラム内へ文章を追加しました。");
+                }}
+              >
+                文章を追加
+              </button>
+              <button
+                type="button"
+                role="menuitem"
                 onMouseDown={(event) => {
                   captureSelectionRange();
                   event.preventDefault();
@@ -1031,6 +1471,20 @@ export default function InlineManuscriptEditor({
               >
                 🔒 ここから有料
               </button>
+              <button
+                type="button"
+                role="menuitem"
+                onMouseDown={(event) => {
+                  captureSelectionRange();
+                  event.preventDefault();
+                }}
+                onClick={() => {
+                  setIsInsertMenuOpen(false);
+                  onInsertColumns?.();
+                }}
+              >
+                2カラムを挿入
+              </button>
             </div>
           ) : null}
         </div>
@@ -1062,8 +1516,21 @@ export default function InlineManuscriptEditor({
             role="textbox"
             aria-multiline="true"
             aria-label="本文入力欄"
-            onClick={(event) => {
+              onClick={(event) => {
               const target = event.target as HTMLElement;
+              const columnAdd = target.closest("[data-column-add]") as HTMLElement | null;
+              if (columnAdd) {
+                const pane = columnAdd.closest<HTMLElement>("[data-column-side]");
+                const column = columnAdd.closest<HTMLElement>("[data-node-type='columns']");
+                const side = pane?.dataset.columnSide;
+                const columnId = column?.dataset.nodeId;
+                if ((side === "left" || side === "right") && columnId) {
+                  const childIndex = pane ? Array.from(pane.children).filter((child) => !(child as HTMLElement).dataset.columnAdd).length : 0;
+                  columnInsertTargetRef.current = { columnId, side, childIndex };
+                  setIsInsertMenuOpen(true);
+                }
+                return;
+              }
               const pageBreak = target.closest("[data-node-type='page-break']") as HTMLElement | null;
               if (pageBreak) {
                 const blockId = pageBreak.dataset.afterBlockId;
@@ -1073,6 +1540,14 @@ export default function InlineManuscriptEditor({
               const paywall = target.closest("[data-node-type='paywall']") as HTMLElement | null;
               if (paywall) {
                 onRemovePaywall?.(paywall.dataset.nodeId || "");
+                return;
+              }
+              const action = target.closest("[data-column-action]") as HTMLElement | null;
+              if (action) {
+                const id = action.dataset.columnId || "";
+                if (id && action.dataset.columnAction !== "ratio") {
+                  handleColumnsAction(id, action.dataset.columnAction as "swap" | "unwrap");
+                }
                 return;
               }
               const image = target.closest("[data-node-type='image']") as HTMLElement | null;
@@ -1113,10 +1588,17 @@ export default function InlineManuscriptEditor({
               const next = parseEditorDom(root);
               nodesRef.current = next;
               onChange(next);
-              const nextPending = next.filter((block) => block.type === "image" && block.uploadState === "pending").length;
+              const nextPending = flattenContentBlocks(next).filter((block) => block.type === "image" && block.uploadState === "pending").length;
               onPendingChange(nextPending);
               captureSelectionRange();
               reportCursor();
+            }}
+            onChange={(event) => {
+              const target = event.target as HTMLElement;
+              if (target instanceof HTMLSelectElement && target.dataset.columnAction === "ratio") {
+                const id = target.dataset.columnId || "";
+                if (id) handleColumnsAction(id, "ratio", target.value as ColumnsRatio);
+              }
             }}
             onPaste={(event) => {
               const files = Array.from(event.clipboardData.files || []).filter(isImageFile);

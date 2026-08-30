@@ -172,7 +172,14 @@ export async function uploadBookProjectAssets(project: BookProject, ownerId: str
   const uploadedById = new Map(
     images.map((image) => [image.image_id || image.image_index, image.image_url]),
   );
-  const contentBlocks = project.contentBlocks?.map((block) => {
+  const updateUploadedBlock = (block: BookContentBlock): BookContentBlock => {
+    if (block.type === "columns") {
+      return {
+        ...block,
+        left: { blocks: block.left.blocks.map((child) => updateUploadedBlock(child as BookContentBlock) as typeof child) },
+        right: { blocks: block.right.blocks.map((child) => updateUploadedBlock(child as BookContentBlock) as typeof child) },
+      };
+    }
     if (block.type !== "image") return block;
     const uploadedPath = uploadedById.get(block.id);
     if (!uploadedPath) return block;
@@ -182,7 +189,8 @@ export async function uploadBookProjectAssets(project: BookProject, ownerId: str
       publicUrl: undefined,
       uploadState: "ready" as const,
     };
-  });
+  };
+  const contentBlocks = project.contentBlocks?.map(updateUploadedBlock);
 
   return {
     ...project,
@@ -234,16 +242,22 @@ export async function materializeBookProjectAssets(project: BookProject): Promis
       };
     }),
   );
-  const contentBlocks = await Promise.all(
-    (project.contentBlocks || []).map(async (block): Promise<BookContentBlock> => {
+  const materializeBlock = async (block: BookContentBlock): Promise<BookContentBlock> => {
+      if (block.type === "columns") {
+        return {
+          ...block,
+          left: { blocks: await Promise.all(block.left.blocks.map((child) => materializeBlock(child as BookContentBlock) as Promise<typeof child>)) },
+          right: { blocks: await Promise.all(block.right.blocks.map((child) => materializeBlock(child as BookContentBlock) as Promise<typeof child>)) },
+        };
+      }
       if (block.type !== "image") return block;
       const publicUrl = await resolveStorageUrl(block.storagePath || block.publicUrl || "");
       return {
         ...block,
         publicUrl: publicUrl || undefined,
       };
-    }),
-  );
+  };
+  const contentBlocks = await Promise.all((project.contentBlocks || []).map(materializeBlock));
   return {
     ...project,
     config: {

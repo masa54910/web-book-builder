@@ -8,7 +8,7 @@ import YouTubePage from "./YouTubePage";
 import type { TextMark } from "@/lib/textStyles";
 import { normalizeTextMarks, TEXT_FONT_SIZE_CSS } from "@/lib/textStyles";
 
-function StyledParagraph({ text, marks }: { text: string; marks?: TextMark[] }) {
+export function StyledParagraph({ text, marks }: { text: string; marks?: TextMark[] }) {
   const normalized = normalizeTextMarks(text, marks);
   if (!normalized.length) return <>{text}</>;
   const boundaries = new Set<number>([0, text.length]);

@@ -1,12 +1,13 @@
 import type { BindingDirection } from "@/config/bookConfig";
-import { normalizeMediaDisplaySize, normalizePaywallAnchors, type BookContentBlock, type MediaDisplaySize } from "./bookProject";
-import type { ImageManifestRow, NovelChapter, ReaderPage } from "./types";
+import { flattenContentBlocks, normalizeMediaDisplaySize, normalizePaywallAnchors, type BookColumnChildBlock, type BookContentBlock, type BookColumnsBlock, type MediaDisplaySize } from "./bookProject";
+import type { ImageManifestRow, NovelChapter, ReaderColumnChild, ReaderPage } from "./types";
 import { findPageAdjustment, type PageAdjustment } from "./pageAdjustments";
 import { sliceTextMarks, type TextMark } from "./textStyles";
 import { parseDocumentHeading } from "./documentStructure";
 
 const IMAGE_PATTERN = /^\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]$/;
 const YOUTUBE_PATTERN = /^\[\[youtube:([A-Za-z0-9._-]+)(?:\|([A-Za-z0-9_-]{11}))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]$/;
+const COLUMNS_PATTERN = /^\[\[columns:([A-Za-z0-9._-]+)\]\]$/;
 export const INLINE_IMAGE_TOKEN_PREFIX = "[[inline-image:";
 export const INLINE_YOUTUBE_TOKEN_PREFIX = "[[inline-youtube:";
 
@@ -89,6 +90,70 @@ function normalizeHeadingTitle(value: string) {
   return value.normalize("NFKC").replace(/\s+/gu, " ").trim();
 }
 
+/** Serialize a top-level block for pagination while keeping Columns atomic. */
+function blockSerialization(block: BookContentBlock): string {
+  if (block.type === "columns") return `[[columns:${block.id}]]`;
+  if (block.type === "text") return block.content;
+  if (block.type === "youtube") {
+    const mode = block.displayMode === "inline" ? "inline" : "full-page";
+    return `[[youtube:${block.id}|${block.videoId}|${mode}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
+  }
+  if (block.type === "paywall") return "";
+  const mode = block.pageMode === "inline" ? "inline" : "full-page";
+  const caption = block.caption?.trim();
+  return caption
+    ? `[[image:${block.id}|${caption}|${mode}|${normalizeMediaDisplaySize(block.displaySize)}]]`
+    : `[[image:${block.id}||${mode}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
+}
+
+function chapterBlockRanges(blocks: BookContentBlock[]) {
+  const headings = blocks
+    .map((block, index) => (block.type === "text" && block.structureRole === "chapter" ? index : -1))
+    .filter((index) => index >= 0);
+  if (!headings.length) return [{ start: 0, end: blocks.length, headingIndex: -1 }];
+  return headings.map((headingIndex, index) => ({
+    // Keep the range start at the heading itself. The first chapter may have
+    // preface blocks before its heading; chapterBodies adds those explicitly.
+    start: headingIndex,
+    end: headings[index + 1] ?? blocks.length,
+    headingIndex,
+  }));
+}
+
+function resolveColumnChild(child: BookColumnChildBlock, imageMap: Map<string, ImageManifestRow>): ReaderColumnChild {
+  if (child.type === "text") {
+    return { id: child.id, kind: "text", paragraphs: [child.content], paragraphRuns: [child.marks || []] };
+  }
+  if (child.type === "youtube") {
+    return { id: child.id, kind: "youtube", videoId: child.videoId, originalUrl: child.originalUrl, displaySize: normalizeMediaDisplaySize(child.displaySize) };
+  }
+  const image = imageMap.get(child.id);
+  return {
+    id: child.id,
+    kind: "image",
+    src: child.publicUrl || imageSource(image) || child.storagePath || undefined,
+    alt: child.altText || child.fileName || "本文画像",
+    caption: child.caption || image?.caption || "",
+    missing: !child.storagePath && !child.publicUrl && !image,
+    displaySize: normalizeMediaDisplaySize(child.displaySize),
+  };
+}
+
+function columnsPageFor(block: BookColumnsBlock, chapter: NovelChapter, imageMap: Map<string, ImageManifestRow>, sectionTitle?: string, headingId?: string): ReaderPage {
+  return {
+    id: `${chapter.slug}-columns-${block.id}`,
+    kind: "columns",
+    chapterTitle: chapter.title,
+    sectionTitle,
+    headingId,
+    ratio: block.ratio,
+    columnsBlockId: block.id,
+    left: block.left.blocks.map((child) => resolveColumnChild(child, imageMap)),
+    right: block.right.blocks.map((child) => resolveColumnChild(child, imageMap)),
+    sourceBlockIds: [block.id, ...block.left.blocks.map((child) => child.id), ...block.right.blocks.map((child) => child.id)],
+  };
+}
+
 export function buildReaderPages({
   chapters,
   images,
@@ -148,7 +213,12 @@ export function buildReaderPages({
   // by a chapter/page number. The chapter bodies intentionally omit the
   // Paywall block from rawText, so resolve the nearest renderable neighbours
   // here and insert the marker while the anchored block is being paginated.
-  const normalizedContentBlocks = contentBlocks ? normalizePaywallAnchors(contentBlocks) : [];
+  // Keep the top-level order intact so a ColumnsBlock can become one atomic
+  // ReaderPage. A flattened view is still used for media lookup and legacy
+  // callers, but it is never used to emit the Columns children as pages.
+  const orderedContentBlocks = contentBlocks ? normalizePaywallAnchors(contentBlocks) : [];
+  const normalizedContentBlocks = flattenContentBlocks(orderedContentBlocks);
+  const flatContentBlocks = normalizedContentBlocks;
   const paywallIndex = normalizedContentBlocks.findIndex((block) => block.type === "paywall");
   const paywall = paywallIndex >= 0 ? normalizedContentBlocks[paywallIndex] : undefined;
   const paywallPreviousBlockId = paywall?.type === "paywall" ? paywall.previousBlockId : undefined;
@@ -175,6 +245,41 @@ export function buildReaderPages({
     paywallInserted = true;
   };
 
+  // extractChaptersFromText historically flattens Columns into chapter.body.
+  // Rebuild a pagination-only body with an atomic Columns token so the stored
+  // document remains backwards compatible while the Reader receives the real
+  // two-pane page.
+  const chapterBodies = new Map<string, string>();
+  const chapterRanges = chapterBlockRanges(orderedContentBlocks);
+  // Only rebuild chapter bodies when the canonical block sequence contains
+  // explicit chapter blocks. Plain-text paste keeps all chapters in one text
+  // block; in that case chapterRanges has a single catch-all range and
+  // reusing it for every parsed chapter duplicates the entire manuscript
+  // once per chapter (the Mini Preview then appears to start a second cycle).
+  const canRebuildChapterBodies = orderedContentBlocks.length > 0 && (
+    // A single fallback chapter can safely consume the complete block list
+    // (including Columns/media tokens) even when its heading is not marked
+    // structurally.
+    chapters.length === 1
+    || (structuredChapterBlocks.length > 0 && chapterRanges.length === chapters.length)
+  );
+  if (canRebuildChapterBodies) {
+    chapters.forEach((chapter, chapterIndex) => {
+      const range = chapterRanges[chapterIndex];
+      if (!range) return;
+      // Preserve any preface blocks before the first chapter heading, while
+      // excluding each chapter's own H1 from the body. This keeps the formal
+      // Columns token ordering identical to the canonical document.
+      const prefixBlocks = chapterIndex === 0 && range.headingIndex > 0
+        ? orderedContentBlocks.slice(0, range.headingIndex)
+        : [];
+      const bodyStart = range.headingIndex >= 0 ? range.headingIndex + 1 : range.start;
+      const bodyBlocks = [...prefixBlocks, ...orderedContentBlocks.slice(bodyStart, range.end)];
+      const body = bodyBlocks.map(blockSerialization).filter(Boolean).join("\n\n").trim();
+      chapterBodies.set(chapter.slug, body);
+    });
+  }
+
   for (const chapter of chapters) {
     const chapterHeadingId = chapterHeadingSourceId(chapter);
     // A boundary before the first block (or before a chapter heading whose
@@ -197,8 +302,9 @@ export function buildReaderPages({
       insertPaywallPage();
     }
 
-    const segments = chapter.body
-      .replace(/^(\[\[(?:image|youtube):[^\]]+\]\])$/gm, "\n\n$1\n\n")
+    const chapterBody = chapterBodies.get(chapter.slug) ?? chapter.body;
+    const segments = chapterBody
+      .replace(/^(\[\[(?:image|youtube|columns):[^\]]+\]\])$/gm, "\n\n$1\n\n")
       .split(/\n{2,}/)
       .map((segment) => segment.trim());
     let paragraphs: string[] = [];
@@ -303,11 +409,26 @@ export function buildReaderPages({
         )?.id;
         pendingHeadingId = currentSectionId;
       }
+      const columnsMatch = segment.match(COLUMNS_PATTERN);
+      if (columnsMatch) {
+        const columnsBlock = orderedContentBlocks.find(
+          (block): block is BookColumnsBlock => block.type === "columns" && block.id === columnsMatch[1],
+        );
+        if (columnsBlock) {
+          if (shouldBreakBefore(columnsBlock.id)) flushTextPage();
+          flushTextPage();
+          pages.push(columnsPageFor(columnsBlock, chapter, imageMap, currentSectionTitle, pendingHeadingId));
+          if (adjustmentForSource(columnsBlock.id)?.pageBreakAfter) handledBreakAfter.add(columnsBlock.id);
+          pendingHeadingId = undefined;
+          if (!paywallInserted && paywallPreviousBlockId === columnsBlock.id) insertPaywallPage();
+          continue;
+        }
+      }
       const youtubeMatch = segment.match(YOUTUBE_PATTERN);
       if (youtubeMatch) {
         const storedBlockId = youtubeMatch[1];
         const videoId = youtubeMatch[2] || storedBlockId;
-        const youtubeBlock = (contentBlocks || []).find(
+        const youtubeBlock = flatContentBlocks.find(
           (block): block is Extract<BookContentBlock, { type: "youtube" }> =>
             block.type === "youtube" && (youtubeMatch[2] ? block.id === storedBlockId : block.videoId === videoId),
         );
@@ -357,7 +478,7 @@ export function buildReaderPages({
         const imageId = imageMatch[1];
         const image = imageMap.get(imageId) ?? imageMap.get(`${chapter.order}-${imageId}`);
         const pageMode = imageMatch[3] === "inline" ? "inline" : "full-page";
-        const imageBlock = (contentBlocks || []).find(
+        const imageBlock = flatContentBlocks.find(
           (block): block is Extract<BookContentBlock, { type: "image" }> => block.type === "image" && block.id === imageId,
         );
         const displaySize = normalizeMediaDisplaySize(imageBlock?.displaySize || imageMatch[4]);
@@ -473,6 +594,20 @@ export function toBoundPageOrder(
 ) {
   void bindingDirection;
   return isMobile ? pages : [...pages];
+}
+
+/**
+ * Keep the Mini Preview source list as one deterministic page set. Reader page
+ * ids are the identity boundary; a stale append or accidental duplicate page
+ * must not produce a second preview cycle.
+ */
+export function uniqueReaderPages(pages: ReaderPage[]): ReaderPage[] {
+  const seen = new Set<string>();
+  return pages.filter((page) => {
+    if (seen.has(page.id)) return false;
+    seen.add(page.id);
+    return true;
+  });
 }
 
 export const toRightBoundPageOrder = toBoundPageOrder;

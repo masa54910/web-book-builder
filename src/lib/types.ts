@@ -91,6 +91,17 @@ type ReaderPageShape =
     }
   | {
       id: string;
+      kind: "columns";
+      chapterTitle: string;
+      sectionTitle?: string;
+      headingId?: string;
+      ratio: "50-50" | "40-60" | "60-40";
+      columnsBlockId: string;
+      left: ReaderColumnChild[];
+      right: ReaderColumnChild[];
+    }
+  | {
+      id: string;
       kind: "pageBreak";
       sourcePageId: string;
     }
@@ -110,3 +121,27 @@ type ReaderPageShape =
 export type ReaderPage = ReaderPageShape & {
   sourceBlockIds?: string[];
 };
+
+export type ReaderColumnChild =
+  | {
+      id: string;
+      kind: "text";
+      paragraphs: string[];
+      paragraphRuns?: TextMark[][];
+    }
+  | {
+      id: string;
+      kind: "image";
+      src?: string;
+      alt: string;
+      caption: string;
+      missing?: boolean;
+      displaySize?: "small" | "medium" | "large" | "full";
+    }
+  | {
+      id: string;
+      kind: "youtube";
+      videoId: string;
+      originalUrl: string;
+      displaySize?: "small" | "medium" | "large" | "full";
+    };
