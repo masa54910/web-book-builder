@@ -19,6 +19,30 @@ export default function Ver2PromotionDemoCenter() {
           </Link>
         </div>
         <p className={styles.sectionLead}>公開して終わりではなく、読者に届く導線までひとつの体験にまとめます。</p>
+        <div className={styles.promotionScenario}>
+          <div className={`${styles.promoCopy} ${styles.sectionLead}`}>
+            <h3>私、こういうの作ったんですよ。見てもらえますか？</h3>
+            <p>
+              URLで送る。QRで渡す。<br />
+              相手はスマホで、その場ですぐ読めます。
+            </p>
+            <p><strong>名刺代わりに。あなたという人の“アイコン”代わりに。</strong></p>
+            <p><strong>まずは、自分を表すWebブックを1冊持っておく。</strong></p>
+            <p>
+              WebBookMakerには作者プロフィールと作品一覧もあります。
+              一冊を読んでもらったあと、あなた自身や、ほかの作品へつなげることもできます。
+            </p>
+          </div>
+          <div className={styles.promotionScenarioVisual}>
+            <Image
+              src="/home/webbook-qr-handoff.webp"
+              alt="QRコードからWebブックをその場で見てもらうイメージ"
+              width={1448}
+              height={1086}
+              sizes="(max-width: 640px) calc(100vw - 48px), (max-width: 820px) calc(100vw - 64px), 42vw"
+            />
+          </div>
+        </div>
         <div className={styles.promoGrid}>
           <article className={`${styles.promo} ${styles.adjustmentCard}`}>
             <div className={styles.promoCopy}>
