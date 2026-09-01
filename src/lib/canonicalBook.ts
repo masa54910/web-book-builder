@@ -94,6 +94,7 @@ export type CanonicalColumnChildBlock =
 
 export type CanonicalBookPayload = {
   bookId?: string;
+  publicationRevision?: number;
   createdAt?: string;
   title: string;
   subtitle: string;
@@ -172,13 +173,14 @@ export type CanonicalEditorState = {
   externalLinkUrl: string;
   externalSalesUrl: string;
   externalSalesLabel: string;
+  publicationRevision?: number;
 };
 
 export type BuildCanonicalBookPayloadInput = {
   state: CanonicalEditorState;
   contentBlocks: BookContentBlock[];
   images: UploadedBookImage[];
-  bookId?: string;
+    bookId?: string;
   existingCreatedAt?: string;
   externalLinks?: ExternalLink[];
 };
@@ -342,6 +344,7 @@ export function buildCanonicalBookPayload(
 
   const payload: CanonicalBookPayload = {
     bookId: input.bookId && looksLikeUuid(input.bookId) ? input.bookId : undefined,
+    publicationRevision: state.publicationRevision,
     createdAt: input.existingCreatedAt,
     title,
     subtitle: state.subtitle.trim(),
@@ -503,6 +506,7 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
     externalSalesLabel: payload.externalSalesLabel,
     existingBookId: payload.bookId && looksLikeUuid(payload.bookId) ? payload.bookId : undefined,
     existingCreatedAt: payload.createdAt,
+    publicationRevision: payload.publicationRevision,
   };
 }
 

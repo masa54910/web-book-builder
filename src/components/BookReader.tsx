@@ -13,7 +13,7 @@ import {
   type PageAdjustment,
 } from "@/lib/pageAdjustments";
 import { buildReaderPages, toBoundPageOrder } from "@/lib/paginateText";
-import { recordReaderProgress } from "@/lib/readerAnalytics";
+import { recordReaderPageReached, recordReaderProgress } from "@/lib/readerAnalytics";
 import { buildReaderFolioById } from "@/lib/readerFolio";
 import { buildDocumentTocEntries, documentStructureFromChapters } from "@/lib/documentStructure";
 import { themeClassNames } from "@/lib/themeSystem";
@@ -68,7 +68,15 @@ function sourceBlockIdsForPage(page: ReaderPage) {
 }
 
 function primarySourceBlockId(page: ReaderPage) {
-  return sourceBlockIdsForPage(page).find((id) => id !== page.id) || page.id;
+  if (page.kind === "paywall" && page.sourceBlockId) return page.sourceBlockId;
+  const columnsId = page.kind === "columns" ? page.columnsBlockId : undefined;
+  return sourceBlockIdsForPage(page).find((id) => id !== page.id && id !== columnsId) || page.id;
+}
+
+function chapterIdForPage(page: ReaderPage, chapters: NovelChapter[]) {
+  return "chapterTitle" in page
+    ? chapters.find((chapter) => chapter.title === page.chapterTitle)?.id
+    : undefined;
 }
 
 /**
@@ -215,7 +223,24 @@ export default function BookReader({
       activePageIdRef.current = activePage?.id || null;
       activePageSourceIdRef.current = activePage ? primarySourceBlockId(activePage) : null;
     }
-  }, [activePageIndex, pagesWithAdjustments]);
+  }, [activePageIndex, chapters, pagesWithAdjustments]);
+
+  // The initial published page is already visible before react-pageflip emits
+  // its first onFlip callback. Preview and Mini Preview intentionally never
+  // enter this effect, so they produce no reader analytics.
+  useEffect(() => {
+    if (displayMode !== "published") return;
+    const page = pagesWithAdjustments[activePageIndex];
+    if (!page) return;
+    recordReaderPageReached(
+      config.bookId,
+      page,
+      activePageIndex,
+      pagesWithAdjustments.length,
+      cloudBookId,
+      { publicationRevision: config.publicationRevision, chapterId: chapterIdForPage(page, chapters) },
+    );
+  }, [activePageIndex, chapters, cloudBookId, config.bookId, config.publicationRevision, displayMode, pagesWithAdjustments]);
 
   const pageDetails = useCallback(
     (pageIndex: number) => {
@@ -522,7 +547,7 @@ export default function BookReader({
     } else if (page.kind === "pageBreak") {
       content = <div className="page-break-page" aria-label="手動改ページ">ここから新しいページ</div>;
     } else if (page.kind === "paywall") {
-      content = <PaywallPage slug={accessSlug || config.slug || ""} paymentUrl={access?.paymentUrl} amount={access?.amount} currency={access?.currency} />;
+      content = <PaywallPage slug={accessSlug || config.slug || ""} cloudBookId={cloudBookId} paymentUrl={access?.paymentUrl} amount={access?.amount} currency={access?.currency} />;
     } else if (page.kind === "colophon") content = <ColophonPage config={config} cloudBookId={cloudBookId} />;
     else content = <CoverPage config={config} back />;
 
@@ -667,7 +692,21 @@ export default function BookReader({
               activePageIdRef.current = activePage?.id || null;
               activePageSourceIdRef.current = activePage ? primarySourceBlockId(activePage) : null;
               saveLastReadAt(event.data);
-              recordReaderProgress(config.bookId, pagesWithAdjustments[event.data], event.data, pagesWithAdjustments.length, cloudBookId);
+              if (displayMode === "published") {
+                recordReaderProgress(
+                  config.bookId,
+                  pagesWithAdjustments[event.data],
+                  event.data,
+                  pagesWithAdjustments.length,
+                  cloudBookId,
+                  { publicationRevision: config.publicationRevision, chapterId: chapterIdForPage(pagesWithAdjustments[event.data] as ReaderPage, chapters) },
+                );
+                // Desktop spreads can expose the adjacent page at the same
+                // time; each page receives its own stable reach event.
+                if (!isMobile && pagesWithAdjustments[event.data + 1]) {
+                  recordReaderPageReached(config.bookId, pagesWithAdjustments[event.data + 1], event.data + 1, pagesWithAdjustments.length, cloudBookId, { publicationRevision: config.publicationRevision, chapterId: chapterIdForPage(pagesWithAdjustments[event.data + 1], chapters) });
+                }
+              }
             }}
           >
             {pagesWithAdjustments.map((page, pageIndex) => renderPage(page, pageIndex))}

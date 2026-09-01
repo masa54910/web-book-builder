@@ -20,6 +20,8 @@ export type BookPublicationVisibility = "private" | "unlisted" | "public";
 
 export type BookConfig = {
   bookId: string;
+  /** Stable published-document revision; legacy payloads are treated as 1. */
+  publicationRevision?: number;
   /** Canonical public slug carried through Preview/BookProject conversion. */
   slug?: string;
   /** Canonical publication state carried through Preview/BookProject conversion. */

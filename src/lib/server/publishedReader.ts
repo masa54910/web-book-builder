@@ -59,6 +59,9 @@ async function materializeFreeAssets(project: BookProject, visibleBlocks: BookCo
     ...project,
     config: {
       ...project.config,
+      publicationRevision: Number.isInteger(project.config.publicationRevision) && (project.config.publicationRevision || 0) > 0
+        ? project.config.publicationRevision
+        : 1,
       coverImageUrl: await resolveImageUrl(project.config.coverImage, admin) || undefined,
       pageAdjustments: isFiltered
         ? project.config.pageAdjustments?.filter((adjustment) => visibleBlockIds.has(adjustment.blockId))

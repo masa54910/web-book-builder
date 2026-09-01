@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   contentBlocksFromLegacy,
@@ -469,6 +469,13 @@ function cloneSelectionRange(root: HTMLElement) {
   return selectionInfo.range.cloneRange();
 }
 
+function rangeCoversRootContent(root: HTMLElement, range: Range) {
+  const rootRange = document.createRange();
+  rootRange.selectNodeContents(root);
+  return range.compareBoundaryPoints(Range.START_TO_START, rootRange) <= 0
+    && range.compareBoundaryPoints(Range.END_TO_END, rootRange) >= 0;
+}
+
 function getTextOffsetWithinParagraph(paragraph: HTMLElement, range: Range) {
   const workingRange = document.createRange();
   workingRange.selectNodeContents(paragraph);
@@ -651,6 +658,12 @@ function getRangeFromPoint(root: HTMLElement, x?: number, y?: number) {
   return null;
 }
 
+export type InlineEditorHelpRequest = {
+  nonce: number;
+  kind: "focus-editor" | "open-insert-menu" | "open-youtube";
+  menuItem?: "image" | "page-break" | "columns" | "paywall";
+};
+
 type Props = {
   value: BookContentBlock[];
   revision: string;
@@ -658,7 +671,8 @@ type Props = {
   onStatus: (message: string) => void;
   onPendingChange: (count: number) => void;
   onCursorChange?: (position: number, blockId: string | null) => void;
-  scrollRequest?: { blockId: string; nonce: number } | null;
+  scrollRequest?: { blockId: string; nonce: number; highlight?: boolean } | null;
+  onScrollRequestResult?: (result: { nonce: number; status: "handled" | "not-found" }) => void;
   pageBreakAfterBlockIds?: string[];
   onInsertPageBreak?: (blockId: string) => void;
   onRemovePageBreak?: (blockId: string) => void;
@@ -666,9 +680,11 @@ type Props = {
   onRemovePaywall?: (blockId: string) => void;
   onInsertColumns?: () => void;
   onPasteAutoFormat?: (previousBlocks: BookContentBlock[]) => void;
+  helpRequest?: InlineEditorHelpRequest | null;
+  onHelpRequestResult?: (result: { nonce: number; status: "handled" | "not-found" }) => void;
 };
 
-export default function InlineManuscriptEditor({
+function InlineManuscriptEditor({
   value,
   revision,
   onChange,
@@ -676,6 +692,7 @@ export default function InlineManuscriptEditor({
   onPendingChange,
   onCursorChange,
   scrollRequest,
+  onScrollRequestResult,
   pageBreakAfterBlockIds = [],
   onInsertPageBreak,
   onRemovePageBreak,
@@ -683,12 +700,15 @@ export default function InlineManuscriptEditor({
   onRemovePaywall,
   onInsertColumns,
   onPasteAutoFormat,
+  helpRequest,
+  onHelpRequestResult,
 }: Props) {
   const editorRef = useRef<HTMLElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const columnInsertTargetRef = useRef<ColumnInsertTarget | null>(null);
+  const guidanceHighlightTimerRef = useRef<number | null>(null);
   const nodesRef = useRef<BookContentBlock[]>(value);
   const renderedRevisionRef = useRef<string | null>(null);
   const renderedBreakSignatureRef = useRef("");
@@ -706,6 +726,12 @@ export default function InlineManuscriptEditor({
   const [youtubePopoverPosition, setYoutubePopoverPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectionToolbar, setSelectionToolbar] = useState<{ top: number; left: number } | null>(null);
   const pageBreakSignature = pageBreakAfterBlockIds.join("|");
+
+  useEffect(() => () => {
+    if (guidanceHighlightTimerRef.current !== null) {
+      window.clearTimeout(guidanceHighlightTimerRef.current);
+    }
+  }, []);
 
   const reportCursor = useCallback(() => {
     const root = rootRef.current;
@@ -979,12 +1005,28 @@ export default function InlineManuscriptEditor({
   useEffect(() => {
     const root = rootRef.current;
     if (!root || !scrollRequest) return;
-    const target = Array.from(root.children).find(
-      (node): node is HTMLElement => node instanceof HTMLElement && node.dataset.nodeId === scrollRequest.blockId,
+    const target = root.querySelector<HTMLElement>(
+      `[data-node-id="${CSS.escape(scrollRequest.blockId)}"]`,
     );
-    if (!target) return;
+    if (!target) {
+      onScrollRequestResult?.({ nonce: scrollRequest.nonce, status: "not-found" });
+      return;
+    }
 
     target.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (scrollRequest.highlight) {
+      root.querySelectorAll<HTMLElement>(".is-guidance-highlight").forEach((node) => {
+        node.classList.remove("is-guidance-highlight");
+      });
+      if (guidanceHighlightTimerRef.current !== null) {
+        window.clearTimeout(guidanceHighlightTimerRef.current);
+      }
+      target.classList.add("is-guidance-highlight");
+      guidanceHighlightTimerRef.current = window.setTimeout(() => {
+        target.classList.remove("is-guidance-highlight");
+        guidanceHighlightTimerRef.current = null;
+      }, 1800);
+    }
     if (target.dataset.nodeType === "paragraph") {
       const selection = window.getSelection();
       const range = document.createRange();
@@ -995,17 +1037,22 @@ export default function InlineManuscriptEditor({
       savedRangeRef.current = range.cloneRange();
       root.focus();
       reportCursor();
+      onScrollRequestResult?.({ nonce: scrollRequest.nonce, status: "handled" });
       return;
     }
 
     let position = 0;
-    for (const node of nodesRef.current) {
+    for (const node of flattenContentBlocks(nodesRef.current)) {
       if (node.id === scrollRequest.blockId) break;
       if (node.type === "text") position += countUserCharacters(node.content);
     }
-    root.focus();
+    target.tabIndex = -1;
+    target.focus({ preventScroll: true });
+    if (target.dataset.nodeType === "image") setSelectedImageId(scrollRequest.blockId);
+    if (target.dataset.nodeType === "youtube") setSelectedYouTubeId(scrollRequest.blockId);
     onCursorChange?.(position, scrollRequest.blockId);
-  }, [onCursorChange, reportCursor, scrollRequest]);
+    onScrollRequestResult?.({ nonce: scrollRequest.nonce, status: "handled" });
+  }, [onCursorChange, onScrollRequestResult, reportCursor, scrollRequest]);
 
   const removeNode = (nodeId: string) => {
     const remaining = removeContentBlockById(nodesRef.current, nodeId);
@@ -1150,10 +1197,25 @@ export default function InlineManuscriptEditor({
     if (!pastedBlocks.length) return;
 
     const root = rootRef.current;
-    const activeRange = root ? (savedRangeRef.current ?? cloneSelectionRange(root))?.cloneRange() ?? null : null;
+    const activeRange = root ? (cloneSelectionRange(root) ?? savedRangeRef.current)?.cloneRange() ?? null : null;
     const paragraphTarget = root ? findParagraphTarget(root, activeRange) : null;
     const columnTarget = root && paragraphTarget ? findColumnParagraphTarget(root, paragraphTarget) : null;
     let nextBlocks: BookContentBlock[];
+
+    // Ctrl+A followed by a normal text paste selects the entire editor root,
+    // not an individual paragraph. Treat that range as a document replacement
+    // so the previous blocks are not appended to the pasted fixture.
+    if (root && activeRange && rangeCoversRootContent(root, activeRange)) {
+      nextBlocks = pastedBlocks;
+      onPasteAutoFormat?.(nodesRef.current);
+      nextBlocks = ensureUniqueContentBlockIds(nextBlocks);
+      emitChange(nextBlocks);
+      renderNodes(root, nextBlocks, pageBreakAfterBlockIds);
+      const last = root.lastElementChild;
+      if (last) setCaretAfterNode(last);
+      onStatus("原稿を解析し、見出し・段落構造を更新しました");
+      return;
+    }
 
     if (paragraphTarget && activeRange) {
       if (!root) return;
@@ -1239,6 +1301,72 @@ export default function InlineManuscriptEditor({
     setYoutubeError("");
     setIsYouTubeModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!helpRequest) return;
+    const highlight = (target: HTMLElement) => {
+      if (guidanceHighlightTimerRef.current !== null) {
+        window.clearTimeout(guidanceHighlightTimerRef.current);
+      }
+      rootRef.current?.querySelectorAll<HTMLElement>(".is-guidance-highlight").forEach((node) => {
+        node.classList.remove("is-guidance-highlight", "editor-help-target");
+      });
+      target.classList.add("is-guidance-highlight", "editor-help-target");
+      guidanceHighlightTimerRef.current = window.setTimeout(() => {
+        target.classList.remove("is-guidance-highlight", "editor-help-target");
+      }, 1800);
+    };
+
+    if (helpRequest.kind === "focus-editor") {
+      const root = rootRef.current;
+      if (!root) {
+        onHelpRequestResult?.({ nonce: helpRequest.nonce, status: "not-found" });
+        return;
+      }
+      root.scrollIntoView({ behavior: "smooth", block: "center" });
+      root.focus({ preventScroll: true });
+      highlight(root);
+      onHelpRequestResult?.({ nonce: helpRequest.nonce, status: "handled" });
+      return;
+    }
+
+    if (helpRequest.kind === "open-youtube") {
+      const openTimer = window.setTimeout(() => {
+        setIsInsertMenuOpen(false);
+        setSelectedYouTubeId(null);
+        openYouTubeModal();
+        onHelpRequestResult?.({ nonce: helpRequest.nonce, status: "handled" });
+      }, 0);
+      return () => window.clearTimeout(openTimer);
+    }
+
+    let focusTimer: number | null = null;
+    const openMenuTimer = window.setTimeout(() => {
+      setIsInsertMenuOpen(true);
+      // Wait for React to commit the existing insertion menu before focusing
+      // its requested item. This only opens UI; it never activates the item.
+      focusTimer = window.setTimeout(() => {
+        const target = editorRef.current?.querySelector<HTMLElement>(
+          `[data-help-insert-action="${helpRequest.menuItem || ""}"]`,
+        );
+        if (!target || target.matches(":disabled")) {
+          onHelpRequestResult?.({ nonce: helpRequest.nonce, status: "not-found" });
+          return;
+        }
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.focus({ preventScroll: true });
+        highlight(target);
+        onHelpRequestResult?.({ nonce: helpRequest.nonce, status: "handled" });
+      }, 50);
+    }, 0);
+    return () => {
+      window.clearTimeout(openMenuTimer);
+      if (focusTimer !== null) window.clearTimeout(focusTimer);
+    };
+  // The nonce is the command boundary; callbacks and editor state must not
+  // retrigger a Help action after the requested UI has opened.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [helpRequest?.nonce]);
 
   const saveYouTubeBlock = () => {
     const parsed = parseYouTubeUrl(youtubeUrl);
@@ -1420,6 +1548,7 @@ export default function InlineManuscriptEditor({
               <button
                 type="button"
                 role="menuitem"
+                data-help-insert-action="image"
                 onMouseDown={(event) => {
                   captureSelectionRange();
                   event.preventDefault();
@@ -1449,6 +1578,7 @@ export default function InlineManuscriptEditor({
               <button
                 type="button"
                 role="menuitem"
+                data-help-insert-action="page-break"
                 onMouseDown={(event) => {
                   captureSelectionRange();
                   event.preventDefault();
@@ -1463,6 +1593,7 @@ export default function InlineManuscriptEditor({
               <button
                 type="button"
                 role="menuitem"
+                data-help-insert-action="paywall"
                 disabled={value.some((block) => block.type === "paywall")}
                 onClick={() => {
                   setIsInsertMenuOpen(false);
@@ -1474,6 +1605,7 @@ export default function InlineManuscriptEditor({
               <button
                 type="button"
                 role="menuitem"
+                data-help-insert-action="columns"
                 onMouseDown={(event) => {
                   captureSelectionRange();
                   event.preventDefault();
@@ -1826,3 +1958,5 @@ export default function InlineManuscriptEditor({
     </section>
   );
 }
+
+export default memo(InlineManuscriptEditor);

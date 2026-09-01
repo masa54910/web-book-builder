@@ -76,17 +76,40 @@ import {
   type PageAdjustment,
 } from "@/lib/pageAdjustments";
 import { buildReaderPages, uniqueReaderPages } from "@/lib/paginateText";
+import { documentStructureFromChapters } from "@/lib/documentStructure";
+import { buildEditorGuidanceSnapshot } from "@/lib/editorGuidance/editorSnapshot";
+import {
+  evaluateEditorGuidance,
+  selectVisibleEditorGuidance,
+} from "@/lib/editorGuidance/editorRules";
+import {
+  resolveGuidanceNavigationTarget,
+  resolveHelpBlockNavigationTarget,
+  resolveReaderPageNavigationTarget,
+  type EditorNavigationResult,
+} from "@/lib/editorGuidance/editorNavigation";
+import { getEditorHelpActionDefinition } from "@/lib/editorGuidance/actionRegistry";
+import type { EditorGuidanceIssue } from "@/lib/editorGuidance/types";
+import type { EditorHelpCatalogEntry } from "@/lib/editorGuidance/helpTypes";
+import { resolveEditorHelpRoute } from "@/lib/editorGuidance/helpActions";
+import {
+  resolveBookyHelpState,
+  type BookyHelpQueryState,
+} from "@/lib/editorGuidance/bookyHelp";
 import { smartFormatContentBlocks } from "@/lib/smartFormat";
 import type { ImageManifestRow, ReaderPage } from "@/lib/types";
 import { countContentCharacters } from "@/lib/characterCount";
 import { validateRequiredBookFields } from "@/lib/editorValidation";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
-import CharacterAssistant from "@/components/CharacterAssistant";
+import { BookyHelpTrigger } from "@/components/BookyHelp";
 import InlineManuscriptEditor from "@/components/InlineManuscriptEditor";
+import type { InlineEditorHelpRequest } from "@/components/InlineManuscriptEditor";
 import HomeBackLink from "@/components/HomeBackLink";
 import Button from "@/components/ui/Button";
 import FormField from "@/components/ui/FormField";
 import EditorMiniPreview from "@/components/EditorMiniPreview";
+import EditorGuidanceCard from "@/components/EditorGuidanceCard";
+import EditorHelpPanel from "@/components/EditorHelpPanel";
 
 type EditorState = {
   title: string;
@@ -129,6 +152,7 @@ type EditorState = {
   externalLinkUrl: string;
   externalSalesUrl: string;
   externalSalesLabel: string;
+  publicationRevision?: number;
 };
 
 type DraftSeed = {
@@ -181,6 +205,7 @@ const INITIAL_EDITOR: EditorState = {
   externalLinkUrl: "",
   externalSalesUrl: "",
   externalSalesLabel: "",
+  publicationRevision: 1,
 };
 
 function normalizeEditorDraftSeed(seed: ReturnType<typeof seedFromDraftFields>): DraftSeed {
@@ -494,6 +519,7 @@ function stateFromPreviewProject(project: BookProject): EditorState {
     externalLinkUrl: project.config.externalLinks?.[0]?.url || "",
     externalSalesUrl: project.config.monetization?.externalSalesUrl || "",
     externalSalesLabel: project.config.monetization?.externalSalesLabel || "",
+    publicationRevision: project.config.publicationRevision || 1,
   };
 }
 
@@ -542,6 +568,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const previewDraftId = searchParams.get("draftId") || "";
+  const focusBlockId = searchParams.get("focusBlock") || "";
   const params = useParams<{ id?: string }>();
   const { user } = useAuth();
   const titleInputRef = useRef<HTMLInputElement | null>(null);
@@ -551,6 +578,18 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const slugInputRef = useRef<HTMLInputElement | null>(null);
   const manuscriptInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const helpTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const helpShouldReturnFocusRef = useRef(false);
+  const manuscriptImportTargetRef = useRef<HTMLLabelElement | null>(null);
+  const smartFormatTargetRef = useRef<HTMLButtonElement | null>(null);
+  const smartUndoTargetRef = useRef<HTMLButtonElement | null>(null);
+  const coverTargetRef = useRef<HTMLDivElement | null>(null);
+  const headerActionsRef = useRef<HTMLDivElement | null>(null);
+  const publishTargetRef = useRef<HTMLButtonElement | null>(null);
+  const previewTargetRef = useRef<HTMLButtonElement | null>(null);
+  const externalSalesTargetRef = useRef<HTMLInputElement | null>(null);
+  const helpHighlightTimerRef = useRef<number | null>(null);
+  const bookySuccessTimerRef = useRef<number | null>(null);
   const [bookId, setBookId] = useState<string | undefined>(params.id);
   const [state, setState] = useState<EditorState>(draftSeed.state);
   const [images, setImages] = useState<UploadedBookImage[]>(draftSeed.images);
@@ -559,6 +598,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       ? ensureUniqueContentBlockIds(draftSeed.contentBlocks)
       : [{ id: "text-001", type: "text", content: "" }],
   );
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [bookyQueryState, setBookyQueryState] = useState<BookyHelpQueryState>("idle");
+  const [bookyActionSuccess, setBookyActionSuccess] = useState(false);
   const [editorRevision, setEditorRevision] = useState(0);
   const [pendingImageCount, setPendingImageCount] = useState(0);
   const [stalePendingImageIds, setStalePendingImageIds] = useState<string[]>([]);
@@ -567,8 +609,11 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [smartFormatSummary, setSmartFormatSummary] = useState<string | null>(null);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
-  const [editorScrollRequest, setEditorScrollRequest] = useState<{ blockId: string; nonce: number } | null>(null);
+  const [editorScrollRequest, setEditorScrollRequest] = useState<{ blockId: string; nonce: number; highlight?: boolean } | null>(null);
+  const [inlineHelpRequest, setInlineHelpRequest] = useState<InlineEditorHelpRequest | null>(null);
   const miniJumpNonceRef = useRef(0);
+  const guidanceRequestNonceRef = useRef<number | null>(null);
+  const handledFocusBlockRef = useRef<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [warnings, setWarnings] = useState<string[]>([]);
   const [statusMessage, setStatusMessage] = useState(
@@ -596,8 +641,21 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       if (statusMessageTimeoutRef.current !== null) {
         window.clearTimeout(statusMessageTimeoutRef.current);
       }
+      if (helpHighlightTimerRef.current !== null) {
+        window.clearTimeout(helpHighlightTimerRef.current);
+      }
+      if (bookySuccessTimerRef.current !== null) {
+        window.clearTimeout(bookySuccessTimerRef.current);
+      }
     };
   }, []);
+
+  useEffect(() => {
+    if (helpOpen || !helpShouldReturnFocusRef.current) return;
+    helpShouldReturnFocusRef.current = false;
+    const focusTimer = window.setTimeout(() => helpTriggerRef.current?.focus(), 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [helpOpen]);
 
   useEffect(() => {
     if (!previewDraftId) return;
@@ -883,43 +941,68 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     // Both Reader and Mini Preview consume this single, ID-unique page set;
     // never append the previous render's pages during editor updates.
     const uniquePages = uniqueReaderPages(logicalPages);
-    return { logicalPages: uniquePages, pages: uniquePages };
+    return {
+      logicalPages: uniquePages,
+      pages: uniquePages,
+      documentStructure: documentStructureFromChapters(chapters),
+    };
   }, [deferredContentBlocks, state.charactersPerPage, state.pageAdjustments, state.tableOfContentsItemsPerPage, state.title]);
   const miniPreviewPages = miniPreviewModel.pages;
   const miniPreviewLogicalPages = miniPreviewModel.logicalPages;
 
   const handleMiniPageClick = useCallback((page: ReaderPage) => {
-    const pageIndex = miniPreviewPages.findIndex((candidate) => candidate.id === page.id);
-    const pageForSources = page.kind === "pageBreak"
-      ? miniPreviewPages.find((candidate) => candidate.id === page.sourcePageId) || page
-      : page;
-    const sourceIds = "sourceBlockIds" in pageForSources ? pageForSources.sourceBlockIds || [] : [];
-    const allContentBlocks = flattenContentBlocks(contentBlocks);
-    const directTarget = sourceIds.find((sourceId) => allContentBlocks.some((block) => block.id === sourceId));
-    let targetBlockId = directTarget;
-
-    if (!targetBlockId && pageIndex >= 0) {
-      for (let index = pageIndex + 1; index < miniPreviewPages.length; index += 1) {
-        const candidate = miniPreviewPages[index];
-        if (!("sourceBlockIds" in candidate)) continue;
-        const nextTarget = candidate.sourceBlockIds?.find((sourceId) => allContentBlocks.some((block) => block.id === sourceId));
-        if (nextTarget) {
-          targetBlockId = nextTarget;
-          break;
-        }
-      }
-    }
-
-    if (!targetBlockId) {
-      const fallbackBlocks = page.kind === "backCover" || page.kind === "colophon"
-        ? [...contentBlocks].reverse()
-        : contentBlocks;
-      targetBlockId = fallbackBlocks[0]?.id;
-    }
+    const targetBlockId = resolveReaderPageNavigationTarget(
+      page,
+      miniPreviewPages,
+      contentBlocks,
+    );
     if (!targetBlockId) return;
     miniJumpNonceRef.current += 1;
-    setEditorScrollRequest({ blockId: targetBlockId, nonce: miniJumpNonceRef.current });
+    setEditorScrollRequest({ blockId: targetBlockId, nonce: miniJumpNonceRef.current, highlight: false });
   }, [contentBlocks, miniPreviewPages]);
+
+  const handleGuidanceAction = useCallback((issue: EditorGuidanceIssue) => {
+    const resolution = resolveGuidanceNavigationTarget(
+      issue,
+      miniPreviewLogicalPages,
+      contentBlocks,
+    );
+    if (resolution.status === "unavailable") return;
+    if (resolution.status === "not-found") {
+      setStatusMessage("該当箇所はすでに変更されています。");
+      return;
+    }
+    miniJumpNonceRef.current += 1;
+    guidanceRequestNonceRef.current = miniJumpNonceRef.current;
+    setEditorScrollRequest({
+      blockId: resolution.blockId,
+      nonce: miniJumpNonceRef.current,
+      highlight: true,
+    });
+  }, [contentBlocks, miniPreviewLogicalPages]);
+
+  const handleEditorScrollRequestResult = useCallback((result: { nonce: number; status: "handled" | "not-found" }) => {
+    if (guidanceRequestNonceRef.current !== result.nonce) return;
+    guidanceRequestNonceRef.current = null;
+    setStatusMessage(
+      result.status === "handled"
+        ? "該当箇所を編集画面に表示しました。"
+        : "該当箇所はすでに変更されています。",
+    );
+  }, []);
+
+  useEffect(() => {
+    if (isLoading || !focusBlockId || handledFocusBlockRef.current === focusBlockId) return;
+    const exists = flattenContentBlocks(contentBlocks).some((block) => block.id === focusBlockId);
+    handledFocusBlockRef.current = focusBlockId;
+    if (!exists) {
+      window.setTimeout(() => setStatusMessage("該当箇所はすでに変更されています。"), 0);
+      return;
+    }
+    miniJumpNonceRef.current += 1;
+    guidanceRequestNonceRef.current = miniJumpNonceRef.current;
+    setEditorScrollRequest({ blockId: focusBlockId, nonce: miniJumpNonceRef.current, highlight: true });
+  }, [contentBlocks, focusBlockId, isLoading]);
 
   const handleCursorChange = useCallback((position: number, blockId: string | null) => {
     setCursorPosition(position);
@@ -1004,6 +1087,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   }, [activeBlockId, miniPreviewPages]);
 
   const bodyCharacterCount = useMemo(() => countContentCharacters(contentBlocks), [contentBlocks]);
+  const deferredBodyCharacterCount = useDeferredValue(bodyCharacterCount);
   const bodyCharacterPercentage = bodyCharacterCount ? Math.round((cursorPosition / bodyCharacterCount) * 100) : 0;
 
   const estimatedPages = useMemo(() => {
@@ -1027,6 +1111,38 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   }, [contentBlocks, state.charactersPerPage]);
 
   const imagePages = useMemo(() => flattenContentBlocks(contentBlocks).filter((block) => block.type === "image").length, [contentBlocks]);
+
+  const editorGuidanceSnapshot = useMemo(
+    () => buildEditorGuidanceSnapshot({
+      title: state.title,
+      contentBlocks: deferredContentBlocks,
+      documentStructure: miniPreviewModel.documentStructure,
+      readerPages: miniPreviewLogicalPages,
+      bodyCharacterCount: deferredBodyCharacterCount,
+      charactersPerPage: state.charactersPerPage,
+    }),
+    [
+      deferredBodyCharacterCount,
+      deferredContentBlocks,
+      miniPreviewLogicalPages,
+      miniPreviewModel.documentStructure,
+      state.charactersPerPage,
+      state.title,
+    ],
+  );
+  const visibleEditorGuidance = useMemo(
+    () => selectVisibleEditorGuidance(evaluateEditorGuidance(editorGuidanceSnapshot)),
+    [editorGuidanceSnapshot],
+  );
+  const bookyState = useMemo(
+    () => resolveBookyHelpState({
+      helpOpen,
+      queryState: bookyQueryState,
+      actionSuccess: bookyActionSuccess,
+      hasGuidance: visibleEditorGuidance.length > 0,
+    }),
+    [bookyActionSuccess, bookyQueryState, helpOpen, visibleEditorGuidance.length],
+  );
 
   const autosaveDraftFields = useMemo(
     () =>
@@ -1333,6 +1449,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       externalLinkUrl: payload.externalLinks[0]?.url || current.externalLinkUrl,
       externalSalesUrl: payload.externalSalesUrl,
       externalSalesLabel: payload.externalSalesLabel,
+      publicationRevision: payload.publicationRevision || current.publicationRevision || 1,
     }));
     setImages(nextImages);
     setContentBlocks(ensureUniqueContentBlockIds(nextBlocks));
@@ -1521,6 +1638,114 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     setStatusMessage("公開を停止しました。");
   };
 
+  const closeHelp = useCallback(() => {
+    helpShouldReturnFocusRef.current = true;
+    setBookyQueryState("idle");
+    setHelpOpen(false);
+  }, []);
+
+  const openHelp = useCallback(() => {
+    if (bookySuccessTimerRef.current !== null) {
+      window.clearTimeout(bookySuccessTimerRef.current);
+      bookySuccessTimerRef.current = null;
+    }
+    setBookyActionSuccess(false);
+    setBookyQueryState("idle");
+    setHelpOpen(true);
+  }, []);
+
+  const showBookySuccess = useCallback(() => {
+    if (bookySuccessTimerRef.current !== null) {
+      window.clearTimeout(bookySuccessTimerRef.current);
+    }
+    setBookyActionSuccess(true);
+    bookySuccessTimerRef.current = window.setTimeout(() => {
+      setBookyActionSuccess(false);
+      bookySuccessTimerRef.current = null;
+    }, 2600);
+  }, []);
+
+  const focusHelpTarget = useCallback((target: HTMLElement | null): EditorNavigationResult => {
+    if (!target) return "not-found";
+    if (target.matches(":disabled") || target.getAttribute("aria-disabled") === "true") return "unavailable";
+    helpShouldReturnFocusRef.current = false;
+    setHelpOpen(false);
+    window.setTimeout(() => {
+      if (helpHighlightTimerRef.current !== null) {
+        window.clearTimeout(helpHighlightTimerRef.current);
+      }
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.focus({ preventScroll: true });
+      target.classList.add("is-guidance-highlight", "editor-help-target");
+      helpHighlightTimerRef.current = window.setTimeout(() => {
+        target.classList.remove("is-guidance-highlight", "editor-help-target");
+      }, 1800);
+    }, 0);
+    return "handled";
+  }, []);
+
+  const requestInlineHelpTarget = useCallback((request: Omit<InlineEditorHelpRequest, "nonce">): EditorNavigationResult => {
+    helpShouldReturnFocusRef.current = false;
+    setHelpOpen(false);
+    miniJumpNonceRef.current += 1;
+    setInlineHelpRequest({ ...request, nonce: miniJumpNonceRef.current });
+    return "handled";
+  }, []);
+
+  const resolveHelpRoute = useCallback((entry: EditorHelpCatalogEntry): `/${string}` | undefined => {
+    return resolveEditorHelpRoute(entry, bookId);
+  }, [bookId]);
+
+  const handleHelpAction = useCallback((entry: EditorHelpCatalogEntry): EditorNavigationResult => {
+    const resolveAction = (): EditorNavigationResult => {
+      const action = getEditorHelpActionDefinition(entry.actionId);
+      if (!action) return "unavailable";
+      if (action.target === "manuscript") return requestInlineHelpTarget({ kind: "focus-editor" });
+      if (action.target === "insert-image") return requestInlineHelpTarget({ kind: "open-insert-menu", menuItem: "image" });
+      if (action.target === "insert-youtube") return requestInlineHelpTarget({ kind: "open-youtube" });
+      if (action.target === "insert-page-break") return requestInlineHelpTarget({ kind: "open-insert-menu", menuItem: "page-break" });
+      if (action.target === "insert-columns") return requestInlineHelpTarget({ kind: "open-insert-menu", menuItem: "columns" });
+      if (action.target === "insert-paywall") {
+        if (contentBlocks.some((block) => block.type === "paywall")) return "unavailable";
+        return requestInlineHelpTarget({ kind: "open-insert-menu", menuItem: "paywall" });
+      }
+      if (action.target === "manuscript-import") return focusHelpTarget(manuscriptImportTargetRef.current);
+      if (action.target === "smart-format") return focusHelpTarget(smartFormatTargetRef.current);
+      if (action.target === "smart-undo") return focusHelpTarget(smartUndoTargetRef.current);
+      if (action.target === "cover") return focusHelpTarget(coverTargetRef.current);
+      if (action.target === "slug") return focusHelpTarget(slugInputRef.current);
+      if (action.target === "save") {
+        return focusHelpTarget(headerActionsRef.current?.querySelector<HTMLElement>("[data-help-target='save']") || null);
+      }
+      if (action.target === "preview") return focusHelpTarget(previewTargetRef.current);
+      if (action.target === "publish") return focusHelpTarget(publishTargetRef.current);
+      if (action.target === "external-sales") return focusHelpTarget(externalSalesTargetRef.current);
+      if (action.target === "pending-image" || action.target === "existing-paywall") {
+        const resolution = resolveHelpBlockNavigationTarget(action.id, contentBlocks);
+        if (resolution.status !== "handled") return resolution.status;
+        helpShouldReturnFocusRef.current = false;
+        setHelpOpen(false);
+        miniJumpNonceRef.current += 1;
+        guidanceRequestNonceRef.current = miniJumpNonceRef.current;
+        setEditorScrollRequest({ blockId: resolution.blockId, nonce: miniJumpNonceRef.current, highlight: true });
+        return "handled";
+      }
+      return "unavailable";
+    };
+    const result = resolveAction();
+    if (result === "handled") showBookySuccess();
+    return result;
+  }, [contentBlocks, focusHelpTarget, requestInlineHelpTarget, showBookySuccess]);
+
+  const handlePasteAutoFormat = useCallback((previousBlocks: BookContentBlock[]) => {
+    setPasteUndoBlocks(previousBlocks);
+  }, []);
+
+  const handleInlineHelpRequestResult = useCallback((result: { nonce: number; status: "handled" | "not-found" }) => {
+    if (inlineHelpRequest?.nonce !== result.nonce) return;
+    setStatusMessage(result.status === "handled" ? "操作場所を開きました。" : "現在の状態では、この操作場所を開けません。");
+  }, [inlineHelpRequest?.nonce]);
+
   if (isLoading) {
     return (
       <div className="reader-loading editor-loading" role="status" aria-live="polite">
@@ -1540,11 +1765,17 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           <h1>{mode === "new" ? "新しい作品" : "作品を編集"}</h1>
           <p>ベータ制限：最大5作品、本文20万文字、画像30枚、画像10MBまで。</p>
         </div>
-        <div className="maker-actions">
-          <Button variant="primary" type="button" disabled={isSaving} onClick={() => void handleCanonicalSave()}>
+        <div ref={headerActionsRef} className="maker-actions">
+          <BookyHelpTrigger
+            buttonRef={helpTriggerRef}
+            state={bookyState}
+            expanded={helpOpen}
+            onOpen={openHelp}
+          />
+          <Button data-help-target="save" variant="primary" type="button" disabled={isSaving} onClick={() => void handleCanonicalSave()}>
             {isSaving ? "保存中…" : "保存"}
           </Button>
-          <button className="maker-secondary-button" type="button" onClick={() => void handleCanonicalPublish()}>
+          <button ref={publishTargetRef} className="maker-secondary-button" type="button" onClick={() => void handleCanonicalPublish()}>
             公開
           </button>
           {state.status === "published" && state.slug ? (
@@ -1563,7 +1794,15 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         </div>
       </div>
 
-      <CharacterAssistant event={statusMessage.includes("失敗") ? "error" : dirty ? "welcome" : "save"} compact />
+      {helpOpen ? (
+        <EditorHelpPanel
+          onClose={closeHelp}
+          onAction={handleHelpAction}
+          resolveRoute={resolveHelpRoute}
+          onBookyStateChange={setBookyQueryState}
+        />
+      ) : null}
+
 
       <section className="editor-workbench">
         <div className="editor-main-column">
@@ -1679,7 +1918,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
         <div className="maker-card">
           <h2>原稿</h2>
-          <label className="manuscript-file-picker" aria-label="原稿ファイルを選択">
+          <label ref={manuscriptImportTargetRef} className="manuscript-file-picker" aria-label="原稿ファイルを選択" tabIndex={-1}>
             <span>TXT / Markdown / Word / PDF / ZIPを読み込む</span>
             <span className="manuscript-file-button">ファイルを選択</span>
             <input
@@ -1692,7 +1931,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           </label>
           <p className="maker-note">文章の途中にカーソルを置いて、画像を貼り付け・ドラッグ&ドロップ・選択挿入できます。</p>
           <div className="smart-format-action" aria-label="自動整形">
-            <button className="maker-secondary-button" type="button" onClick={handleSmartFormat} disabled={isSaving || !contentBlocks.length}>
+            <button ref={smartFormatTargetRef} className="maker-secondary-button" type="button" onClick={handleSmartFormat} disabled={isSaving || !contentBlocks.length}>
               自動で整える
             </button>
             <span className="maker-note">文章は変更せず、見出し・段落・ページ構成を整えます。</span>
@@ -1700,9 +1939,23 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           {smartFormatSummary ? (
             <div className="maker-note inline-paste-undo" role="status">
               {smartFormatSummary}
-              <button className="maker-secondary-button" type="button" onClick={handleSmartFormatUndo}>整形前に戻す</button>
+              <button ref={smartUndoTargetRef} className="maker-secondary-button" type="button" onClick={handleSmartFormatUndo}>整形前に戻す</button>
             </div>
           ) : null}
+          <EditorGuidanceCard
+            id="editor-guidance-mobile"
+            summary={editorGuidanceSnapshot.summary}
+            issues={visibleEditorGuidance}
+            className="editor-guidance-mobile"
+            embedded
+            onIssueAction={handleGuidanceAction}
+          >
+            <p className="maker-note">
+              推定ページ数: {estimatedPages} / 20ページ
+              <br />
+              文章: {textPages}ページ / 挿絵: {imagePages}ページ / 自動保存: {autosaveLabel}
+            </p>
+          </EditorGuidanceCard>
           {pendingImageCount > 0 ? (
             <div className="editor-pending-warning" role="alert">
               <strong>画像のアップロードが完了していません。</strong>
@@ -1730,13 +1983,16 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             onPendingChange={setPendingImageCount}
             onCursorChange={handleCursorChange}
             scrollRequest={editorScrollRequest}
+            onScrollRequestResult={handleEditorScrollRequestResult}
             pageBreakAfterBlockIds={pageBreakAfterBlockIds}
             onInsertPageBreak={handleEditorInsertPageBreak}
             onRemovePageBreak={handleEditorRemovePageBreak}
             onInsertPaywall={handleEditorInsertPaywall}
             onRemovePaywall={handleEditorRemovePaywall}
             onInsertColumns={handleEditorInsertColumns}
-            onPasteAutoFormat={(previousBlocks) => setPasteUndoBlocks(previousBlocks)}
+            onPasteAutoFormat={handlePasteAutoFormat}
+            helpRequest={inlineHelpRequest}
+            onHelpRequestResult={handleInlineHelpRequestResult}
           />
           <p className="inline-manuscript-character-count" aria-live="polite">
             <strong>{Math.min(cursorPosition, bodyCharacterCount).toLocaleString("ja-JP")}</strong>
@@ -1749,13 +2005,19 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         </div>
 
         <aside className="editor-side-column" aria-label="設定とMini Preview">
-          <section className="maker-card editor-status-card">
+          <EditorGuidanceCard
+            id="editor-guidance-desktop"
+            summary={editorGuidanceSnapshot.summary}
+            issues={visibleEditorGuidance}
+            className="editor-status-card editor-guidance-desktop"
+            onIssueAction={handleGuidanceAction}
+          >
             <p className="maker-note">
               推定ページ数: {estimatedPages} / 20ページ
               <br />
               文章: {textPages}ページ / 挿絵: {imagePages}ページ / 自動保存: {autosaveLabel}
             </p>
-          </section>
+          </EditorGuidanceCard>
 
           <EditorMiniPreview
             pages={miniPreviewPages}
@@ -1764,7 +2026,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             onPageClick={handleMiniPageClick}
           />
 
-        <div className="maker-card editor-cover-settings">
+        <div ref={coverTargetRef} className="maker-card editor-cover-settings" tabIndex={-1}>
           <h2>表紙画像</h2>
           <div className="cover-picker">
             <div className="cover-preview">
@@ -1916,7 +2178,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             </label>
             <label>
               <span>外部販売ページURL</span>
-              <input value={state.externalSalesUrl} onChange={(event) => update("externalSalesUrl", event.target.value)} placeholder="https://..." />
+              <input ref={externalSalesTargetRef} value={state.externalSalesUrl} onChange={(event) => update("externalSalesUrl", event.target.value)} placeholder="https://..." />
             </label>
           </div>
           <p className="maker-note">WebBookMakerは決済に関与しません。販売や応援は外部URLへの導線として扱います。</p>
@@ -1936,7 +2198,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         <Button variant="primary" type="button" disabled={isSaving} onClick={() => void handleCanonicalSave()}>
           {isSaving ? "保存中…" : "保存"}
         </Button>
-        <button className="maker-secondary-button" type="button" onClick={() => void handleCanonicalPreview()}>
+        <button ref={previewTargetRef} className="maker-secondary-button" type="button" onClick={() => void handleCanonicalPreview()}>
           プレビュー
         </button>
         <button className="maker-secondary-button" type="button" onClick={() => void handleCanonicalPublish()}>

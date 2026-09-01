@@ -211,6 +211,7 @@ export type BookProjectInput = {
   externalSalesLabel?: string;
   existingBookId?: string;
   existingCreatedAt?: string;
+  publicationRevision?: number;
 };
 
 export type ProjectBuildResult =
@@ -830,6 +831,7 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
       version: BOOK_PROJECT_VERSION,
       config: {
         bookId,
+        publicationRevision: Number.isInteger(input.publicationRevision) && (input.publicationRevision || 0) > 0 ? input.publicationRevision : 1,
         slug: input.slug?.trim() || undefined,
         publication: {
           status: input.publicationStatus || "draft",

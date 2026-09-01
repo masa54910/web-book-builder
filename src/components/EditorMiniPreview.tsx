@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReaderPage } from "@/lib/types";
-import { useMemo } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { INLINE_IMAGE_TOKEN_PREFIX, INLINE_YOUTUBE_TOKEN_PREFIX } from "@/lib/paginateText";
 import { buildReaderFolioById, readerPageNumberLabel } from "@/lib/readerFolio";
 import { normalizeTextMarks, TEXT_FONT_SIZE_CSS, type TextMark } from "@/lib/textStyles";
@@ -78,9 +78,9 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
     const columnsGrid = page.ratio === "40-60" ? "2fr 3fr" : page.ratio === "60-40" ? "3fr 2fr" : "1fr 1fr";
     const renderPane = (children: typeof page.left) => (
       <div className="editor-mini-columns-pane" style={{ display: "grid", minWidth: 0, overflow: "hidden" }}>
-        {children.map((child) => child.kind === "text" ? (
-          <p key={child.id}>
-            {child.paragraphs.map((paragraph, index) => (
+          {children.map((child) => child.kind === "text" ? (
+            <p key={child.id}>
+              {child.paragraphs.map((paragraph, index) => (
               <span key={`${child.id}-${index}`}>
                 {index > 0 ? " " : ""}
                 <MiniStyledText text={paragraph} marks={child.paragraphRuns?.[index]} />
@@ -133,7 +133,7 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
   );
 }
 
-export default function EditorMiniPreview({
+function EditorMiniPreview({
   pages,
   logicalPages,
   activePageId,
@@ -144,10 +144,65 @@ export default function EditorMiniPreview({
   activePageId?: string | null;
   onPageClick?: (page: ReaderPage) => void;
 }) {
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const [materializedIndices, setMaterializedIndices] = useState<Set<number>>(() => new Set());
+  // Keep the complete ReaderPage[] as the source of truth, but materialize
+  // only the thumbnail contents near the browser viewport. The lightweight
+  // page cards remain present so scroll height, page labels, and click targets
+  // stay stable while distant pages are replaced with placeholders.
+  useEffect(() => {
+    const initial = new Set<number>();
+    for (let index = 0; index < Math.min(30, pages.length); index += 1) initial.add(index);
+    const resetHandle = window.setTimeout(() => setMaterializedIndices(initial), 0);
+
+    const list = listRef.current;
+    if (!list || typeof IntersectionObserver === "undefined") return () => window.clearTimeout(resetHandle);
+    const observer = new IntersectionObserver((entries) => {
+      setMaterializedIndices((current) => {
+        const next = new Set(current);
+        let changed = false;
+        entries.forEach((entry) => {
+          const rawIndex = entry.target.getAttribute("data-mini-page-index");
+          const index = rawIndex === null ? -1 : Number(rawIndex);
+          if (index < 0 || !Number.isFinite(index)) return;
+          if (entry.isIntersecting) {
+            if (!next.has(index)) {
+              next.add(index);
+              changed = true;
+            }
+          } else if (next.has(index)) {
+            next.delete(index);
+            changed = true;
+          }
+        });
+        return changed ? next : current;
+      });
+    }, { rootMargin: "480px 0px" });
+    list.querySelectorAll<HTMLElement>("[data-mini-page-index]").forEach((element) => observer.observe(element));
+    return () => {
+      window.clearTimeout(resetHandle);
+      observer.disconnect();
+    };
+  }, [pages]);
+
   const logicalFolioById = useMemo(() => {
     const folioPages = logicalPages?.length ? logicalPages : pages.filter((page) => page.kind !== "pageBreak");
     return buildReaderFolioById(folioPages);
   }, [logicalPages, pages]);
+  const activePageIndex = activePageId ? pages.findIndex((page) => page.id === activePageId) : -1;
+  useEffect(() => {
+    if (activePageIndex < 0) return;
+    const activeIndex = activePageIndex;
+    const handle = window.setTimeout(() => {
+      setMaterializedIndices((current) => {
+        if (current.has(activeIndex)) return current;
+        const next = new Set(current);
+        next.add(activeIndex);
+        return next;
+      });
+    }, 0);
+    return () => window.clearTimeout(handle);
+  }, [activePageIndex]);
 
   return (
     <section className="editor-mini-preview" aria-label="ページ一覧ミニプレビュー">
@@ -159,29 +214,44 @@ export default function EditorMiniPreview({
         <strong>{pages.length}ページ</strong>
       </div>
       <p className="maker-note editor-mini-preview-note">本文の構成を確認できます。クリックするとそのページに移動できます。</p>
-      <div className="editor-mini-preview-list">
-        {pages.map((page) => {
+      <div ref={listRef} className="editor-mini-preview-list">
+        {pages.map((page, index) => {
           const pageNumber = readerPageNumberLabel(page, logicalFolioById);
           const clickable = Boolean(onPageClick);
+          const isMaterialized = materializedIndices.has(index);
+          const handleClick = () => {
+            if (!isMaterialized) {
+              setMaterializedIndices((current) => {
+                if (current.has(index)) return current;
+                const next = new Set(current);
+                next.add(index);
+                return next;
+              });
+            }
+            onPageClick?.(page);
+          };
           return (
             <article
               className={`editor-mini-page ${activePageId === page.id ? "is-active" : ""} ${clickable ? "is-clickable" : ""}`}
               key={page.id}
               data-page-id={page.id}
+              data-mini-page-index={index}
               role={clickable ? "button" : undefined}
               tabIndex={clickable ? 0 : undefined}
               aria-current={activePageId === page.id ? "page" : undefined}
               aria-label={clickable ? `${pageNumber || pageLabel(page)} ${pageLabel(page)}へ移動` : undefined}
-              onClick={clickable ? () => onPageClick?.(page) : undefined}
+              onClick={clickable ? handleClick : undefined}
               onKeyDown={clickable ? (event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
-                  onPageClick?.(page);
+                  handleClick();
                 }
               } : undefined}
             >
               <div className="editor-mini-page-number">{pageNumber || pageLabel(page)}</div>
-              <div className="editor-mini-page-frame"><MiniPageContent page={page} /></div>
+              <div className="editor-mini-page-frame">
+                {isMaterialized ? <MiniPageContent page={page} /> : <div className="editor-mini-page-placeholder" aria-hidden="true" />}
+              </div>
               <div className="editor-mini-page-meta"><span>{pageLabel(page)}</span></div>
             </article>
           );
@@ -190,3 +260,5 @@ export default function EditorMiniPreview({
     </section>
   );
 }
+
+export default memo(EditorMiniPreview);

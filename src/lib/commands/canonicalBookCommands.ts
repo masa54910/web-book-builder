@@ -95,12 +95,16 @@ function mergeSavedPayload(
   payload: CanonicalBookPayload,
   record: CloudBookRecord,
 ): CanonicalBookPayload {
-  return mergeSavedProjectIntoCanonicalPayload(payload, record.bookProject, {
+  const merged = mergeSavedProjectIntoCanonicalPayload(payload, record.bookProject, {
     id: record.id,
     slug: record.slug,
     status: record.status,
     visibility: record.visibility,
   });
+  return {
+    ...merged,
+    publicationRevision: payload.publicationRevision || record.bookProject.config.publicationRevision || 1,
+  };
 }
 
 /**
@@ -148,7 +152,7 @@ export async function saveCanonicalBookCommand(
       if (!existing) throw new CanonicalBookCommandError("The requested book was not found");
       const projectForUpload: BookProject = {
         ...project,
-        config: { ...project.config, bookId: existingId },
+        config: { ...project.config, bookId: existingId, publicationRevision: payload.publicationRevision || existing.bookProject.config.publicationRevision || 1 },
       };
       const projectWithAssets = await uploadBookProjectAssets(projectForUpload, ownerId);
       record = await saveBook(projectWithAssets, ownerId, existingId, payload.slug || undefined);
@@ -201,9 +205,24 @@ export async function publishCanonicalBookCommand(
   payload: CanonicalBookPayload,
   ownerId: string,
 ): Promise<PublishedBookResult> {
+  let payloadForPublish = payload;
+  if (payload.bookId && isPersistedBookId(payload.bookId)) {
+    const existing = await getBook(payload.bookId, ownerId);
+    const currentRevision = existing?.bookProject.config.publicationRevision || 1;
+    if (existing?.status === "published") {
+      const structureChanged = JSON.stringify(existing.bookProject.contentBlocks || []) !== JSON.stringify(payload.contentBlocks || [])
+        || existing.bookProject.config.title !== payload.title
+        || JSON.stringify(existing.bookProject.config.pageAdjustments || []) !== JSON.stringify(payload.pageAdjustments || []);
+      payloadForPublish = { ...payload, publicationRevision: structureChanged ? currentRevision + 1 : currentRevision };
+    } else {
+      payloadForPublish = { ...payload, publicationRevision: currentRevision };
+    }
+  } else if (!payload.publicationRevision) {
+    payloadForPublish = { ...payload, publicationRevision: 1 };
+  }
   let saved: SavedBookResult;
   try {
-    saved = await saveCanonicalBookCommand(payload, ownerId);
+    saved = await saveCanonicalBookCommand(payloadForPublish, ownerId);
   } catch (error) {
     logCommandFailure("publishCanonicalBookCommand.save", error, payload);
     throw new CanonicalBookCommandError("保存に失敗したため公開できませんでした。");
