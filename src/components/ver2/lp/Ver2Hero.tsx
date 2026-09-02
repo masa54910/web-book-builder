@@ -118,7 +118,6 @@ export default function Ver2Hero({
       <div className={styles.container}>
         <div className={styles.heroGrid}>
           <div className={styles.heroCopy}>
-            <div className={styles.kicker}>PDF不要。文章をコピペするだけ。</div>
             <h1 className={styles.heroTitle}>
               <span className={styles.heroTitleLead}>あなたの文章を</span>
               <br />
@@ -148,6 +147,19 @@ export default function Ver2Hero({
                   <strong>もちろん、PDF・Word・Markdown・TXTなどのファイル読み込みにも対応します。</strong>
                 </div>
               </div>
+              <div className={styles.heroActionRow} aria-label="WebBookMakerを知る・作る">
+                <Link className={styles.heroActionButton} href="/about">
+                  <span aria-hidden="true">📖</span>
+                  <span className={styles.heroActionText}>
+                    <strong>記事でWebBookMakerを知る</strong>
+                  </span>
+                </Link>
+                <Link className={styles.heroActionButton} href="/signup?next=%2Fbooks%2Fnew">
+                  <span className={styles.heroActionText}>
+                    <strong>無料でWebブックを作ってみる</strong>
+                  </span>
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -160,17 +172,6 @@ export default function Ver2Hero({
               <Ver2BookShowcase variant="heroPhoto" />
             </Link>
           </div>
-        </div>
-
-        <div className={styles.aboutCtaRow}>
-          <Link className={styles.aboutCta} href="/about">
-            <span aria-hidden="true">📖</span>
-            <span className={styles.aboutCtaText}>
-              <strong>記事でWebBookMakerを知る</strong>
-              <small>WebBookMakerでできることを詳しく紹介</small>
-            </span>
-            <span className={styles.aboutCtaArrow} aria-hidden="true">👆</span>
-          </Link>
         </div>
 
         <div className={styles.heroRecommendations}>

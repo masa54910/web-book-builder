@@ -1281,6 +1281,130 @@
   font-size: 10px;
 }
 
+/* Compact, real-profile-like preview used in the portfolio promotion card. */
+.authorProfileMini {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .96), rgba(238, 247, 252, .84));
+}
+
+.authorProfileMiniHeader {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(49, 130, 177, .14);
+}
+
+.authorProfileMiniAvatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #2a9fd6, #156b9e);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.authorProfileMiniHeader div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.authorProfileMiniHeader strong {
+  overflow: hidden;
+  color: #123e68;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.authorProfileMiniHeader small,
+.authorProfileMiniBio,
+.authorProfileMiniWorksHeading small {
+  color: #55708a;
+  font-size: 10px;
+}
+
+.authorProfileMiniBio {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.authorProfileMiniWorks {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.authorProfileMiniWorksHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.authorProfileMiniWorksHeading strong {
+  color: #123e68;
+  font-size: 11px;
+}
+
+.authorProfileMiniWorkGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  min-width: 0;
+}
+
+.authorProfileMiniWork {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.authorProfileMiniThumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid rgba(49, 130, 177, .14);
+  border-radius: 6px;
+  background: #edf4f8;
+}
+
+.authorProfileMiniThumb img {
+  object-fit: cover;
+}
+
+.authorProfileMiniWork > strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #234d70;
+  font-size: 9px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+@media (max-width: 700px) {
+  .authorProfileMini {
+    padding: 12px;
+  }
+
+  .authorProfileMiniWorkGrid {
+    gap: 6px;
+  }
+}
+
 .pricingSection {
   padding: 18px 0 42px;
 }
@@ -4690,6 +4814,69 @@
   border-radius: 8px;
 }
 
+.noteSampleEmbed {
+  overflow: hidden;
+  border: 1px solid rgba(15, 111, 93, .2);
+  border-radius: 9px;
+  background: #f7fbf9;
+}
+
+.noteSampleEmbedBar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(15, 111, 93, .12);
+  color: #174936;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.noteSampleEmbedBar small {
+  color: #6d7d74;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.noteSampleEmbedBody {
+  display: grid;
+  grid-template-columns: minmax(0, 82px) minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  padding: 8px;
+}
+
+.noteSampleEmbedBody .shareSampleCover {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+  border-radius: 6px;
+}
+
+.noteSampleEmbedMeta {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  color: #4f5e56;
+  font-size: 9px;
+}
+
+.noteSampleEmbedMeta strong {
+  overflow: hidden;
+  color: #173c31;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.noteSampleEmbedAction {
+  color: #0f6f5d;
+  font-size: 8px;
+  font-weight: 800;
+}
+
 .noteSampleTemplateText {
   max-height: 68px;
   overflow: hidden;
@@ -5344,6 +5531,10 @@
   white-space: nowrap;
 }
 
+.heroTitleLine {
+  margin-top: .16em;
+}
+
 @media (min-width: 1281px) {
   /* The longer value proposition still fits as a confident two-line lockup. */
   .heroTitle {
@@ -5364,10 +5555,12 @@
 }
 
 .heroInfoCard {
+  padding: 0;
+  border: 0;
   border-color: var(--wb-border);
-  border-radius: var(--wb-radius-lg);
-  background: linear-gradient(145deg, #ffffff 0%, #ffffff 58%, #f5f9fd 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .98), 0 12px 26px rgba(52, 112, 169, .08);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .inputMessageCard {
@@ -5378,7 +5571,7 @@
 }
 
 .heroInfoRow + .heroInfoRow {
-  border-top-color: var(--wb-border);
+  border-top: 0;
 }
 
 .heroInfoIcon,
@@ -5927,6 +6120,117 @@
 .aboutCta:hover .aboutCtaArrow,
 .aboutCta:focus-visible .aboutCtaArrow {
   transform: translateX(3px);
+}
+
+.heroActionRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 12px;
+  width: min(100%, clamp(274px, 22.2vw, 320px));
+  max-width: 100%;
+  margin-top: 18px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.heroActionButton {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 10px 14px;
+  border: 1px solid var(--wb-navy);
+  border-radius: var(--wb-radius-md);
+  background: var(--wb-navy);
+  color: var(--wb-white);
+  box-shadow: 0 8px 18px rgba(12, 45, 87, .16);
+  text-align: center;
+  text-decoration: none;
+  transition: transform var(--wb-transition), box-shadow var(--wb-transition), background-color var(--wb-transition);
+}
+
+.heroActionButton:hover,
+.heroActionButton:focus-visible {
+  background: color-mix(in srgb, var(--wb-navy) 88%, #2d74bd);
+  box-shadow: 0 12px 24px rgba(12, 45, 87, .22);
+  transform: translateY(-2px);
+}
+
+.heroActionButton:first-child {
+  border-color: rgba(16, 120, 90, .12);
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255, 255, 255, .96), rgba(0, 0, 0, 0) 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, .86), rgba(247, 255, 251, .62)),
+    linear-gradient(135deg, rgba(255, 255, 255, .96), rgba(16, 120, 90, .12), rgba(201, 154, 69, .12));
+  color: var(--wb-navy);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .94), 0 12px 26px rgba(31, 78, 112, .08);
+}
+
+.heroActionButton:first-child:hover,
+.heroActionButton:first-child:focus-visible {
+  border-color: var(--wb-blue);
+  background: var(--wb-pale-blue);
+  color: var(--wb-navy);
+  box-shadow: var(--wb-shadow-small);
+}
+
+.heroActionButton > span:first-child {
+  flex: 0 0 auto;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.heroActionText {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.heroActionText strong,
+.heroActionText small {
+  color: inherit;
+  line-height: 1.35;
+}
+
+.heroActionText strong {
+  font-family: "Noto Serif JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-size: clamp(14px, 1.25vw, 18px);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.heroActionText small {
+  font-size: clamp(10px, .95vw, 13px);
+  font-weight: 600;
+  opacity: .9;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .heroActionRow {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    margin-top: 14px;
+  }
+
+  .heroActionButton {
+    min-height: 54px;
+    padding: 9px 12px;
+  }
+
+  .heroActionText strong {
+    font-size: 15px;
+  }
+
+  .heroActionText small {
+    font-size: 11px;
+  }
 }
 
 .sampleGuideArrow {
@@ -6995,4 +7299,35 @@
   .flowXPost .shareSampleCard {
     min-height: 248px;
   }
+}
+
+/* Keep the handoff photo clear while retaining a soft edge against the page. */
+.promotionScenarioVisual {
+  -webkit-mask-image:
+    linear-gradient(to right, transparent 0, #000 7%, #000 100%),
+    linear-gradient(to bottom, transparent 0, #000 4%, #000 96%, transparent 100%);
+  mask-image:
+    linear-gradient(to right, transparent 0, #000 7%, #000 100%),
+    linear-gradient(to bottom, transparent 0, #000 4%, #000 96%, transparent 100%);
+}
+
+@media (max-width: 820px) {
+  .promotionScenarioVisual {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 4%, #000 96%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 4%, #000 96%, transparent 100%);
+  }
+}
+
+/* The Home handoff asset is a complete 4:3 two-scene composition. Keep both
+   the online message and the in-person QR handoff visible at every width. */
+.promotionScenarioVisual {
+  height: auto;
+  aspect-ratio: 4 / 3;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.promotionScenarioVisual img {
+  object-fit: cover;
+  object-position: center;
 }

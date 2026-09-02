@@ -5,6 +5,42 @@ import { SAMPLE_BOOK_COVER_IMAGE } from "@/lib/sampleBookConstants";
 import styles from "./Ver2Landing.module.css";
 import { NoteShareSampleCard, XShareSampleCard } from "./HomeShareSamples";
 
+function AuthorProfileMiniPreview() {
+  const works = [
+    { title: "星降る街の小さな記録", image: SAMPLE_BOOK_COVER_IMAGE },
+    { title: "風見鶏の灯台", image: "/sample-images/hoshifuru-01.webp" },
+    { title: "月明かりの停留所", image: "/sample-images/hoshifuru-02.webp" },
+  ];
+
+  return (
+    <div className={`${styles.promoPreview} ${styles.authorProfileMini}`} aria-label="作者プロフィールページの見本">
+      <div className={styles.authorProfileMiniHeader}>
+        <span className={styles.authorProfileMiniAvatar}>
+          A
+        </span>
+        <div>
+          <strong>本野しおり（サンプル作者）</strong>
+          <small>@webbookmaker</small>
+        </div>
+      </div>
+      <p className={styles.authorProfileMiniBio}>夜の街と小さな灯りをテーマに、短編を制作しています。</p>
+      <div className={styles.authorProfileMiniWorks}>
+        <div className={styles.authorProfileMiniWorksHeading}><strong>公開作品</strong><small>3冊</small></div>
+        <div className={styles.authorProfileMiniWorkGrid}>
+          {works.map((work) => (
+            <div className={styles.authorProfileMiniWork} key={work.title}>
+              <span className={styles.authorProfileMiniThumb}>
+                <Image src={work.image} alt="" fill sizes="72px" />
+              </span>
+              <strong>{work.title}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Ver2PromotionDemoCenter() {
   return (
     <section className={styles.promotionSection} id="promotion">
@@ -35,7 +71,7 @@ export default function Ver2PromotionDemoCenter() {
           </div>
           <div className={styles.promotionScenarioVisual}>
             <Image
-              src="/home/webbook-qr-handoff.webp"
+              src="/home/webbook-delivery-online-offline.png"
               alt="QRコードからWebブックをその場で見てもらうイメージ"
               width={1448}
               height={1086}
@@ -104,7 +140,7 @@ export default function Ver2PromotionDemoCenter() {
           </article>
           <article className={`${styles.promo} ${styles.portfolioCard}`}>
             <div className={styles.promoCopy}><span className={styles.promoLabel}>作品棚を育てる</span><h3>作者のポートフォリオにも</h3><p>公開作品を作者ページにまとめて、自分だけの作品棚として読者へ見せられます。</p><ul className={styles.promoChecks}><li>作品一覧を自動表示</li><li>プロフィールとSNSを掲載</li><li>次の作品へ自然に誘導</li></ul></div>
-            <div className={`${styles.promoPreview} ${styles.shelfPreview}`}><div className={styles.shelfBooks}><i /><i /><i /><i /></div><div className={styles.shelfBoard} /><div className={styles.authorCardMini}><span>A</span><div><strong>あなたの作者ページ</strong><small>公開作品 4冊</small></div></div></div>
+            <AuthorProfileMiniPreview />
             <Link className={`${styles.promoCta} ${styles.portfolioCta}`} href="/demo/author">作者ページを見る →</Link>
           </article>
         </div>

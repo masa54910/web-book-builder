@@ -65,6 +65,10 @@
   color: #1c2e28;
 }
 
+.authorTitle {
+  font-size: clamp(15px, 2.5vw, 23px);
+}
+
 .lead {
   margin: 0;
   color: #516059;
@@ -88,6 +92,38 @@
 .channelCard h3 {
   margin: 0 0 10px;
   color: #1f312b;
+}
+
+.authorNameRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.authorAvatar {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 2px solid rgba(42, 159, 214, .28);
+  background: #eaf6fc;
+}
+
+.authorAvatar img {
+  object-fit: cover;
+  object-position: center 18%;
+}
+
+.authorName {
+  margin: 0;
+  min-width: 0;
+  font-size: clamp(32px, 4vw, 48px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .card p,
@@ -114,6 +150,9 @@
 }
 
 .chips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border-radius: 999px;
   border: 1px solid rgba(39, 65, 56, 0.14);
   background: rgba(255, 255, 255, 0.76);
@@ -121,6 +160,24 @@
   font-size: 12px;
   font-weight: 700;
   color: #465952;
+}
+
+.profileSocialIcon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.profileSocialIconX {
+  color: #111827;
+}
+
+.profileSocialIconNote {
+  color: #2f3437;
+}
+
+.profileSocialIconInstagram {
+  color: #c13584;
 }
 
 .previewPanel {
@@ -221,6 +278,19 @@
   font-size: 14px;
 }
 
+.bookAction {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bookStatus {
+  color: #718397;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .noteArticle {
   margin-top: 12px;
   border-radius: 16px;
@@ -229,6 +299,20 @@
   padding: 14px;
   display: grid;
   gap: 10px;
+}
+
+.bookThumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  margin: -2px 0 12px;
+  overflow: hidden;
+  border-radius: 11px;
+  background: #edf4f8;
+}
+
+.bookThumb img {
+  object-fit: cover;
 }
 
 .shareTemplateModalStage {

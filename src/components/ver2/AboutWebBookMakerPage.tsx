@@ -84,14 +84,14 @@ function RealDeliverySection() {
       <div className={styles.realIntro}>
         <div className={styles.sectionContent}>
           <h2 className={styles.realHeading}>Webブックは、リアルでも渡せます。</h2>
-          <p className={styles.realScene}><span>「私、こういうの、作ったんですよ。</span><span>見てもらえますか？」</span></p>
+          <p className={styles.realScene}><span>「私、こういうの作ったんですよ。</span><span>見てもらえますか？」</span></p>
           <p>Webブックは、SNSでシェアするだけではありません。誰かと実際に会ったとき、QRコードを見せれば、相手はその場でスマートフォンからWebブックを開けます。</p>
           <p className={styles.realCatch}>URLで送れる。QRで渡せる。</p>
           <p>アプリのインストールも、アカウント作成も、ログインも必要ありません。</p>
         </div>
         <figure className={styles.realVisual}>
           <Image
-            src="/about/webbook-qr-handoff-about.webp"
+            src="/about/webbook-qr-handoff-chat.png"
             alt="QRコードを使ってWebブックをその場で見てもらうイメージ"
             fill
             sizes="(max-width: 640px) calc(100vw - 28px), (max-width: 900px) calc(100vw - 40px), 420px"
