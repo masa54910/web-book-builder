@@ -120,9 +120,13 @@ export default function Ver2Hero({
           <div className={styles.heroCopy}>
             <div className={styles.kicker}>PDF不要。文章をコピペするだけ。</div>
             <h1 className={styles.heroTitle}>
-              <span className={styles.heroTitleLead}>書いた文章を</span>
+              <span className={styles.heroTitleLead}>あなたの文章を</span>
               <br />
-              <span className={styles.heroTitleLine}>そのまま<span>Webブック</span>に。</span>
+              <span className={styles.heroTitleLine}>
+                <span className={styles.heroTitlePhrase}>「届けて」</span>
+                <span className={styles.heroTitlePhrase}>「読まれる」</span>
+                一冊に。
+              </span>
             </h1>
             <div className={styles.heroInfoCard} aria-label="WebBookMakerの特徴">
               <div className={styles.heroInfoRow}>
