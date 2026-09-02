@@ -11,11 +11,12 @@
     "verify:editor-guidance": "tsx scripts/verify-editor-guidance.ts",
     "verify:editor-help": "tsx scripts/verify-editor-help.ts",
     "verify:editor-help-actions": "tsx scripts/verify-editor-help-actions.ts",
+    "verify:editor-helper": "tsx scripts/verify-editor-helper-serialization.ts",
     "verify:booky-help": "tsx scripts/verify-booky-help.ts",
     "verify:analytics-guidance": "tsx scripts/verify-analytics-guidance.ts",
     "verify:analytics-integrity": "tsx scripts/verify-analytics-integrity.ts",
     "verify:analytics-schema": "tsx scripts/verify-analytics-schema.ts",
-    "test": "tsx scripts/verify-beta.ts && tsx scripts/verify-gatec.ts && tsx scripts/verify-gatec-step2b.ts && tsx scripts/verify-paywall-security.ts && tsx scripts/verify-columns.ts && tsx scripts/verify-analytics-integrity.ts"
+    "test": "tsx scripts/verify-beta.ts && tsx scripts/verify-gatec.ts && tsx scripts/verify-gatec-step2b.ts && tsx scripts/verify-paywall-security.ts && tsx scripts/verify-columns.ts && tsx scripts/verify-editor-helper-serialization.ts && tsx scripts/verify-analytics-integrity.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",

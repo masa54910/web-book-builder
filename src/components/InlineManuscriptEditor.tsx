@@ -177,6 +177,9 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
   };
 
   for (const [index, child] of children.entries()) {
+    if (child instanceof HTMLElement && child.dataset.editorHelper === "add-content") {
+      continue;
+    }
     if (child instanceof HTMLElement && child.dataset.nodeType === "page-break") {
       continue;
     }
@@ -410,6 +413,7 @@ function createColumnsElement(block: BookColumnsBlock) {
     add.className = "inline-editor-column-add";
     add.dataset.columnAdd = side;
     add.dataset.columnId = block.id;
+    add.dataset.editorHelper = "add-content";
     add.contentEditable = "false";
     add.textContent = "＋ 内容を追加";
     pane.append(add);

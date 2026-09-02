@@ -13,6 +13,22 @@ import type { ImageManifestRow } from "@/lib/types";
 import type { PublishedReaderPayload } from "@/lib/publishedReaderTypes";
 import type { DocumentTocEntry } from "@/lib/documentStructure";
 
+function safeStripeRetrieveError(error: unknown) {
+  const value = error && typeof error === "object" ? error as Record<string, unknown> : null;
+  const errorName = value && typeof value.name === "string"
+    ? value.name.slice(0, 120)
+    : error instanceof Error
+      ? error.name.slice(0, 120)
+      : "UnknownError";
+  return {
+    errorName,
+    stripeErrorType: value && typeof value.type === "string" ? value.type.slice(0, 120) : undefined,
+    stripeErrorCode: value && typeof value.code === "string" ? value.code.slice(0, 120) : undefined,
+    statusCode: value && typeof value.statusCode === "number" ? value.statusCode : undefined,
+    requestId: value && typeof value.requestId === "string" ? value.requestId.slice(0, 120) : undefined,
+  };
+}
+
 function storageRef(value: string | undefined) {
   if (!value?.startsWith("storage:")) return null;
   const [bucket, ...parts] = value.slice("storage:".length).split("/");
@@ -106,7 +122,17 @@ export async function loadPublishedReader(slug: string): Promise<PublishedReader
     : [];
   let paymentUrl: string | undefined;
   if (locked && typeof settings?.stripe_payment_link_id === "string" && settings.stripe_payment_link_id) {
-    try { paymentUrl = (await requireStripeClient().paymentLinks.retrieve(settings.stripe_payment_link_id)).url || undefined; } catch { paymentUrl = undefined; }
+    try {
+      paymentUrl = (await requireStripeClient().paymentLinks.retrieve(settings.stripe_payment_link_id)).url || undefined;
+    } catch (error) {
+      console.error({
+        event: "published_reader_payment_link_retrieve_failed",
+        ...safeStripeRetrieveError(error),
+        expectedLivemode,
+        bookSlug: slug,
+      });
+      paymentUrl = undefined;
+    }
   }
   let authorPageHandle: string | null = null;
   const { data: profile } = await admin.from("profiles").select("handle,is_public").eq("id", row.owner_id).eq("is_public", true).maybeSingle();
