@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { FulfillmentError, fulfillCheckoutSession, validateCheckoutSessionId } from "@/lib/server/purchaseFulfillment";
+import { createPurchaseAccessToken, purchaseAccessCookieOptions, PURCHASE_ACCESS_COOKIE } from "@/lib/server/purchaseAccessSession";
 
 export const runtime = "nodejs";
 
@@ -21,10 +22,12 @@ export async function POST(request: Request) {
 
   try {
     const result = await fulfillCheckoutSession(sessionId);
-    return NextResponse.json(
-      { success: true, access_code: result.accessCode, book_slug: result.bookSlug },
+    const response = NextResponse.json(
+      { success: true, book_slug: result.bookSlug },
       { headers: { "Cache-Control": "no-store" } },
     );
+    response.cookies.set(PURCHASE_ACCESS_COOKIE, createPurchaseAccessToken(result.bookId, result.purchaseId), purchaseAccessCookieOptions(result.bookSlug));
+    return response;
   } catch (error) {
     const knownError = error instanceof FulfillmentError;
     const status = knownError ? 400 : 503;

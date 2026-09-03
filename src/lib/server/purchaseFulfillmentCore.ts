@@ -1,10 +1,3 @@
-import {
-  decryptAccessCode,
-  encryptAccessCode,
-  generateAccessCode,
-  hashAccessCode,
-} from "./accessCodeCore";
-
 export type CheckoutSessionForFulfillment = {
   id: string;
   livemode: boolean;
@@ -43,8 +36,9 @@ export type PurchaseRecord = {
   amount: number;
   currency: string;
   payment_status: "paid";
-  access_code_hash: string;
-  access_code_ciphertext: string;
+  access_code_hash: string | null;
+  access_code_ciphertext: string | null;
+  revoked_at?: string | null;
 };
 
 export type PurchaseDatabase = {
@@ -61,7 +55,7 @@ export type FulfillmentDependencies = {
 };
 
 export type FulfillmentResult = {
-  accessCode: string;
+  purchaseId: string;
   bookId: string;
   bookSlug: string;
   reused: boolean;
@@ -72,8 +66,7 @@ export type FulfillmentErrorCode =
   | "session_not_paid"
   | "sales_settings_not_found"
   | "payment_mismatch"
-  | "purchase_unavailable"
-  | "purchase_code_unavailable";
+  | "purchase_unavailable";
 
 export class FulfillmentError extends Error {
   readonly code: FulfillmentErrorCode;
@@ -114,16 +107,10 @@ async function restoreExistingPurchase(
   if (expectedLivemode !== undefined && purchase.stripeLivemode !== expectedLivemode) {
     throw new FulfillmentError("purchase_unavailable");
   }
-  let accessCode: string;
-  try {
-    accessCode = decryptAccessCode(purchase.access_code_ciphertext);
-  } catch {
-    throw new FulfillmentError("purchase_code_unavailable");
-  }
-
   const bookSlug = await database.findBookSlug(purchase.book_id);
   if (!bookSlug) throw new FulfillmentError("purchase_unavailable");
-  return { accessCode, bookId: purchase.book_id, bookSlug, reused: true };
+  if (!purchase.id) throw new FulfillmentError("purchase_unavailable");
+  return { purchaseId: purchase.id, bookId: purchase.book_id, bookSlug, reused: true };
 }
 
 function isUniqueViolation(error: unknown): boolean {
@@ -147,7 +134,6 @@ export async function fulfillCheckoutSession(
   }
 
   const existingPurchase = await dependencies.database.findPurchase(rawSessionId);
-  if (existingPurchase) return restoreExistingPurchase(existingPurchase, dependencies.database, dependencies.expectedLivemode);
 
   const paymentLinkId = session.payment_link;
   const sessionPriceId = priceId(session);
@@ -172,7 +158,19 @@ export async function fulfillCheckoutSession(
   const bookSlug = await dependencies.database.findBookSlug(settings.book_id);
   if (!bookSlug) throw new FulfillmentError("purchase_unavailable");
 
-  const accessCode = generateAccessCode();
+  if (existingPurchase) {
+    if (
+      existingPurchase.book_id !== settings.book_id ||
+      existingPurchase.amount !== sessionAmount ||
+      normalizedCurrency(existingPurchase.currency) !== sessionCurrency ||
+      existingPurchase.payment_status !== "paid" ||
+      existingPurchase.revoked_at
+    ) {
+      throw new FulfillmentError("purchase_unavailable");
+    }
+    return restoreExistingPurchase(existingPurchase, dependencies.database, dependencies.expectedLivemode);
+  }
+
   const record: PurchaseRecord = {
     book_id: settings.book_id,
     stripeLivemode: session.livemode,
@@ -182,8 +180,8 @@ export async function fulfillCheckoutSession(
     amount: sessionAmount,
     currency: sessionCurrency,
     payment_status: "paid",
-    access_code_hash: hashAccessCode(accessCode),
-    access_code_ciphertext: encryptAccessCode(accessCode),
+    access_code_hash: null,
+    access_code_ciphertext: null,
   };
 
   const { data, error } = await dependencies.database.insertPurchase(record);
@@ -196,5 +194,6 @@ export async function fulfillCheckoutSession(
   }
 
   if (!data) throw new FulfillmentError("purchase_unavailable");
-  return { accessCode, bookId: settings.book_id, bookSlug, reused: false };
+  if (!data.id) throw new FulfillmentError("purchase_unavailable");
+  return { purchaseId: data.id, bookId: settings.book_id, bookSlug, reused: false };
 }

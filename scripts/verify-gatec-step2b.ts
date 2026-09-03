@@ -8,9 +8,6 @@ import {
   type SaleSettingsRecord,
 } from "../src/lib/server/purchaseFulfillmentCore";
 
-process.env.PURCHASE_CODE_PEPPER = "gatec-step2b-test-pepper";
-process.env.PURCHASE_CODE_ENCRYPTION_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-
 const sessionId = "cs_test_gatec_step2b_001";
 const saleSettings: SaleSettingsRecord = {
   book_id: "book-1",
@@ -51,13 +48,14 @@ function setup(options: { session?: CheckoutSessionForFulfillment; settings?: Sa
     async findBookSlug(bookId) { return bookId === "book-1" ? "gatec-sample-book" : null; },
     async findPurchase() { return purchase; },
     async insertPurchase(record) {
+      const saved = { ...record, id: "purchase-1" };
       if (raceOnce) {
         raceOnce = false;
-        purchase = record;
+        purchase = saved;
         return { data: null, error: { code: "23505", message: "duplicate key value violates unique constraint" } };
       }
-      purchase = record;
-      return { data: record, error: null };
+      purchase = saved;
+      return { data: saved, error: null };
     },
   };
   return {
@@ -74,12 +72,14 @@ async function main() {
   const first = setup();
   const created = await fulfillCheckoutSession(sessionId, first.dependencies);
   assert.equal(created.reused, false);
-  assert.match(created.accessCode, /^WBK-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}(?:-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}){3}$/);
+  assert.equal(created.purchaseId, "purchase-1");
   assert.equal(created.bookSlug, "gatec-sample-book");
+  assert.equal((await first.dependencies.database.findPurchase(sessionId))?.access_code_hash, null);
+  assert.equal((await first.dependencies.database.findPurchase(sessionId))?.access_code_ciphertext, null);
 
   const repeated = await fulfillCheckoutSession(sessionId, first.dependencies);
   assert.equal(repeated.reused, true, "a repeated verify must reuse the purchase");
-  assert.equal(repeated.accessCode, created.accessCode, "a repeated verify must reuse the code");
+  assert.equal(repeated.purchaseId, created.purchaseId, "a repeated verify must reuse the purchase");
 
   const cases: Array<{ label: string; overrides: Partial<CheckoutSessionForFulfillment> }> = [
     { label: "unpaid", overrides: { payment_status: "unpaid" } },
@@ -98,7 +98,7 @@ async function main() {
   const raced = setup({ race: true });
   const raceResult = await fulfillCheckoutSession(sessionId, raced.dependencies);
   assert.equal(raceResult.reused, true, "a unique violation must restore the existing purchase");
-  assert.equal((await fulfillCheckoutSession(sessionId, raced.dependencies)).accessCode, raceResult.accessCode);
+  assert.equal((await fulfillCheckoutSession(sessionId, raced.dependencies)).purchaseId, raceResult.purchaseId);
 
   console.log("Gate C Step 2-B fulfillment checks passed.");
 }

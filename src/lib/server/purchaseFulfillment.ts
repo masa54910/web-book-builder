@@ -39,7 +39,7 @@ function requireAdminDatabase() {
     async findPurchase(sessionId): Promise<PurchaseRecord | null> {
       const { data, error } = await client
         .from("book_purchases")
-        .select("id,book_id,stripe_livemode,stripe_checkout_session_id,stripe_payment_intent_id,buyer_email,amount,currency,payment_status,access_code_hash,access_code_ciphertext")
+        .select("id,book_id,stripe_livemode,stripe_checkout_session_id,stripe_payment_intent_id,buyer_email,amount,currency,payment_status,access_code_hash,access_code_ciphertext,revoked_at")
         .eq("stripe_checkout_session_id", sessionId)
         .maybeSingle();
       if (error) throw error;
@@ -59,7 +59,7 @@ function requireAdminDatabase() {
         payment_status: record.payment_status,
         access_code_hash: record.access_code_hash,
         access_code_ciphertext: record.access_code_ciphertext,
-      }).select("id,book_id,stripe_livemode,stripe_checkout_session_id,stripe_payment_intent_id,buyer_email,amount,currency,payment_status,access_code_hash,access_code_ciphertext").single();
+      }).select("id,book_id,stripe_livemode,stripe_checkout_session_id,stripe_payment_intent_id,buyer_email,amount,currency,payment_status,access_code_hash,access_code_ciphertext,revoked_at").single();
       return {
         data: data
           ? { ...data, stripeLivemode: Boolean((data as { stripe_livemode?: unknown }).stripe_livemode) } as PurchaseRecord
