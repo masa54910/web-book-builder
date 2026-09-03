@@ -21,6 +21,7 @@ import { getOwnProfile, saveOwnProfile, type ProfileRecord } from "@/lib/profile
 import { resolveStorageUrl } from "@/lib/bookAssetStorage";
 import { uploadProfileAvatar } from "@/lib/profileAssetStorage";
 import { authorPagePath } from "@/lib/authorPage";
+import SellerConnectPanel from "@/components/SellerConnectPanel";
 
 const PROFILE_LOAD_ERROR_MESSAGE = "プロフィール情報を読み込めませんでした。時間をおいて再度お試しください。";
 const PROFILE_SAVE_ERROR_MESSAGE = "登録情報を保存できませんでした。時間をおいて再度お試しください。";
@@ -422,6 +423,9 @@ export default function ProfileSettingsPage() {
             <li>データ削除依頼・問い合わせ先は限定ベータ案内文書に記載します。</li>
           </ul>
         </section>
+      </div>
+      <div className="settings-sections">
+        <SellerConnectPanel />
       </div>
     </main>
   );

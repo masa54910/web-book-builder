@@ -135,7 +135,7 @@ export default function BookReader({
   };
   onCoverDesignChange?: (patch: Partial<CoverDesign>) => void;
   sampleBookPresentation?: boolean;
-  access?: { state: "free" | "locked" | "unlocked"; paymentUrl?: string; amount?: number; currency?: string; lockedTocEntries?: import("@/lib/documentStructure").DocumentTocEntry[] };
+  access?: { state: "free" | "locked" | "unlocked"; paymentUrl?: string; amount?: number; currency?: string; lockedTocEntries?: import("@/lib/documentStructure").DocumentTocEntry[]; sellerDisclosure?: { sellerName: string; address: string; supportEmail: string; paymentMethod: string; paymentTiming: string; digitalDeliveryTiming: string; refundPolicy: string; additionalCosts: string; applicationDeadline?: string } };
   accessSlug?: string;
 }) {
   const flipBookRef = useRef<FlipBookHandle | null>(null);
@@ -547,7 +547,7 @@ export default function BookReader({
     } else if (page.kind === "pageBreak") {
       content = <div className="page-break-page" aria-label="手動改ページ">ここから新しいページ</div>;
     } else if (page.kind === "paywall") {
-      content = <PaywallPage slug={accessSlug || config.slug || ""} cloudBookId={cloudBookId} paymentUrl={access?.paymentUrl} amount={access?.amount} currency={access?.currency} />;
+      content = <PaywallPage slug={accessSlug || config.slug || ""} cloudBookId={cloudBookId} paymentUrl={access?.paymentUrl} amount={access?.amount} currency={access?.currency} sellerDisclosure={access?.sellerDisclosure} />;
     } else if (page.kind === "colophon") content = <ColophonPage config={config} cloudBookId={cloudBookId} />;
     else content = <CoverPage config={config} back />;
 

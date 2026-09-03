@@ -4,11 +4,13 @@ import { unstable_noStore } from "next/cache";
 import { flattenContentBlocks, type BookContentBlock, type BookProject } from "@/lib/bookProject";
 import { parseBookProjectJson } from "@/lib/bookProjectNormalization";
 import { normalizeAuthorPageHandle } from "@/lib/authorPage";
+import { evaluateSalesLegalTerms } from "@/lib/sellerConnect";
 import { filterPublishedProject, visibleContentBlockIds } from "@/lib/publishedReaderSecurity";
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
 import { requireStripeClient } from "@/lib/server/stripe";
 import { expectedStripeLivemode } from "@/lib/server/stripeEnvironment";
 import { readPurchaseAccessSession } from "@/lib/server/purchaseAccessSession";
+import { getConnectBookSale } from "@/lib/server/connectSalesRepository";
 import type { ImageManifestRow } from "@/lib/types";
 import type { PublishedReaderPayload } from "@/lib/publishedReaderTypes";
 import type { DocumentTocEntry } from "@/lib/documentStructure";
@@ -100,7 +102,8 @@ export async function loadPublishedReader(slug: string): Promise<PublishedReader
   const paywallIndex = originalBlocks.findIndex((block) => block.type === "paywall");
   const expectedLivemode = expectedStripeLivemode();
   const { data: settings } = await admin.from("book_sales_settings").select("enabled,amount,currency,stripe_payment_link_id,stripe_livemode").eq("book_id", row.id).eq("stripe_livemode", expectedLivemode).maybeSingle();
-  const salesEnabled = Boolean(settings?.enabled);
+  const connectSale = await getConnectBookSale(String(row.id), expectedLivemode);
+  const salesEnabled = Boolean(settings?.enabled || connectSale?.enabled);
   const session = paywallIndex >= 0 ? await readPurchaseAccessSession(String(row.id)) : null;
   let unlocked = false;
   if (session?.purchaseId) {
@@ -121,9 +124,10 @@ export async function loadPublishedReader(slug: string): Promise<PublishedReader
       })
     : [];
   let paymentUrl: string | undefined;
-  if (locked && typeof settings?.stripe_payment_link_id === "string" && settings.stripe_payment_link_id) {
+  const paymentLinkId = connectSale?.enabled ? connectSale.stripePaymentLinkId : typeof settings?.stripe_payment_link_id === "string" ? settings.stripe_payment_link_id : "";
+  if (locked && paymentLinkId) {
     try {
-      paymentUrl = (await requireStripeClient().paymentLinks.retrieve(settings.stripe_payment_link_id)).url || undefined;
+      paymentUrl = (await requireStripeClient().paymentLinks.retrieve(paymentLinkId, undefined, connectSale?.enabled ? { stripeAccount: connectSale.stripeAccountId } : undefined)).url || undefined;
     } catch (error) {
       console.error({
         event: "published_reader_payment_link_retrieve_failed",
@@ -137,9 +141,17 @@ export async function loadPublishedReader(slug: string): Promise<PublishedReader
   let authorPageHandle: string | null = null;
   const { data: profile } = await admin.from("profiles").select("handle,is_public").eq("id", row.owner_id).eq("is_public", true).maybeSingle();
   if (profile?.is_public && typeof profile.handle === "string") authorPageHandle = normalizeAuthorPageHandle(profile.handle);
+  const { data: sellerProfile } = locked ? await admin.from("author_seller_profiles").select("legal_name,trade_name,representative_name,postal_code,region,city,address_line1,address_line2,support_email").eq("user_id", row.owner_id).maybeSingle() : { data: null };
+  const sellerName = String(sellerProfile?.trade_name || sellerProfile?.legal_name || sellerProfile?.representative_name || "").trim();
+  const address = [sellerProfile?.postal_code, sellerProfile?.region, sellerProfile?.city, sellerProfile?.address_line1, sellerProfile?.address_line2].filter((value) => typeof value === "string" && value.trim()).join(" ");
+  const sellerDisclosure = locked && connectSale?.enabled && sellerName && typeof sellerProfile?.support_email === "string" && sellerProfile.support_email.trim() && evaluateSalesLegalTerms(connectSale.legalTerms).complete
+    ? { sellerName, address, supportEmail: sellerProfile.support_email.trim(), ...connectSale.legalTerms }
+    : undefined;
+  const accessAmount = connectSale?.enabled ? connectSale.amount : Number(settings?.amount || 0);
+  const accessCurrency = connectSale?.enabled ? connectSale.currency.toUpperCase() : String(settings?.currency || "JPY");
   return {
     bookId: String(row.id), ownerId: String(row.owner_id), slug: String(row.slug), description: String(row.description || ""), authorPageHandle,
     project: materialized,
-    access: locked ? { state: "locked", paymentUrl, amount: Number(settings?.amount || 0), currency: String(settings?.currency || "JPY"), lockedTocEntries } : { state: paywallIndex >= 0 ? "unlocked" : "free" },
+    access: locked ? { state: "locked", paymentUrl, amount: accessAmount, currency: accessCurrency, lockedTocEntries, sellerDisclosure } : { state: paywallIndex >= 0 ? "unlocked" : "free" },
   };
 }

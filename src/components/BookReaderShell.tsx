@@ -41,7 +41,7 @@ export default function BookReaderShell({
   shareDisabledReason?: string;
   authorPageHandle?: string | null;
   sampleBookPresentation?: boolean;
-  access?: { state: "free" | "locked" | "unlocked"; paymentUrl?: string; amount?: number; currency?: string; lockedTocEntries?: import("@/lib/documentStructure").DocumentTocEntry[] };
+  access?: { state: "free" | "locked" | "unlocked"; paymentUrl?: string; amount?: number; currency?: string; lockedTocEntries?: import("@/lib/documentStructure").DocumentTocEntry[]; sellerDisclosure?: { sellerName: string; address: string; supportEmail: string; paymentMethod: string; paymentTiming: string; digitalDeliveryTiming: string; refundPolicy: string; additionalCosts: string; applicationDeadline?: string } };
   accessSlug?: string;
   onCoverDesignChange?: (patch: Partial<CoverDesign>) => void;
   backLink?: {

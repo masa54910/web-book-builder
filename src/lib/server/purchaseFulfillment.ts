@@ -5,6 +5,7 @@ import type Stripe from "stripe";
 import { requireStripeClient } from "./stripe";
 import { getSupabaseAdminClient } from "./supabaseAdmin";
 import { expectedStripeLivemode } from "./stripeEnvironment";
+import { findConnectSaleByPaymentLink } from "./connectSalesRepository";
 import {
   fulfillCheckoutSession as fulfillCore,
   type CheckoutSessionForFulfillment,
@@ -14,12 +15,27 @@ import {
   type SaleSettingsRecord,
 } from "./purchaseFulfillmentCore";
 
-function requireAdminDatabase() {
+function requireAdminDatabase(connectAccountId?: string) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error("Purchase server configuration is unavailable.");
 
   const database: PurchaseDatabase = {
     async findSaleSettings(paymentLinkId, stripeLivemode): Promise<SaleSettingsRecord | null> {
+      if (connectAccountId) {
+        const connectSale = await findConnectSaleByPaymentLink(paymentLinkId, stripeLivemode);
+        if (connectSale && connectSale.stripeAccountId === connectAccountId) {
+          return {
+            book_id: connectSale.bookId,
+            stripeLivemode: connectSale.stripeLivemode,
+            stripe_payment_link_id: connectSale.stripePaymentLinkId,
+            stripe_price_id: connectSale.stripePriceId,
+            amount: connectSale.amount,
+            currency: connectSale.currency,
+            enabled: connectSale.enabled,
+            stripeAccountId: connectSale.stripeAccountId,
+          };
+        }
+      }
       const { data, error } = await client
         .from("book_sales_settings")
         .select("book_id,stripe_livemode,stripe_payment_link_id,stripe_price_id,amount,currency,enabled")
@@ -98,6 +114,22 @@ export async function fulfillCheckoutSession(sessionId: string, expectedEventLiv
     },
     database: requireAdminDatabase(),
     expectedLivemode: expectedEventLivemode ?? expectedStripeLivemode(),
+  };
+  return fulfillCore(sessionId, dependencies);
+}
+
+/** Fulfill a Direct Charge session after validating its connected account context. */
+export async function fulfillConnectedCheckoutSession(sessionId: string, connectedAccountId: string, expectedEventLivemode?: boolean) {
+  const stripe = requireStripeClient();
+  const expectedLivemode = expectedEventLivemode ?? expectedStripeLivemode();
+  const dependencies: FulfillmentDependencies = {
+    retrieveSession: async (id) => {
+      const session = await stripe.checkout.sessions.retrieve(id, { expand: ["line_items.data.price"] }, { stripeAccount: connectedAccountId });
+      return asFulfillmentSession(session);
+    },
+    database: requireAdminDatabase(connectedAccountId),
+    expectedLivemode,
+    expectedStripeAccountId: connectedAccountId,
   };
   return fulfillCore(sessionId, dependencies);
 }

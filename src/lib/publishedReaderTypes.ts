@@ -8,5 +8,5 @@ export type PublishedReaderPayload = {
   description: string;
   authorPageHandle: string | null;
   project: BookProject;
-  access: { state: "free" | "locked" | "unlocked"; paymentUrl?: string; amount?: number; currency?: string; lockedTocEntries?: DocumentTocEntry[] };
+  access: { state: "free" | "locked" | "unlocked"; paymentUrl?: string; amount?: number; currency?: string; lockedTocEntries?: DocumentTocEntry[]; sellerDisclosure?: { sellerName: string; address: string; supportEmail: string; paymentMethod: string; paymentTiming: string; digitalDeliveryTiming: string; refundPolicy: string; additionalCosts: string; applicationDeadline?: string } };
 };

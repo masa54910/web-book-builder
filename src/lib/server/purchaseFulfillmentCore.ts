@@ -24,6 +24,7 @@ export type SaleSettingsRecord = {
   amount: number;
   currency: string;
   enabled: boolean;
+  stripeAccountId?: string;
 };
 
 export type PurchaseRecord = {
@@ -52,6 +53,7 @@ export type FulfillmentDependencies = {
   retrieveSession(sessionId: string): Promise<CheckoutSessionForFulfillment>;
   database: PurchaseDatabase;
   expectedLivemode?: boolean;
+  expectedStripeAccountId?: string;
 };
 
 export type FulfillmentResult = {
@@ -151,6 +153,7 @@ export async function fulfillCheckoutSession(
     settings.stripe_price_id !== sessionPriceId ||
     settings.amount !== sessionAmount ||
     normalizedCurrency(settings.currency) !== sessionCurrency
+    || (dependencies.expectedStripeAccountId !== undefined && settings.stripeAccountId !== dependencies.expectedStripeAccountId)
   ) {
     throw new FulfillmentError("payment_mismatch");
   }

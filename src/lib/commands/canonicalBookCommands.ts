@@ -19,6 +19,7 @@ import {
 import { uploadBookProjectAssets } from "@/lib/bookAssetStorage";
 import { saveCanonicalPreview } from "@/lib/canonicalPreviewStorage";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 export type SavedBookResult = {
   bookId: string;
@@ -205,6 +206,22 @@ export async function publishCanonicalBookCommand(
   payload: CanonicalBookPayload,
   ownerId: string,
 ): Promise<PublishedBookResult> {
+  const supabase = getSupabaseClient();
+  if (supabase && payload.bookId && isPersistedBookId(payload.bookId)) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (token) {
+      const gateResponse = await fetch("/api/connect/publish-gate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ bookId: payload.bookId }),
+      });
+      if (!gateResponse.ok) {
+        const result = await gateResponse.json().catch(() => ({}));
+        throw new CanonicalBookCommandError(typeof result.error === "string" ? result.error : "販売条件を満たしていないため公開できません。");
+      }
+    }
+  }
   let payloadForPublish = payload;
   if (payload.bookId && isPersistedBookId(payload.bookId)) {
     const existing = await getBook(payload.bookId, ownerId);

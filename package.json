@@ -16,7 +16,12 @@
     "verify:analytics-guidance": "tsx scripts/verify-analytics-guidance.ts",
     "verify:analytics-integrity": "tsx scripts/verify-analytics-integrity.ts",
     "verify:analytics-schema": "tsx scripts/verify-analytics-schema.ts",
-    "test": "tsx scripts/verify-beta.ts && tsx scripts/verify-gatec.ts && tsx scripts/verify-gatec-step2b.ts && tsx scripts/verify-paywall-security.ts && tsx scripts/verify-columns.ts && tsx scripts/verify-editor-helper-serialization.ts && tsx scripts/verify-analytics-integrity.ts"
+    "verify:seller-connect": "tsx scripts/verify-seller-connect.ts",
+    "verify:seller-connect-hardening": "tsx scripts/verify-seller-connect-hardening.ts",
+    "verify:connect-onboarding": "tsx scripts/verify-connect-onboarding.ts",
+    "verify:connect-sales": "tsx scripts/verify-connect-sales.ts",
+    "verify:connect-compliance": "tsx scripts/verify-connect-compliance.ts",
+    "test": "tsx scripts/verify-beta.ts && tsx scripts/verify-gatec.ts && tsx scripts/verify-gatec-step2b.ts && tsx scripts/verify-paywall-security.ts && tsx scripts/verify-columns.ts && tsx scripts/verify-editor-helper-serialization.ts && tsx scripts/verify-analytics-integrity.ts && tsx scripts/verify-seller-connect.ts && tsx scripts/verify-seller-connect-hardening.ts && tsx scripts/verify-connect-onboarding.ts && tsx scripts/verify-connect-sales.ts && tsx scripts/verify-connect-compliance.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",

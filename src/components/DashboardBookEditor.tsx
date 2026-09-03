@@ -106,6 +106,7 @@ import InlineManuscriptEditor from "@/components/InlineManuscriptEditor";
 import type { InlineEditorHelpRequest } from "@/components/InlineManuscriptEditor";
 import HomeBackLink from "@/components/HomeBackLink";
 import Button from "@/components/ui/Button";
+import ConnectSalesPanel from "@/components/ConnectSalesPanel";
 import FormField from "@/components/ui/FormField";
 import EditorMiniPreview from "@/components/EditorMiniPreview";
 import EditorGuidanceCard from "@/components/EditorGuidanceCard";
@@ -2024,6 +2025,11 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             logicalPages={miniPreviewLogicalPages}
             activePageId={activeMiniPageId}
             onPageClick={handleMiniPageClick}
+          />
+
+          <ConnectSalesPanel
+            bookId={bookId}
+            hasPaywall={contentBlocks.some((block) => block.type === "paywall")}
           />
 
         <div ref={coverTargetRef} className="maker-card editor-cover-settings" tabIndex={-1}>
