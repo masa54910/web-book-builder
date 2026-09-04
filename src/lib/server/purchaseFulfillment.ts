@@ -5,9 +5,10 @@ import type Stripe from "stripe";
 import { requireStripeClient } from "./stripe";
 import { getSupabaseAdminClient } from "./supabaseAdmin";
 import { expectedStripeLivemode } from "./stripeEnvironment";
-import { findConnectSaleByPaymentLink } from "./connectSalesRepository";
+import { findConnectSaleByPaymentLink, listConnectStripeAccountIds } from "./connectSalesRepository";
 import {
   fulfillCheckoutSession as fulfillCore,
+  FulfillmentError,
   type CheckoutSessionForFulfillment,
   type FulfillmentDependencies,
   type PurchaseDatabase,
@@ -115,7 +116,39 @@ export async function fulfillCheckoutSession(sessionId: string, expectedEventLiv
     database: requireAdminDatabase(),
     expectedLivemode: expectedEventLivemode ?? expectedStripeLivemode(),
   };
-  return fulfillCore(sessionId, dependencies);
+  try {
+    return await fulfillCore(sessionId, dependencies);
+  } catch (error) {
+    // Direct-charge Checkout Sessions belong to a connected account and are
+    // therefore invisible when retrieved with only the platform account key.
+    // Fall back to the server-registered Connect accounts in that case.
+    if (!isStripeResourceMissing(error)) throw error;
+    return fulfillConnectedCheckoutSessionFromRegistry(sessionId, expectedEventLivemode);
+  }
+}
+
+function isStripeResourceMissing(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const record = error as { code?: unknown; statusCode?: unknown; message?: unknown };
+  return record.code === "resource_missing" || record.statusCode === 404 || (typeof record.message === "string" && /No such checkout\.session/iu.test(record.message));
+}
+
+async function fulfillConnectedCheckoutSessionFromRegistry(sessionId: string, expectedEventLivemode?: boolean) {
+  const livemode = expectedEventLivemode ?? expectedStripeLivemode();
+  const accountIds = await listConnectStripeAccountIds(livemode);
+  let lastError: unknown;
+  for (const accountId of accountIds) {
+    try {
+      return await fulfillConnectedCheckoutSession(sessionId, accountId, expectedEventLivemode);
+    } catch (error) {
+      lastError = error;
+      // A session from another connected account is expected while probing the
+      // registry; continue until the owning account is found.
+      if (error instanceof FulfillmentError && !["payment_mismatch", "session_not_paid", "purchase_unavailable"].includes(error.code)) throw error;
+    }
+  }
+  if (lastError) throw lastError;
+  throw new FulfillmentError("purchase_unavailable");
 }
 
 /** Fulfill a Direct Charge session after validating its connected account context. */

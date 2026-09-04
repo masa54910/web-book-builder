@@ -59,6 +59,16 @@ export async function findConnectSaleByPaymentLink(paymentLinkId: string, stripe
   return data ? map(data) : null;
 }
 
+/** Return server-registered connected accounts for the requested Stripe mode. */
+export async function listConnectStripeAccountIds(stripeLivemode: boolean) {
+  const { data, error } = await requireSupabaseAdminClient()
+    .from("connect_book_sales")
+    .select("stripe_account_id")
+    .eq("stripe_livemode", stripeLivemode);
+  if (error && !relationMissing(error)) throw error;
+  return Array.from(new Set((data ?? []).map((row) => String((row as { stripe_account_id?: unknown }).stripe_account_id ?? "").trim()).filter(Boolean)));
+}
+
 export async function saveConnectBookSale(sale: ConnectBookSaleRecord) {
   const { data, error } = await requireSupabaseAdminClient().from("connect_book_sales").upsert({
     book_id: sale.bookId,

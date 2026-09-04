@@ -24,6 +24,7 @@ assert(salesModule.includes("evaluateSalesLegalTerms") && salesModule.includes("
 assert(panel.includes("返品・返金条件") && panel.includes("デジタル配信時期"), "sales UI collects reader-facing legal terms");
 assert(route.includes("requireAuthenticatedUser"), "sales route authenticates owner");
 assert(fulfillment.includes("fulfillConnectedCheckoutSession") && fulfillment.includes("expectedStripeAccountId"), "connected fulfillment validates account boundary");
+assert(fulfillment.includes("listConnectStripeAccountIds") && fulfillment.includes("isStripeResourceMissing"), "platform verification falls back to registered Connect accounts for direct charges");
 assert(webhook.includes("STRIPE_CONNECT_WEBHOOK_SECRET") && webhook.includes("event.account") && webhook.includes("fulfillConnectedCheckoutSession") && webhook.includes("recordConnectWebhookEvent"), "Connect webhook is separate and account-scoped");
 assert(!salesModule.includes("STRIPE_SECRET_KEY") && !salesModule.includes("sk_live_"), "secrets are not embedded");
 console.log("Connect sales verification passed.");
