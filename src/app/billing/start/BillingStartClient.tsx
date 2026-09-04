@@ -1,0 +1,12 @@
+"use client";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getSupabaseClient } from "@/lib/supabase/client";
+type Book = { id: string; title: string; status: string; slug: string };
+export default function BillingStartClient() {
+  const plan = useSearchParams().get("plan") === "writer" ? "operation" : "publication";
+  const [books, setBooks] = useState<Book[]>([]); const [bookId, setBookId] = useState(""); const [message, setMessage] = useState("作品一覧を読み込んでいます…");
+  useEffect(() => { const client = getSupabaseClient(); void (async () => { const session = client ? await client.auth.getSession() : null; const token = session?.data.session?.access_token; if (!token) { setMessage("ログインが必要です。"); return; } const response = await fetch("/api/billing/books", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }); const result = await response.json() as { books?: Book[]; error?: string }; if (!response.ok) { setMessage(result.error || "作品一覧を取得できませんでした。"); return; } setBooks(result.books || []); setBookId(result.books?.[0]?.id || ""); setMessage(""); })(); }, []);
+  const begin = async () => { const client = getSupabaseClient(); const session = client ? await client.auth.getSession() : null; const token = session?.data.session?.access_token; if (!token) { setMessage("ログインが必要です。"); return; } setMessage("Checkoutを準備しています…"); const response = await fetch("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ plan, ...(plan === "publication" ? { bookId } : {}) }) }); const result = await response.json() as { url?: string; error?: string }; if (!response.ok || !result.url) { setMessage(result.error || "決済を開始できませんでした。"); return; } window.location.assign(result.url); };
+  return <main className="auth-page"><section className="auth-card"><h1>{plan === "publication" ? "出版プラン" : "運用プラン"}</h1><p>{plan === "publication" ? "公開する作品を選択してください。" : "月額運用プランを開始します。"}</p>{plan === "publication" ? <label className="form-field"><span>作品</span><select value={bookId} onChange={(event) => setBookId(event.target.value)}>{books.map((book) => <option key={book.id} value={book.id}>{book.title}</option>)}</select></label> : null}{message ? <p className="form-error" aria-live="polite">{message}</p> : null}<button className="maker-primary-button" type="button" disabled={plan === "publication" && !bookId} onClick={() => void begin()}>Stripe Checkoutへ進む</button></section></main>;
+}

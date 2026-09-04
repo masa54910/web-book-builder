@@ -19,12 +19,6 @@ function safeNextPath(value: string | null) {
   return value;
 }
 
-function selectedPlanMessage(plan: string | null) {
-  if (plan === "publish") return "出版プランは現在準備中です。無料プランで先に作品作成を始められます。";
-  if (plan === "writer") return "作家プランは現在準備中です。無料プランで先に作品作成を始められます。";
-  return "";
-}
-
 export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -96,15 +90,11 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
       return;
     }
 
-    if (mode === "signup") {
-      const planMessage = selectedPlanMessage(planParam);
-      if (planMessage) {
-        setMessage(planMessage);
-        return;
-      }
+    if (planParam === "publish" || planParam === "writer") {
+      router.push(`/billing/start?plan=${encodeURIComponent(planParam)}`);
+    } else {
+      router.push(nextPath);
     }
-
-    router.push(nextPath);
   };
 
   return (
