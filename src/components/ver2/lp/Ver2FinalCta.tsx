@@ -53,7 +53,7 @@ export default function Ver2FinalCta({
         <div className={styles.cta}>
           <div>
             <h2>文章を1つ貼って、Webブックにしてみませんか？</h2>
-            <p>20ページまで無料で作成・公開できます。有料の作家プランはいつでも解約できます。</p>
+            <p>無料で作成・プレビューを試せます。運用プランはいつでも解約でき、解約は現在の請求期間終了時に有効になります。</p>
             <div
               className={styles.ctaComposer}
               onDragOver={(event) => event.preventDefault()}

@@ -224,8 +224,8 @@ export default function LandingPage() {
     setFlowEstimate(null);
     setStatus(
       plan === "publishing"
-        ? "出版プランの案内へ移動します。現在ベータ版では決済は有効化していません。"
-        : "作家プランの案内へ移動します。現在ベータ版では決済は有効化していません。",
+        ? "出版プランの案内へ移動します。"
+        : "運用プランの案内へ移動します。",
     );
     router.push("/pricing");
   };
@@ -303,7 +303,7 @@ export default function LandingPage() {
                     出版プランを見る
                   </button>
                   <button type="button" className={styles.dialogPrimary} onClick={() => choosePlan("writer")}>
-                    作家プランを見る
+                    運用プランを見る
                   </button>
                 </>
               ) : (

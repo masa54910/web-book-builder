@@ -14,7 +14,9 @@ export default function LandingFooter() {
           <Link href="/privacy">プライバシーポリシー</Link>
           <Link href="/commercial-transactions">特定商取引法に基づく表記</Link>
         </nav>
-        <div className="md:text-right">support@webbookmaker.app</div>
+        <div className="md:text-right">
+          <Link href="/contact">お問い合わせフォーム</Link>
+        </div>
       </div>
       <p className="pb-6 text-center text-xs text-slate-500">© 2026 WebBookMaker</p>
     </footer>

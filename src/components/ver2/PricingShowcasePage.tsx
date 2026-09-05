@@ -66,8 +66,8 @@ type PlanCard = {
 
 const comparisonRows = [
   { icon: "book" as const, label: "作成・プレビュー", free: "○", publish: "○", operation: "○" },
-  { icon: "external" as const, label: "公開", free: "—", publish: "1作品", operation: "最大10作品まで" },
-  { icon: "read" as const, label: "公開後の編集", free: "—", publish: "7日間まで", operation: "いつでも可能" },
+  { icon: "external" as const, label: "公開", free: "—", publish: "1作品", operation: "複数作品" },
+  { icon: "read" as const, label: "公開後の編集", free: "—", publish: "継続編集可能", operation: "継続編集可能" },
   { icon: "book" as const, label: "WebBook Gallery掲載", free: "—", publish: "○", operation: "○" },
   { icon: "share" as const, label: "SNS共有（X・note・LINEなど）", free: "—", publish: "○", operation: "○" },
   { icon: "share" as const, label: "URL / QR共有", free: "—", publish: "○", operation: "○" },
@@ -99,10 +99,10 @@ export default function PricingShowcasePage() {
       price: "¥980",
       unit: "/ 1作品",
       lead: "完成した作品を、Webで公開したい方へ。",
-      features: ["1作品を公開", "公開後7日間は編集可能", "WebBook Galleryに掲載", "X・note・LINEなどへ共有", "公開URLはそのまま継続"],
+      features: ["1作品を公開", "公開後も継続編集可能", "WebBook Galleryに掲載", "X・note・LINEなどへ共有", "公開URLはそのまま継続"],
       actionLabel: "出版プランではじめる",
       href: "/signup?plan=publish",
-      note: "買い切り・PayPay払いO.K!",
+      note: "買い切り・Stripe Checkout",
     },
     {
       id: "operation",
@@ -111,7 +111,7 @@ export default function PricingShowcasePage() {
       price: "¥1,980",
       unit: "/ 月",
       lead: "公開後も、編集・分析しながら作品を育てたい方へ。",
-      features: ["最大10作品まで公開", "公開後もいつでも編集可能", "アクセス分析ができる", "読者がどのページまで読んだか分かる", "リンクがどれくらい押されたか分かる", "過去の出版済み作品も再編集可能"],
+      features: ["複数作品を継続運用", "公開後もいつでも編集可能", "アクセス分析ができる", "読者がどのページまで読んだか分かる", "リンクがどれくらい押されたか分かる", "過去の出版済み作品も再編集可能"],
       actionLabel: "運用プランではじめる",
       href: "/signup?plan=writer",
       note: "いつでも解約できます",
@@ -152,7 +152,7 @@ export default function PricingShowcasePage() {
               </ul>
               <div className={styles.cardActions}>
                 <Link className={`maker-primary-link ${styles.planAction}`} href={plan.href}>{plan.actionLabel}</Link>
-                {plan.id === "publish" ? <p className={styles.planTag}><PricingIcon name="tag" size={16} /><span>{plan.note}</span></p> : <small className={styles.planNote}>{plan.note}</small>}
+                {plan.id === "publish" ? <p className={styles.planTag}><PricingIcon name="tag" size={16} /><span>{plan.note}</span></p> : <small className={styles.planNote}>{plan.note}。請求期間終了時に解約が有効になります。</small>}
               </div>
             </article>
           ))}

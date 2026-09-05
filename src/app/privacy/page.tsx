@@ -1,3 +1,4 @@
+import Link from "next/link";
 import LegalPageShell from "@/components/legal/LegalPageShell";
 
 export default function PrivacyPage() {
@@ -85,7 +86,7 @@ export default function PrivacyPage() {
       <p>運営者は、法令の変更、サービス内容の変更その他必要に応じて本ポリシーを改定することがあります。重要な変更については、本サービス上その他適切な方法で告知します。</p>
 
       <h2>15. 問い合わせ窓口</h2>
-      <p>本ポリシーに関する問い合わせ、開示等の請求は、WebBookMakerの問い合わせ窓口（support@webbookmaker.app）までご連絡ください。</p>
+        <p>本ポリシーに関する問い合わせ、個人情報に関する開示等の請求は、<Link href="/contact">お問い合わせフォーム</Link>からご連絡ください。フォームでは、お名前、返信先メールアドレス、問い合わせ種別、問い合わせ内容を取得します。ログイン中は必要に応じてユーザーIDを関連付け、問い合わせ対応・本人確認・不正利用防止の目的で利用します。</p>
     </LegalPageShell>
   );
 }

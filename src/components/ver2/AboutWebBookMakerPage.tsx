@@ -57,7 +57,7 @@ function ShareScreen() {
 }
 
 function PaywallScreen() {
-  return <figure className={styles.screenFigure}><div className={styles.paywallScreen}><div className={styles.paywallBook}><span>CHAPTER 02</span><h3>ここからは有料</h3><p>続きの文章を読むには、購入後に発行される閲覧コードを入力してください。</p><div className={styles.paywallRule} /><small>無料部分を読んでから続きを読む</small></div><div className={styles.paywallActions}><b>🔒 ここからは有料</b><span>購入して続きを読む</span><button type="button">閲覧コードを入力</button></div></div><figcaption>読者に表示される有料ページのイメージ</figcaption></figure>;
+  return <figure className={styles.screenFigure}><div className={styles.paywallScreen}><div className={styles.paywallBook}><span>CHAPTER 02</span><h3>ここからは有料</h3><p>有料部分のあるWebブックは、購入後に同じアカウントでログインすると続きを読むことができます。</p><div className={styles.paywallRule} /><small>無料部分を読んでから続きを読む</small></div><div className={styles.paywallActions}><b>🔒 ここからは有料</b><span>購入して続きを読む</span><button type="button">購入後に続きを読む</button></div></div><figcaption>読者に表示される有料ページのイメージ</figcaption></figure>;
 }
 
 function LineVisual() {

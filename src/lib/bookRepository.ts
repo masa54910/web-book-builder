@@ -425,7 +425,7 @@ async function syncBookSideTables(book: CloudBookRecord) {
   }
 }
 
-const BOOK_LIMIT_ERROR = `ベータ版では1ユーザー最大${BETA_LIMITS.maxBooksPerUser}作品まで作成できます。`;
+const BOOK_LIMIT_ERROR = `安全上の制限により、1ユーザーあたり最大${BETA_LIMITS.maxBooksPerUser}作品まで作成できます。`;
 
 /**
  * Check the active-book limit before any book, side-table, or asset write.

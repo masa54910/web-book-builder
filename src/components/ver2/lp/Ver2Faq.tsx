@@ -15,7 +15,7 @@ export default function Ver2Faq() {
           <details className={styles.faqItem}><summary>入力途中で保存できますか？</summary><p>はい。自動保存に対応し、あとから続きの編集ができます。</p></details>
           <details className={styles.faqItem}><summary>公開後に修正できますか？</summary><p>はい。同じ公開URLのまま、本文・表紙・テーマを更新できます。</p></details>
           <details className={styles.faqItem}><summary>スマートフォンでも読めますか？</summary><p>はい。パソコン、タブレット、スマートフォンに合わせて読みやすく表示します。</p></details>
-          <details className={styles.faqItem}><summary>無料でどこまで使えますか？</summary><p>20ページまで無料で作成・公開できます。作家プランはいつでも解約できます。</p></details>
+          <details className={styles.faqItem}><summary>無料でどこまで使えますか？</summary><p>無料プランでは作成とプレビューを試せます。公開する場合は出版プラン、複数作品を継続運用する場合は運用プランをご利用ください。</p></details>
         </div>
       </div>
     </section>

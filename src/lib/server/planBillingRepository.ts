@@ -53,6 +53,22 @@ export async function findPlanTransactionBySubscription(subscriptionId: string, 
   return data ? mapTransaction(data) : null;
 }
 
+export async function findActiveOperationPlanForUser(userId: string, livemode: boolean) {
+  const { data, error } = await requireSupabaseAdminClient()
+    .from("plan_billing_transactions")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("plan_code", "operation")
+    .eq("livemode", livemode)
+    .eq("status", "paid")
+    .not("stripe_customer_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapTransaction(data) : null;
+}
+
 export async function updatePlanSubscriptionState(transactionId: string, status: PlanTransaction["status"], periodEnd: string | null, cancelAtPeriodEnd: boolean) {
   const { data, error } = await requireSupabaseAdminClient().from("plan_billing_transactions").update({ status, current_period_end: periodEnd, cancel_at_period_end: cancelAtPeriodEnd }).eq("id", transactionId).select("*").single();
   if (error) throw error;

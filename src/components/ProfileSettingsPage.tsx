@@ -21,6 +21,7 @@ import { getOwnProfile, saveOwnProfile, type ProfileRecord } from "@/lib/profile
 import { resolveStorageUrl } from "@/lib/bookAssetStorage";
 import { uploadProfileAvatar } from "@/lib/profileAssetStorage";
 import { authorPagePath } from "@/lib/authorPage";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import SellerConnectPanel from "@/components/SellerConnectPanel";
 
 const PROFILE_LOAD_ERROR_MESSAGE = "プロフィール情報を読み込めませんでした。時間をおいて再度お試しください。";
@@ -89,6 +90,8 @@ export default function ProfileSettingsPage() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
+  const [portalMessage, setPortalMessage] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -265,6 +268,27 @@ export default function ProfileSettingsPage() {
     }
   };
 
+  const openBillingPortal = async () => {
+    setPortalMessage("");
+    setIsOpeningPortal(true);
+    try {
+      const client = getSupabaseClient();
+      const session = client ? await client.auth.getSession() : null;
+      const token = session?.data.session?.access_token;
+      const response = await fetch("/api/billing/portal", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const result = await response.json().catch(() => ({})) as { url?: string; error?: string };
+      if (!response.ok || !result.url) {
+        setPortalMessage(result.error || "プラン管理画面を開けませんでした。");
+        return;
+      }
+      window.location.assign(result.url);
+    } catch {
+      setPortalMessage("プラン管理画面を開けませんでした。");
+    } finally {
+      setIsOpeningPortal(false);
+    }
+  };
+
   return (
     <main className="dashboard-page profile-settings-page">
       <AppHeader />
@@ -416,11 +440,20 @@ export default function ProfileSettingsPage() {
           )}
         </section>
         <section className="maker-card">
+          <p className="maker-kicker">Billing</p>
+          <h2>プランを管理</h2>
+          <p>運用プランの解約や請求情報の確認はStripe Customer Portalで行えます。解約は現在の請求期間終了時に有効になります。</p>
+          <div className="maker-actions">
+            <Button loading={isOpeningPortal} onClick={() => void openBillingPortal()}>プランを管理</Button>
+          </div>
+          {portalMessage ? <StatusMessage variant="error" message={portalMessage} className="form-error" /> : null}
+        </section>
+        <section className="maker-card">
           <h2>限定ベータ中のお願い</h2>
           <ul className="beta-notes">
             <li>重要な原稿は必ず手元にも保存してください。</li>
             <li>不具合・要望はフッターまたはダッシュボードのフィードバック導線から送ってください。</li>
-            <li>データ削除依頼・問い合わせ先は限定ベータ案内文書に記載します。</li>
+            <li>データ削除依頼・お問い合わせはお問い合わせフォームからお送りください。</li>
           </ul>
         </section>
       </div>
