@@ -3,6 +3,7 @@ import { useRef, type DragEvent } from "react";
 
 import { SAMPLE_BOOK_GUIDE_TEXT, SAMPLE_BOOK_ROUTE } from "@/lib/sampleBookConstants";
 import styles from "./Ver2Landing.module.css";
+import HomeReveal from "./HomeReveal";
 import Ver2BookShowcase from "./Ver2BookShowcase";
 
 type AttachedFileSummary = {
@@ -174,44 +175,46 @@ export default function Ver2Hero({
           </div>
         </div>
 
-        <div className={styles.heroRecommendations}>
-          <div className={styles.recommendHeading}>
-            <div className={styles.recommendLabel}>こんな方におすすめ</div>
-            <Link className={styles.useCasesCta} href="/use-cases">
-              詳しい活用例はこちら <span aria-hidden="true">→</span>
-            </Link>
+        <HomeReveal>
+          <div className={styles.heroRecommendations}>
+            <div className={styles.recommendHeading}>
+              <div className={styles.recommendLabel}>こんな方におすすめ</div>
+              <Link className={styles.useCasesCta} href="/use-cases">
+                詳しい活用例はこちら <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+            <div className={styles.heroRecommendationGrid}>
+              <article className={styles.heroRecommendationCard}>
+                <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="note" /></span>
+                <div>
+                  <h3>note・ブログを書いている方</h3>
+                  <p>過去の記事をテーマごとのWebブックへ。</p>
+                </div>
+              </article>
+              <article className={styles.heroRecommendationCard}>
+                <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="book" /></span>
+                <div>
+                  <h3>小説・エッセイを書いている方</h3>
+                  <p>書きためた作品を、読者へ届ける作品に。</p>
+                </div>
+              </article>
+              <article className={styles.heroRecommendationCard}>
+                <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="research" /></span>
+                <div>
+                  <h3>研究・論文を書いている方</h3>
+                  <p>卒論・修論・レポートを、提出して終わらせない。</p>
+                </div>
+              </article>
+              <article className={styles.heroRecommendationCard}>
+                <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="knowledge" /></span>
+                <div>
+                  <h3>専門知識を発信している方</h3>
+                  <p>教材・ノウハウ・ガイド本を、読みやすい一冊へ。</p>
+                </div>
+              </article>
+            </div>
           </div>
-          <div className={styles.heroRecommendationGrid}>
-            <article className={styles.heroRecommendationCard}>
-              <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="note" /></span>
-              <div>
-                <h3>note・ブログを書いている方</h3>
-                <p>過去の記事をテーマごとのWebブックへ。</p>
-              </div>
-            </article>
-            <article className={styles.heroRecommendationCard}>
-              <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="book" /></span>
-              <div>
-                <h3>小説・エッセイを書いている方</h3>
-                <p>書きためた作品を、読者へ届ける作品に。</p>
-              </div>
-            </article>
-            <article className={styles.heroRecommendationCard}>
-              <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="research" /></span>
-              <div>
-                <h3>研究・論文を書いている方</h3>
-                <p>卒論・修論・レポートを、提出して終わらせない。</p>
-              </div>
-            </article>
-            <article className={styles.heroRecommendationCard}>
-              <span className={styles.heroRecommendationIcon}><RecommendationIcon kind="knowledge" /></span>
-              <div>
-                <h3>専門知識を発信している方</h3>
-                <p>教材・ノウハウ・ガイド本を、読みやすい一冊へ。</p>
-              </div>
-            </article>
-          </div>
-        </div>
+        </HomeReveal>
 
         <div className={styles.heroComposerRow} id="create">
           <div
