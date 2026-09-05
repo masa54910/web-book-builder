@@ -9,7 +9,7 @@ export default function GuidelinesPage() {
         <p className="maker-kicker">Guidelines</p>
         <HomeBackLink />
         <h1>投稿ガイドライン</h1>
-        <p>WebBookMakerは、自分の文章を読者へ届くWeb作品として公開するためのサービスです。</p>
+        <p>WebBookMakerは、自分のWebブックを読者へ届けるWeb作品として公開するためのサービスです。</p>
         <h2>公開できるもの</h2>
         <p>小説、エッセイ、教材、研究資料、旅行記、ポートフォリオなど、ユーザー自身が権利を持つ文章・画像を公開できます。</p>
         <h2>公開できないもの</h2>
