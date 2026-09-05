@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireAuthenticatedUser } from "@/lib/server/requestAuth";
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
+import { sendContactNotification } from "@/lib/server/contactNotification";
 
 const categories = new Set(["usage", "pricing", "payment", "book_purchase", "account", "technical", "other"]);
 const recentByIp = new Map<string, number[]>();
@@ -55,6 +56,14 @@ export async function POST(request: Request) {
       status: "new",
     });
     if (error) throw error;
+
+    try {
+      await sendContactNotification({ name, replyEmail, category, message });
+    } catch (notificationError) {
+      // Notification is best-effort; the persisted inquiry must remain accepted.
+      console.error("contact.notification failed", notificationError instanceof Error ? notificationError.message : "unknown");
+    }
+
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
     console.error("contact.submit failed", error instanceof Error ? error.message : "unknown");
