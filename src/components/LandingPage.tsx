@@ -19,6 +19,7 @@ import Ver2HowItWorks from "@/components/ver2/lp/Ver2HowItWorks";
 import styles from "@/components/ver2/lp/Ver2Landing.module.css";
 import Ver2Pricing from "@/components/ver2/lp/Ver2Pricing";
 import Ver2PromotionDemoCenter from "@/components/ver2/lp/Ver2PromotionDemoCenter";
+import HomeReveal from "@/components/ver2/lp/HomeReveal";
 
 type ComposerTarget = "hero" | "cta";
 
@@ -246,25 +247,27 @@ export default function LandingPage() {
           isImporting={isImporting}
           status={status}
         />
-        <Ver2FeatureStrip />
-        <Ver2HowItWorks />
-        <Ver2PromotionDemoCenter />
-        <Ver2Pricing />
-        <Ver2FinalCta
-          ctaText={ctaText}
-          onCtaTextChange={(value) => {
-            setActiveTarget("cta");
-            setCtaText(value);
-          }}
-          onStart={startBookFlow}
-          onFileSelected={(file) => void importFile(file, "cta")}
-          attachedFiles={attachedFiles}
-          onRemoveAttachedFile={removeAttachedFile}
-          isImporting={isImporting}
-          status={status}
-        />
+        <HomeReveal><Ver2FeatureStrip /></HomeReveal>
+        <HomeReveal><Ver2HowItWorks /></HomeReveal>
+        <HomeReveal><Ver2PromotionDemoCenter /></HomeReveal>
+        <HomeReveal><Ver2Pricing /></HomeReveal>
+        <HomeReveal>
+          <Ver2FinalCta
+            ctaText={ctaText}
+            onCtaTextChange={(value) => {
+              setActiveTarget("cta");
+              setCtaText(value);
+            }}
+            onStart={startBookFlow}
+            onFileSelected={(file) => void importFile(file, "cta")}
+            attachedFiles={attachedFiles}
+            onRemoveAttachedFile={removeAttachedFile}
+            isImporting={isImporting}
+            status={status}
+          />
+        </HomeReveal>
       </main>
-      <Ver2Faq />
+      <HomeReveal><Ver2Faq /></HomeReveal>
       <Ver2Footer />
       {flowEstimate ? (
         <div className={styles.flowDialogBackdrop} role="presentation">

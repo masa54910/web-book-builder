@@ -31,6 +31,35 @@
   box-sizing: border-box;
 }
 
+/* Gate 19: below-the-fold content reveals each time it enters the viewport.
+   The default state stays visible so the page remains usable without JS. */
+.homeReveal {
+  opacity: 1;
+  transform: none;
+}
+
+.homeRevealReady {
+  opacity: 0;
+  transform: translate3d(0, 22px, 0);
+  transition: opacity 560ms ease, transform 560ms cubic-bezier(.2, .7, .2, 1);
+  will-change: opacity, transform;
+}
+
+.homeRevealVisible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .homeRevealReady,
+  .homeRevealVisible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    will-change: auto;
+  }
+}
+
 .container {
   width: min(1440px, calc(100% - 48px));
   margin: auto;
