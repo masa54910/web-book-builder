@@ -8,6 +8,68 @@
   --copper: #168dcc;
   --publisher-brown: #123e68;
   --publisher-cream: #ffffff;
+
+  /* Gate 22 semantic foundation. Existing tokens remain the visual source of truth;
+     these names provide a stable vocabulary for new UI without changing current CSS. */
+  --wbm-color-bg: #fff7ec;
+  --wbm-color-surface: #ffffff;
+  --wbm-color-surface-elevated: rgba(255, 255, 255, 0.88);
+  --wbm-color-text: #13202d;
+  --wbm-color-text-muted: #6f777d;
+  --wbm-color-border: #d9e6ee;
+  --wbm-color-border-muted: #e7eef3;
+  --wbm-color-accent: #168dcc;
+  --wbm-color-primary: #123e68;
+  --wbm-color-secondary: #5cb5dc;
+  --wbm-color-success: #1b8a73;
+  --wbm-color-warning: #e98a2b;
+  --wbm-color-danger: #8b352e;
+  --wbm-color-overlay: rgba(11, 31, 56, 0.62);
+  --wbm-color-focus: #168dcc;
+
+  --wbm-font-body: "Noto Sans JP", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", sans-serif;
+  --wbm-font-display: Georgia, "Times New Roman", serif;
+  --wbm-font-size-body: 1rem;
+  --wbm-font-size-caption: 0.8125rem;
+  --wbm-font-size-label: 0.875rem;
+  --wbm-font-size-h1: clamp(2rem, 4vw, 3.5rem);
+  --wbm-font-size-h2: clamp(1.5rem, 3vw, 2.25rem);
+  --wbm-font-size-h3: 1.25rem;
+  --wbm-font-weight-regular: 400;
+  --wbm-font-weight-medium: 500;
+  --wbm-font-weight-semibold: 600;
+  --wbm-font-weight-bold: 700;
+  --wbm-line-height-body: 1.8;
+  --wbm-line-height-heading: 1.3;
+
+  --wbm-space-1: 4px;
+  --wbm-space-2: 8px;
+  --wbm-space-3: 12px;
+  --wbm-space-4: 16px;
+  --wbm-space-5: 24px;
+  --wbm-space-6: 32px;
+  --wbm-space-7: 48px;
+  --wbm-space-8: 64px;
+  --wbm-radius-sm: 4px;
+  --wbm-radius-md: 8px;
+  --wbm-radius-lg: 12px;
+  --wbm-radius-xl: 18px;
+  --wbm-border-width: 1px;
+  --wbm-shadow-sm: 0 2px 8px rgba(19, 32, 45, 0.08);
+  --wbm-shadow-md: 0 12px 32px rgba(19, 32, 45, 0.12);
+  --wbm-shadow-modal: 0 24px 64px rgba(11, 31, 56, 0.22);
+
+  --wbm-motion-fast: 120ms;
+  --wbm-motion-normal: 180ms;
+  --wbm-motion-slow: 280ms;
+  --wbm-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --wbm-content-width: 1180px;
+  --wbm-article-width: 760px;
+  --wbm-dashboard-width: 1280px;
+  --wbm-reader-width: 960px;
+  --wbm-breakpoint-mobile: 480px;
+  --wbm-breakpoint-tablet: 768px;
+  --wbm-breakpoint-desktop: 1024px;
 }
 
 * {
