@@ -31,6 +31,10 @@ assert.match(story, /href="\/about"/);
 assert.doesNotMatch(story, /WebBookMakerができるまで|AIとの開発記録/);
 
 assert.match(about, /<BrandArticleLinks current="what" \/>/);
+assert.match(about, /className=\{styles\.tocNextArticle\} href="\/brand-story"/);
+assert.match(about, /次の記事/);
+assert.match(about, /なぜ、このWebBookMakerを作ったか。/);
+assert.doesNotMatch(about, /ブックマークする/);
 assert.match(crossNavigation, /href: "\/brand-story"/);
 assert.match(crossNavigation, /href: "\/about"/);
 assert.match(reveal, /prefers-reduced-motion: reduce/);

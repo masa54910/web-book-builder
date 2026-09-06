@@ -128,7 +128,11 @@ export default function AboutWebBookMakerPage() {
             <div className={styles.tocInner}>
               <h2>この記事の内容</h2>
               <ol>{sections.map((section, index) => <li key={section.id}><a href={`#${section.id}`}><span>{String(index + 1).padStart(2, "0")}</span>{section.label}</a></li>)}</ol>
-              <Link className={styles.tocBookmark} href="/signup?next=%2Fbooks%2Fnew">ブックマークする <span aria-hidden="true">♡</span></Link>
+              <Link className={styles.tocNextArticle} href="/brand-story">
+                <span>次の記事</span>
+                なぜ、このWebBookMakerを作ったか。
+                <span aria-hidden="true">→</span>
+              </Link>
             </div>
           </aside>
 
