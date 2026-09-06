@@ -26,7 +26,7 @@ The existing book theme settings remain the source of truth for `fontFamily`, `f
 
 ## Safe Design Spec
 
-`BookDesignSpec` contains only allow-listed theme, typography, palette, page, cover, image, and motion options. Cover layouts and positions are the ten existing cover options; numeric cover values are bounded to the same ranges used by the cover normalizer. `parseBookDesignSpec()` rejects unknown enum values, non-hex colors, HTML/CSS-like title overrides, and out-of-range numbers. It does not accept arbitrary CSS, HTML, or class names.
+`BookDesignSpec` contains only allow-listed theme, typography, palette, page, cover, image, and motion options. Cover styles, layouts, and positions are the existing options; numeric cover values are bounded to the same ranges used by the cover normalizer. `parseBookDesignSpec()` rejects unknown enum values, non-hex colors, HTML/CSS-like title overrides, and out-of-range numbers. It does not accept arbitrary CSS, HTML, or class names.
 
 `DEFAULT_BOOK_DESIGN_SPEC` represents the existing Classic book defaults (`layout-01`, RTL binding, paper background, mincho/medium/normal typography). `designPresets.default` is the intentionally small preset registry foundation. AI APIs, prompts, model calls, and a new renderer are explicitly deferred.
 

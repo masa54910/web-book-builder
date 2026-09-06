@@ -37,6 +37,7 @@ export type BookDesignSpec = {
     paragraphSpacing: "compact" | "normal" | "wide";
   };
   cover: {
+    coverStyle: DesignSpecCoverStyle;
     layout: CoverLayoutId;
     titlePosition: CoverPosition;
     authorPosition: CoverPosition;
@@ -103,6 +104,7 @@ function parseCover(value: unknown): BookDesignSpec["cover"] {
   if (!hasValue(POSITIONS, value.titlePosition) || !hasValue(POSITIONS, value.authorPosition) || !hasValue(POSITIONS, value.imagePosition)) {
     throw new Error("cover position is not allowed");
   }
+  if (value.coverStyle !== "overlay" && value.coverStyle !== "solid" && value.coverStyle !== "band") throw new Error("cover.coverStyle is not allowed");
   if (value.imageFit !== "contain" && value.imageFit !== "cover") throw new Error("cover.imageFit is not allowed");
   for (const [key, min, max] of [["titleScale", 0.3, 1], ["authorScale", 0.7, 1.5], ["imageScale", 0.3, 1], ["overlayOpacity", 0, 0.6]] as const) {
     const error = boundedNumber(value[key], min, max, `cover.${key}`);
@@ -113,6 +115,7 @@ function parseCover(value: unknown): BookDesignSpec["cover"] {
     throw new Error("cover.titleTextOverride is not safe");
   }
   return {
+    coverStyle: value.coverStyle,
     layout: value.layout,
     titlePosition: value.titlePosition,
     authorPosition: value.authorPosition,
@@ -160,7 +163,7 @@ export const DEFAULT_BOOK_DESIGN_SPEC: BookDesignSpec = {
   typography: { fontFamily: "mincho", fontScale: "medium", lineHeight: "normal" },
   palette: { textColor: "#2f251d", accentColor: "#6bb9ad" },
   page: { background: "paper", marginScale: "standard", pageWidth: "standard", bindingDirection: "rtl", readerMode: "book", paragraphSpacing: "normal" },
-  cover: { layout: "layout-01", titlePosition: "center-left", authorPosition: "bottom-left", imagePosition: "center", imageFit: "contain", titleVisible: true, authorVisible: true, titleScale: 1, authorScale: 1, imageScale: 1, overlayOpacity: 0 },
+  cover: { coverStyle: "overlay", layout: "layout-01", titlePosition: "center-left", authorPosition: "bottom-left", imagePosition: "center", imageFit: "contain", titleVisible: true, authorVisible: true, titleScale: 1, authorScale: 1, imageScale: 1, overlayOpacity: 0 },
   image: { layout: "framed" },
   motion: { reveal: "standard", reducedMotion: "respect" },
 };
@@ -178,7 +181,7 @@ export function designSpecFromBookConfig(config: Partial<BookConfig>): BookDesig
     typography: { fontFamily: settings.fontFamily, fontScale: settings.fontScale, lineHeight: settings.lineHeight },
     palette: { textColor: settings.textColor, accentColor: settings.accentColor },
     page: { background: settings.background, marginScale: settings.marginScale, pageWidth: settings.pageWidth, bindingDirection: config.bindingDirection === "ltr" ? "ltr" : "rtl", readerMode: config.readerMode && READER_MODES.includes(config.readerMode) ? config.readerMode : "book", paragraphSpacing: "normal" },
-    cover: { layout: cover.layout, titlePosition: cover.titlePosition, authorPosition: cover.authorPosition, imagePosition: cover.imagePosition, imageFit: cover.imageFit, titleVisible: cover.titleVisible !== false, authorVisible: cover.authorVisible !== false, titleScale: cover.titleScale, authorScale: cover.authorScale, imageScale: cover.imageScale, overlayOpacity: cover.overlayOpacity, ...(cover.titleTextOverride ? { titleTextOverride: cover.titleTextOverride } : {}) },
+    cover: { coverStyle: settings.coverStyle, layout: cover.layout, titlePosition: cover.titlePosition, authorPosition: cover.authorPosition, imagePosition: cover.imagePosition, imageFit: cover.imageFit, titleVisible: cover.titleVisible !== false, authorVisible: cover.authorVisible !== false, titleScale: cover.titleScale, authorScale: cover.authorScale, imageScale: cover.imageScale, overlayOpacity: cover.overlayOpacity, ...(cover.titleTextOverride ? { titleTextOverride: cover.titleTextOverride } : {}) },
     image: { layout: settings.imageLayout },
   };
   return parseBookDesignSpec(spec).success ? spec : DEFAULT_BOOK_DESIGN_SPEC;
