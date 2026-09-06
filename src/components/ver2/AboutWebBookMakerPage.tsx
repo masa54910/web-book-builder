@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import Ver2Footer from "@/components/ver2/lp/Ver2Footer";
 import Ver2Header from "@/components/ver2/lp/Ver2Header";
+import BrandArticleLinks from "./BrandArticleLinks";
 import AboutZoomableImage from "./AboutZoomableImage";
 import styles from "./AboutWebBookMakerPage.module.css";
 
@@ -189,6 +190,7 @@ export default function AboutWebBookMakerPage() {
 
             <section id="compare" className={`${styles.articleSection} ${styles.compareSection}`}><div className={styles.sectionContent}><h2>Kindleとも、PDFとも、一般的なWebサイトとも違う。</h2><p>Kindleには、Amazonという大きな書店で新しい読者へ届けられる強みがあります。PDFには、ファイルとして簡単に配れる強みがあります。一般的なWebサイトには、情報を常に更新して公開できる強みがあります。</p><p>WebBookMakerは、URLやQRで、自分が出会った人にも直接届けられます。noteも続ける。Kindleにも出す。Webブックでも届ける。それぞれの良さを使い分けながら、文章を読みやすい一冊の形で手軽に公開・更新できます。</p><div className={styles.comparisonVisual} aria-label="Kindle・PDF・Webサイト・WebBookMakerの比較"><div><b>Kindle</b><span>大きな書店で出版</span></div><div><b>PDF</b><span>ファイルで配布</span></div><div><b>Webサイト</b><span>常時更新</span></div><div className={styles.comparisonFocus}><b>WebBookMaker</b><span>URLやQRで直接届ける</span></div></div><ul className={styles.featureList}><li>URLをタップしたら、すぐ読める。</li><li>アプリ不要。</li><li>読者登録不要。</li><li>ログイン不要。</li><li>作者自身で手軽に作れる。</li><li>安価に公開できる。</li><li>公開後でも編集できる。</li><li>毎月更新する情報発信にも使える。</li><li>より詳細な分析ができる。</li><li>各SNSへ簡単にシェアできる。</li><li>QRコードもすぐ出せる。</li><li>必要なら、そのまま収益化できる。</li></ul></div></section>
 
+            <BrandArticleLinks current="what" />
             <section className={styles.finalCta} aria-labelledby="about-cta-title"><h2 id="about-cta-title">あなたの文章に、「読む場所」をつくる。</h2><p>文章は、もう書いてある。<br />お店や教室から届けたい情報も、もうある。<br />あとは、それを一冊にするだけ。</p><strong>WebBookMaker</strong><span>書いた文章を、そのままWebブックに。</span><Link href="/signup?next=%2Fbooks%2Fnew">今すぐ始める <span aria-hidden="true">→</span></Link></section>
           </article>
         </div>

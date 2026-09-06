@@ -1,0 +1,25 @@
+.reveal {
+  opacity: 1;
+  transform: none;
+}
+
+.revealReady {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 520ms ease, transform 520ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.revealVisible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .revealReady,
+  .revealVisible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
