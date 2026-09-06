@@ -37,5 +37,6 @@ assert.match(reveal, /prefers-reduced-motion: reduce/);
 assert.match(reveal, /window\.location\.hash/);
 assert.match(reveal, /element\.contains\(hashTarget\)/);
 assert.match(revealStyles, /@media \(prefers-reduced-motion: reduce\)/);
+assert.doesNotMatch(revealStyles, /opacity:\s*0;/, "article copy must stay readable while reveal is pending");
 
 console.log("Brand Story static verification passed");

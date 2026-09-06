@@ -4,8 +4,8 @@
 }
 
 .revealReady {
-  opacity: 0;
-  transform: translateY(18px);
+  opacity: .96;
+  transform: translateY(14px);
   transition: opacity 520ms ease, transform 520ms cubic-bezier(.22, 1, .36, 1);
 }
 
