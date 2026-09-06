@@ -116,6 +116,9 @@ export default function DashboardPage() {
           <Button variant="secondary" href="/settings">
             プロフィール / 作者ページ
           </Button>
+          <Button variant="secondary" href="/admin/inquiries">
+            お問い合わせ管理
+          </Button>
           <Button href="/books/new">新しい作品を作る</Button>
         </div>
       </div>
