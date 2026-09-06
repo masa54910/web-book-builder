@@ -1,0 +1,23 @@
+import assert from "node:assert/strict";
+import { createEditorHistory, EDITOR_HISTORY_LIMIT } from "../src/lib/editorHistory";
+
+const history = createEditorHistory({ value: "initial" }, 3);
+assert.equal(history.undo(), null);
+assert.equal(history.redo(), null);
+history.record({ value: "one" });
+history.record({ value: "two" });
+history.record({ value: "three" });
+assert.deepEqual(history.undo(), { value: "two" });
+assert.deepEqual(history.redo(), { value: "three" });
+history.undo();
+history.record({ value: "new branch" });
+assert.equal(history.redo(), null);
+for (let index = 0; index < EDITOR_HISTORY_LIMIT + 10; index += 1) history.record({ value: `entry-${index}` });
+let undoCount = 0;
+while (history.undo()) undoCount += 1;
+assert.equal(undoCount, 3);
+const first = { blocks: ["same"] };
+const equalHistory = createEditorHistory(first, 5, (left, right) => left.blocks === right.blocks);
+equalHistory.record({ blocks: first.blocks });
+assert.equal(equalHistory.undo(), null);
+console.log("Editor history verification passed.");

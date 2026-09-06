@@ -101,6 +101,7 @@ import type { ImageManifestRow, ReaderPage } from "@/lib/types";
 import { countContentCharacters } from "@/lib/characterCount";
 import { validateRequiredBookFields } from "@/lib/editorValidation";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
+import { useEditorHistory } from "@/lib/editorHistory";
 import { BookyHelpTrigger } from "@/components/BookyHelp";
 import InlineManuscriptEditor from "@/components/InlineManuscriptEditor";
 import type { InlineEditorHelpRequest } from "@/components/InlineManuscriptEditor";
@@ -161,6 +162,12 @@ type DraftSeed = {
   images: UploadedBookImage[];
   contentBlocks: BookContentBlock[];
   restored: boolean;
+};
+
+type EditorHistorySnapshot = {
+  state: EditorState;
+  contentBlocks: BookContentBlock[];
+  images: UploadedBookImage[];
 };
 
 const SAVE_SUCCESS_MESSAGE = "保存しました。";
@@ -635,6 +642,48 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const restoredAutosaveKeyRef = useRef<string | null>(null);
   const statusMessageTimeoutRef = useRef<number | null>(null);
 
+  const historySnapshot = useMemo<EditorHistorySnapshot>(() => ({ state, contentBlocks, images }), [contentBlocks, images, state]);
+  const editorHistory = useEditorHistory(historySnapshot, {
+    enabled: !isLoading,
+    areEqual: (left, right) => left.state === right.state && left.contentBlocks === right.contentBlocks && left.images === right.images,
+  });
+  const resetEditorHistory = editorHistory.reset;
+  const applyHistorySnapshot = useCallback((next: EditorHistorySnapshot, message: string) => {
+    setState(next.state);
+    setContentBlocks(next.contentBlocks);
+    setImages(next.images);
+    setDirty(true);
+    setPasteUndoBlocks(null);
+    setSmartFormatUndoBlocks(null);
+    setSmartFormatSummary(null);
+    setEditorRevision((current) => current + 1);
+    setStatusMessage(message);
+  }, []);
+  const handleEditorUndo = useCallback(() => {
+    const previous = editorHistory.undo();
+    if (previous) applyHistorySnapshot(previous, "操作を元に戻しました。");
+  }, [applyHistorySnapshot, editorHistory]);
+  const handleEditorRedo = useCallback(() => {
+    const next = editorHistory.redo();
+    if (next) applyHistorySnapshot(next, "操作をやり直しました。");
+  }, [applyHistorySnapshot, editorHistory]);
+  useEffect(() => {
+    const onEditorHistoryShortcut = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (!target?.closest(".editor-page")) return;
+      const key = event.key.toLowerCase();
+      const isUndo = key === "z" && !event.shiftKey;
+      const isRedo = key === "y" || (key === "z" && event.shiftKey);
+      if (!isUndo && !isRedo) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (isRedo) handleEditorRedo(); else handleEditorUndo();
+    };
+    window.addEventListener("keydown", onEditorHistoryShortcut, true);
+    return () => window.removeEventListener("keydown", onEditorHistoryShortcut, true);
+  }, [handleEditorRedo, handleEditorUndo]);
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -692,10 +741,13 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
       const materializedProject = await materializeBookProjectAssets(project);
       const restoredPreviewBlocks = ensureUniqueContentBlockIds(contentBlocksFromPreviewProject(materializedProject));
-      setState(stateWithValidBlockAdjustments(stateFromPreviewProject(materializedProject), restoredPreviewBlocks));
+      const restoredPreviewState = stateWithValidBlockAdjustments(stateFromPreviewProject(materializedProject), restoredPreviewBlocks);
+      const restoredPreviewImages = imagesFromPreviewProject(materializedProject);
+      setState(restoredPreviewState);
       setBookId(materializedProject.config.bookId);
-      setImages(imagesFromPreviewProject(materializedProject));
+      setImages(restoredPreviewImages);
       setContentBlocks(restoredPreviewBlocks);
+      resetEditorHistory({ state: restoredPreviewState, contentBlocks: restoredPreviewBlocks, images: restoredPreviewImages });
       setStalePendingImageIds(
         restoredPreviewBlocks
           .filter((block) => block.type === "image" && block.uploadState === "pending")
@@ -737,7 +789,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     return () => {
       active = false;
     };
-  }, [dirty, mode, params.id, pathname, previewDraftId, router]);
+  }, [dirty, mode, params.id, pathname, previewDraftId, resetEditorHistory, router]);
 
   useEffect(() => {
     if (mode !== "edit" || !params.id || !user) return;
@@ -784,17 +836,23 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             const restoredImages = restored.images.length
               ? mergeRestoredImages(restored.images, persistedImages)
               : persistedImages;
-            setState(stateWithValidBlockAdjustments({
+            const restoredState = stateWithValidBlockAdjustments({
               ...restored.state,
               coverImage: isDisplayableImageUrl(restored.state.coverImage)
                 ? restored.state.coverImage
                 : persistedState.coverImage,
               coverImageStoragePath:
                 restored.state.coverImageStoragePath || persistedState.coverImageStoragePath,
-            }, restoredBlocks));
+            }, restoredBlocks);
+            setState(restoredState);
             setBookId(materializedBook.id);
             setImages(restoredImages);
             setContentBlocks(restoredBlocks.length ? restoredBlocks : normalizedPersistedBlocks);
+            resetEditorHistory({
+              state: restoredState,
+              contentBlocks: restoredBlocks.length ? restoredBlocks : normalizedPersistedBlocks,
+              images: restoredImages,
+            });
             setStalePendingImageIds(
               flattenContentBlocks(restoredBlocks.length ? restoredBlocks : normalizedPersistedBlocks)
                 .filter((block) => block.type === "image" && block.uploadState === "pending")
@@ -808,10 +866,12 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           }
         }
 
-        setState(stateWithValidBlockAdjustments(persistedState, normalizedPersistedBlocks));
+        const persistedEditorState = stateWithValidBlockAdjustments(persistedState, normalizedPersistedBlocks);
+        setState(persistedEditorState);
         setBookId(materializedBook.id);
         setImages(persistedImages);
         setContentBlocks(normalizedPersistedBlocks);
+        resetEditorHistory({ state: persistedEditorState, contentBlocks: normalizedPersistedBlocks, images: persistedImages });
         setStalePendingImageIds(
           normalizedPersistedBlocks.filter((block) => block.type === "image" && block.uploadState === "pending").map((block) => block.id),
         );
@@ -832,7 +892,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     return () => {
       active = false;
     };
-  }, [didRestorePreviewDraft, hasRestoredDraft, mode, params.id, previewDraftId, user]);
+  }, [didRestorePreviewDraft, hasRestoredDraft, mode, params.id, previewDraftId, resetEditorHistory, user]);
 
   useEffect(() => {
     if (
@@ -855,10 +915,12 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     }));
     if (!restored.restored) return;
     const restoreTimer = window.setTimeout(() => {
-      setImages(restored.images);
       const restoredBlocks = ensureUniqueContentBlockIds(restored.contentBlocks);
-      setState(stateWithValidBlockAdjustments(restored.state, restoredBlocks));
+      const restoredState = stateWithValidBlockAdjustments(restored.state, restoredBlocks);
+      setImages(restored.images);
+      setState(restoredState);
       setContentBlocks(restoredBlocks);
+      resetEditorHistory({ state: restoredState, contentBlocks: restoredBlocks, images: restored.images });
       setStalePendingImageIds(
         restoredBlocks
           .filter((block) => block.type === "image" && block.uploadState === "pending")
@@ -872,7 +934,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       setEditorRevision((current) => current + 1);
     }, 0);
     return () => window.clearTimeout(restoreTimer);
-  }, [didRestorePreviewDraft, draftSeed.restored, mode, previewDraftId, user]);
+  }, [didRestorePreviewDraft, draftSeed.restored, mode, previewDraftId, resetEditorHistory, user]);
 
   useEffect(() => {
     if (pendingScrollRestore === null) return;
@@ -1362,10 +1424,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
   const handleSmartFormatUndo = () => {
     if (!smartFormatUndoBlocks) return;
-    syncContentBlocks(smartFormatUndoBlocks);
+    handleEditorUndo();
     setSmartFormatUndoBlocks(null);
     setSmartFormatSummary(null);
-    setEditorRevision((current) => current + 1);
     setStatusMessage("自動整形前の原稿へ戻しました。");
   };
 
@@ -1408,8 +1469,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const replaceEditorStateFromCanonicalPayload = (payload: CanonicalBookPayload) => {
     const nextBlocks = canonicalContentBlocksToEditorBlocks(payload);
     const nextImages = canonicalAssetsToUploadedImages(payload);
-    setState((current) => ({
-      ...current,
+    const normalizedBlocks = ensureUniqueContentBlockIds(nextBlocks);
+    const nextState = {
+      ...state,
       title: payload.title,
       subtitle: payload.subtitle,
       author: payload.authorName,
@@ -1424,16 +1486,16 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       bindingDirection: payload.bindingDirection,
       theme: payload.theme,
       language: payload.language,
-      fontFamily: payload.themeSettings.fontFamily || current.fontFamily,
-      fontScale: payload.themeSettings.fontScale || current.fontScale,
-      lineHeight: payload.themeSettings.lineHeight || current.lineHeight,
-      marginScale: payload.themeSettings.marginScale || current.marginScale,
-      pageWidth: payload.themeSettings.pageWidth || current.pageWidth,
-      background: payload.themeSettings.background || current.background,
-      textColor: payload.themeSettings.textColor || current.textColor,
-      accentColor: payload.themeSettings.accentColor || current.accentColor,
-      coverStyle: payload.themeSettings.coverStyle || current.coverStyle,
-      imageLayout: payload.themeSettings.imageLayout || current.imageLayout,
+      fontFamily: payload.themeSettings.fontFamily || state.fontFamily,
+      fontScale: payload.themeSettings.fontScale || state.fontScale,
+      lineHeight: payload.themeSettings.lineHeight || state.lineHeight,
+      marginScale: payload.themeSettings.marginScale || state.marginScale,
+      pageWidth: payload.themeSettings.pageWidth || state.pageWidth,
+      background: payload.themeSettings.background || state.background,
+      textColor: payload.themeSettings.textColor || state.textColor,
+      accentColor: payload.themeSettings.accentColor || state.accentColor,
+      coverStyle: payload.themeSettings.coverStyle || state.coverStyle,
+      imageLayout: payload.themeSettings.imageLayout || state.imageLayout,
       coverDesign: normalizeCoverDesign(payload.coverDesign),
       pageAdjustments: normalizePageAdjustments(payload.pageAdjustments),
       charactersPerPage: payload.charactersPerPage,
@@ -1446,14 +1508,16 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       authorWebsiteUrl: payload.authorWebsiteUrl,
       authorXUrl: payload.authorXUrl,
       authorNoteUrl: payload.authorNoteUrl,
-      externalLinkLabel: payload.externalLinks[0]?.label || current.externalLinkLabel,
-      externalLinkUrl: payload.externalLinks[0]?.url || current.externalLinkUrl,
+      externalLinkLabel: payload.externalLinks[0]?.label || state.externalLinkLabel,
+      externalLinkUrl: payload.externalLinks[0]?.url || state.externalLinkUrl,
       externalSalesUrl: payload.externalSalesUrl,
       externalSalesLabel: payload.externalSalesLabel,
-      publicationRevision: payload.publicationRevision || current.publicationRevision || 1,
-    }));
+      publicationRevision: payload.publicationRevision || state.publicationRevision || 1,
+    } satisfies EditorState;
+    setState(nextState);
     setImages(nextImages);
-    setContentBlocks(ensureUniqueContentBlockIds(nextBlocks));
+    setContentBlocks(normalizedBlocks);
+    resetEditorHistory({ state: nextState, contentBlocks: normalizedBlocks, images: nextImages });
     setBookId(payload.bookId);
     setEditorRevision((current) => current + 1);
   };
@@ -1773,6 +1837,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             expanded={helpOpen}
             onOpen={openHelp}
           />
+          <button className="maker-secondary-button editor-history-button" type="button" onClick={handleEditorUndo} disabled={!editorHistory.canUndo || isSaving} aria-label="元に戻す" title="元に戻す (Ctrl/Cmd+Z)">↶ 元に戻す</button>
+          <button className="maker-secondary-button editor-history-button" type="button" onClick={handleEditorRedo} disabled={!editorHistory.canRedo || isSaving} aria-label="やり直す" title="やり直す (Ctrl/Cmd+Y または Ctrl/Cmd+Shift+Z)">↷ やり直す</button>
           <Button data-help-target="save" variant="primary" type="button" disabled={isSaving} onClick={() => void handleCanonicalSave()}>
             {isSaving ? "保存中…" : "保存"}
           </Button>
@@ -2201,6 +2267,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       {statusMessage ? <p className="maker-status" aria-live="polite">{statusMessage}</p> : null}
 
       <div className="maker-actions sticky-actions">
+        <button className="maker-secondary-button editor-history-button" type="button" onClick={handleEditorUndo} disabled={!editorHistory.canUndo || isSaving} aria-label="元に戻す" title="元に戻す (Ctrl/Cmd+Z)">↶</button>
+        <button className="maker-secondary-button editor-history-button" type="button" onClick={handleEditorRedo} disabled={!editorHistory.canRedo || isSaving} aria-label="やり直す" title="やり直す (Ctrl/Cmd+Y または Ctrl/Cmd+Shift+Z)">↷</button>
         <Button variant="primary" type="button" disabled={isSaving} onClick={() => void handleCanonicalSave()}>
           {isSaving ? "保存中…" : "保存"}
         </Button>

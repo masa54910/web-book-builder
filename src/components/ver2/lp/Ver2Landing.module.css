@@ -1,4 +1,4 @@
-:global(:root) {
+.page {
   --wbm-bg: #eef7fc;
   --wbm-primary-green: #168dcc;
   --wbm-accent-orange: #2a9fd6;
@@ -2346,7 +2346,7 @@
 }
 
 /* Ver.2 official visual finish: bookstore × cafe × Apple Store */
-:global(:root) {
+.page {
   --green: #168dcc;
   --green-dark: #123e68;
   --orange: #2a9fd6;
@@ -3228,7 +3228,7 @@
 }
 
 /* Ver.2 interaction polish: glass controls, layered cards, accessible motion */
-:global(:root) {
+.page {
   --wbm-green-900: #123e68;
   --wbm-green-700: #156b9e;
   --wbm-green-500: #168dcc;

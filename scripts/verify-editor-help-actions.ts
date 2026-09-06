@@ -25,7 +25,7 @@ assert.deepEqual(
     ANSWER_ONLY: entriesByKind.ANSWER_ONLY?.length || 0,
     UNSUPPORTED: entriesByKind.UNSUPPORTED?.length || 0,
   },
-  { ACTION: 17, ROUTE: 4, ANSWER_ONLY: 16, UNSUPPORTED: 5 },
+  { ACTION: 17, ROUTE: 4, ANSWER_ONLY: 17, UNSUPPORTED: 4 },
 );
 
 for (const entry of EDITOR_HELP_CATALOG) {

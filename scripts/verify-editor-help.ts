@@ -112,7 +112,7 @@ const fixtures: readonly (readonly [string, string])[] = [
   ["操作方法を知りたい", "help"], ["活用事例を見たい", "use.cases"],
   ["何に使えるか知りたい", "use.cases"], ["AIで文章を書き直したい", "unsupported.ai-rewrite"],
   ["AIに書いてほしい", "unsupported.ai-generate"], ["ブロックをドラッグで並べ替えたい", "unsupported.drag-reorder"],
-  ["Redoしたい", "unsupported.redo"], ["一括置換したい", "unsupported.search-replace"],
+  ["Redoしたい", "editor.redo"], ["一括置換したい", "unsupported.search-replace"],
 ];
 for (const [query, intent] of fixtures) assert.equal(answerIntent(query), intent, query);
 
@@ -137,7 +137,7 @@ assert.equal(catalog.find((entry) => entry.intent === "pricing")?.route, "/prici
 assert.equal(catalog.find((entry) => entry.intent === "analytics")?.route, "/analytics");
 assert.equal(catalog.find((entry) => entry.intent === "help")?.route, "/help");
 assert.equal(catalog.find((entry) => entry.intent === "use.cases")?.route, "/use-cases");
-assert.ok(catalog.filter((entry) => entry.unsupported).length >= 5);
+assert.ok(catalog.filter((entry) => entry.unsupported).length >= 4);
 assert.ok(catalog.every((entry) => !/12ジャンル|accent color|テーマがあります/iu.test(entry.answer)));
 
 const deterministicQueries = fixtures.slice(0, 20).map(([query]) => query).concat(["販売したい", "画像", "不明な操作"]);
