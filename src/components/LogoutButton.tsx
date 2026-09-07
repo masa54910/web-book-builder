@@ -5,6 +5,8 @@ import { useState } from "react";
 
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { useUiLocale } from "@/components/UiLocaleProvider";
+import { uiT } from "@/lib/localization";
 
 const LOGOUT_ERROR_MESSAGE = "ログアウトできませんでした。もう一度お試しください。";
 
@@ -22,6 +24,7 @@ function getLogoutErrorDetails(error: unknown) {
 
 export default function LogoutButton({ className }: { className?: string }) {
   const { signOut } = useAuth();
+  const { locale } = useUiLocale();
   const pathname = usePathname() || "/";
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -44,7 +47,7 @@ export default function LogoutButton({ className }: { className?: string }) {
         "error.message": details.message,
         "error.code": details.code,
       });
-      setErrorMessage(LOGOUT_ERROR_MESSAGE);
+      setErrorMessage(locale === "en" ? "We could not log you out. Please try again." : LOGOUT_ERROR_MESSAGE);
     } finally {
       setIsSigningOut(false);
     }
@@ -61,9 +64,9 @@ export default function LogoutButton({ className }: { className?: string }) {
         aria-busy={isSigningOut}
         className={className}
         onClick={() => void handleLogout()}
-        ariaLabel={isSigningOut ? "ログアウト中" : "ログアウト"}
+        ariaLabel={isSigningOut ? `${uiT(locale, "navigation.logout")}…` : uiT(locale, "navigation.logout")}
       >
-        {isSigningOut ? "ログアウト中…" : "ログアウト"}
+        {isSigningOut ? `${uiT(locale, "navigation.logout")}…` : uiT(locale, "navigation.logout")}
       </Button>
       {errorMessage ? (
         <span className="logout-error" role="alert">

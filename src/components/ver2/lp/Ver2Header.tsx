@@ -6,9 +6,13 @@ import { type MouseEvent, useRef, useState } from "react";
 import BrandLogo from "@/components/ui/BrandLogo";
 import { useAuth } from "@/lib/auth/AuthContext";
 import styles from "./Ver2Landing.module.css";
+import LanguageSelector from "@/components/LanguageSelector";
+import { useUiLocale } from "@/components/UiLocaleProvider";
+import { uiT } from "@/lib/localization";
 
 export default function Ver2Header() {
   const { user, isLoading } = useAuth();
+  const { locale } = useUiLocale();
   const [open, setOpen] = useState(false);
   const scrollFrameRef = useRef<number | null>(null);
   const loginHref = user ? "/dashboard" : "/login";
@@ -77,26 +81,27 @@ export default function Ver2Header() {
           taglineClassName={styles.logoTagline}
         />
 
-        <button className={styles.menuToggle} aria-label="メニューを開く" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <button className={styles.menuToggle} aria-label={locale === "en" ? "Open menu" : "メニューを開く"} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
           ☰
         </button>
 
         <nav className={`${styles.mainNav} ${open ? styles.mainNavOpen : ""}`}>
-          <Link href="/#samples" onClick={(event) => handleSectionNavigation(event, "samples")}>作り方</Link>
-          <Link href="/pricing">料金プラン</Link>
-          <Link href="/#promotion" onClick={(event) => handleSectionNavigation(event, "promotion")}>作品を広める</Link>
-          <Link href="/#faq" onClick={(event) => handleSectionNavigation(event, "faq")}>よくある質問</Link>
+          <Link href="/#samples" onClick={(event) => handleSectionNavigation(event, "samples")}>{uiT(locale, "navigation.howItWorks")}</Link>
+          <Link href="/pricing">{uiT(locale, "navigation.pricing")}</Link>
+          <Link href="/#promotion" onClick={(event) => handleSectionNavigation(event, "promotion")}>{uiT(locale, "navigation.promotion")}</Link>
+          <Link href="/#faq" onClick={(event) => handleSectionNavigation(event, "faq")}>{uiT(locale, "navigation.faq")}</Link>
           {isLoading ? (
-            <span className={`${styles.navBtn} ${styles.navBtnLoading}`} aria-disabled="true">ログイン</span>
+            <span className={`${styles.navBtn} ${styles.navBtnLoading}`} aria-disabled="true">{uiT(locale, "navigation.login")}</span>
           ) : (
-            <Link className={styles.navBtn} href={loginHref}>ログイン</Link>
+            <Link className={styles.navBtn} href={loginHref}>{uiT(locale, "navigation.login")}</Link>
           )}
           <Link
             className={`${styles.navBtn} ${styles.navBtnPrimary}`}
             href={user ? "/books/new" : "/signup?next=%2Fbooks%2Fnew"}
           >
-            はじめる
+            {uiT(locale, "navigation.start")}
           </Link>
+          <LanguageSelector />
         </nav>
       </div>
     </header>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { useUiLocale } from "@/components/UiLocaleProvider";
 
 type Props = {
   className?: string;
@@ -26,6 +27,7 @@ export default function HomeBackLink({
   label,
 }: Props) {
   const { user } = useAuth();
+  const { locale } = useUiLocale();
   const pathname = usePathname() ?? "";
   const inDashboardContext = isDashboardContext(pathname);
 
@@ -33,7 +35,7 @@ export default function HomeBackLink({
 
   const shouldUseDashboardTop = destination === "auto" ? Boolean(user) && inDashboardContext : destination === "dashboard";
   const href = shouldUseDashboardTop ? "/dashboard" : "/";
-  const text = label ?? (shouldUseDashboardTop ? "← TOPへ戻る" : "← ホームへ戻る");
+  const text = label ?? (shouldUseDashboardTop ? (locale === "en" ? "← Back to dashboard" : "← TOPへ戻る") : (locale === "en" ? "← Back to home" : "← ホームへ戻る"));
 
   return (
     <Link className={className} href={href}>

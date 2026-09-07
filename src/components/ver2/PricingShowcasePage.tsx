@@ -5,6 +5,8 @@ import Link from "next/link";
 import HomeBackLink from "@/components/HomeBackLink";
 import { useAuth } from "@/lib/auth/AuthContext";
 import styles from "@/components/ver2/PricingShowcasePage.module.css";
+import { useUiLocale } from "@/components/UiLocaleProvider";
+import { uiT } from "@/lib/localization";
 
 type PricingIconName = "book" | "chart" | "check" | "minus" | "share" | "analytics" | "read" | "external" | "lightbulb" | "tag";
 
@@ -78,41 +80,42 @@ const comparisonRows = [
 
 export default function PricingShowcasePage() {
   const { user } = useAuth();
+  const { locale } = useUiLocale();
   const startHref = user ? "/books/new" : "/signup?next=%2Fbooks%2Fnew";
   const plans: PlanCard[] = [
     {
       id: "free",
       badge: "FREE",
-      name: "無料プラン",
+      name: uiT(locale, "pricing.freePlan"),
       price: "¥0",
       unit: "",
       lead: "まずは無料で、Webブックを作って試せます。",
       features: ["ご自身の閲覧用", "作成・プレビュー", "表紙・ページ調整", "公開前の仕上がりを確認", "一般公開はできません"],
-      actionLabel: "無料ではじめる",
+      actionLabel: uiT(locale, "pricing.startFree"),
       href: startHref,
       note: "クレジットカード登録不要",
     },
     {
       id: "publish",
       badge: "PUBLISH",
-      name: "出版プラン",
+      name: uiT(locale, "pricing.publicationPlan"),
       price: "¥980",
       unit: "/ 1作品",
       lead: "完成した作品を、Webで公開したい方へ。",
       features: ["1作品を公開", "公開後も継続編集可能", "WebBook Galleryに掲載", "X・note・LINEなどへ共有", "公開URLはそのまま継続"],
-      actionLabel: "出版プランではじめる",
+      actionLabel: uiT(locale, "pricing.startPublication"),
       href: "/signup?plan=publish",
       note: "買い切り・Stripe Checkout",
     },
     {
       id: "operation",
       badge: "OPERATION",
-      name: "運用プラン",
+      name: uiT(locale, "pricing.operationPlan"),
       price: "¥1,980",
       unit: "/ 月",
       lead: "公開後も、編集・分析しながら作品を育てたい方へ。",
       features: ["複数作品を継続運用", "公開後もいつでも編集可能", "アクセス分析ができる", "読者がどのページまで読んだか分かる", "リンクがどれくらい押されたか分かる", "過去の出版済み作品も再編集可能"],
-      actionLabel: "運用プランではじめる",
+      actionLabel: uiT(locale, "pricing.startOperation"),
       href: "/signup?plan=writer",
       note: "いつでも解約できます",
     },
@@ -122,19 +125,19 @@ export default function PricingShowcasePage() {
     <main className={styles.page}>
       <div className={styles.shell}>
         <div className={styles.topBar}>
-          <HomeBackLink label="ホームへ戻る" />
+          <HomeBackLink label={uiT(locale, "common.backHome")} />
         </div>
 
         <section className={styles.hero} aria-labelledby="pricing-heading">
           <div className={styles.heroCopy}>
             <p className={styles.kicker}>WebBooK<span className={styles.brandMaker}>Maker</span></p>
-            <h1 id="pricing-heading">料金プラン</h1>
-            <p className={styles.heroLead}>作るところまでは無料。公開スタイルに合わせて選べます。</p>
-            <p className={styles.heroSub}>1作品だけ公開するなら「出版プラン」。公開後も編集・分析しながら育てるなら「運用プラン」。</p>
+            <h1 id="pricing-heading">{uiT(locale, "pricing.title")}</h1>
+            <p className={styles.heroLead}>{uiT(locale, "pricing.lead")}</p>
+            <p className={styles.heroSub}>{locale === "en" ? "Publish one work with Publication, or keep improving it with Operation." : "1作品だけ公開するなら「出版プラン」。公開後も編集・分析しながら育てるなら「運用プラン」。"}</p>
           </div>
         </section>
 
-        <section className={styles.cards} aria-label="料金プラン一覧">
+        <section className={styles.cards} aria-label={locale === "en" ? "Pricing plans" : "料金プラン一覧"}>
           {plans.map((plan) => (
             <article key={plan.id} className={`${styles.card} ${styles[`card${plan.id[0].toUpperCase()}${plan.id.slice(1)}`]}`}>
               {plan.id === "operation" ? <span className={styles.dealRibbon}>お得！</span> : null}
@@ -159,7 +162,7 @@ export default function PricingShowcasePage() {
         </section>
 
         <section className={styles.compare} aria-labelledby="pricing-compare-heading">
-          <h2 id="pricing-compare-heading">プラン比較表</h2>
+          <h2 id="pricing-compare-heading">{uiT(locale, "pricing.compare")}</h2>
           <div className={styles.tableWrap}>
             <table>
               <thead>

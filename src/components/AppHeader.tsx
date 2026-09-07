@@ -7,6 +7,9 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { getAppEnv } from "@/lib/appEnv";
 import { safeExternalUrl } from "@/lib/productTypes";
 import styles from "@/components/ver2/lp/Ver2Landing.module.css";
+import LanguageSelector from "@/components/LanguageSelector";
+import { useUiLocale } from "@/components/UiLocaleProvider";
+import { uiT } from "@/lib/localization";
 
 export default function AppHeader({
   publicAuthor = false,
@@ -16,6 +19,7 @@ export default function AppHeader({
   authorIsOwner?: boolean;
 }) {
   const { user, isLoading } = useAuth();
+  const { locale } = useUiLocale();
   const isPreview = getAppEnv() === "preview";
   const feedbackUrl = safeExternalUrl(process.env.NEXT_PUBLIC_FEEDBACK_URL ?? "");
 
@@ -43,21 +47,21 @@ export default function AppHeader({
             authorIsOwner ? (
               <div className="author-owner-nav">
                 <Link className="nav-cta" href="/dashboard">
-                  管理画面へ
+                  {uiT(locale, "navigation.library")}
                 </Link>
                 <small>このボタンは読者のページには表示されません。</small>
               </div>
             ) : null
           ) : isLoading ? null : user ? (
             <>
-              <Link href="/dashboard">作品一覧</Link>
-              <Link href="/analytics">分析</Link>
-              <Link href="/settings">設定</Link>
+              <Link href="/dashboard">{uiT(locale, "navigation.library")}</Link>
+              <Link href="/analytics">{uiT(locale, "navigation.analytics")}</Link>
+              <Link href="/settings">{uiT(locale, "navigation.settings")}</Link>
               <LogoutButton />
             </>
           ) : (
             <>
-              <Link href="/#features">機能</Link>
+              <Link href="/#features">{uiT(locale, "navigation.howItWorks")}</Link>
               <Link href="/blog">Blog</Link>
               <Link href="/help">Help</Link>
               <Link href="/sample">サンプル</Link>
@@ -66,12 +70,13 @@ export default function AppHeader({
                   フィードバック
                 </a>
               ) : null}
-              <Link href="/login">ログイン</Link>
+              <Link href="/login">{uiT(locale, "navigation.login")}</Link>
               <Link className="nav-cta" href="/signup">
-                無料で始める
+                {uiT(locale, "auth.signup")}
               </Link>
             </>
           )}
+          <LanguageSelector />
         </nav>
       </header>
     </>

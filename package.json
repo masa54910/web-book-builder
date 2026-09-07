@@ -25,7 +25,8 @@
     "verify:gate20": "tsx scripts/verify-gate20.ts",
     "verify:gate20-s": "tsx scripts/verify-gate20-s.ts",
     "verify:editor-history": "tsx scripts/verify-editor-history.ts",
-    "test": "tsx scripts/verify-beta.ts && tsx scripts/verify-gatec.ts && tsx scripts/verify-gatec-step2b.ts && tsx scripts/verify-paywall-security.ts && tsx scripts/verify-columns.ts && tsx scripts/verify-editor-helper-serialization.ts && tsx scripts/verify-analytics-integrity.ts && tsx scripts/verify-seller-connect.ts && tsx scripts/verify-seller-connect-hardening.ts && tsx scripts/verify-connect-onboarding.ts && tsx scripts/verify-connect-sales.ts && tsx scripts/verify-connect-compliance.ts && tsx scripts/verify-plan-billing.ts && tsx scripts/verify-gate20.ts && tsx scripts/verify-gate20-s.ts && tsx scripts/verify-editor-history.ts && tsx scripts/verify-design-system.ts"
+    "verify:i18n": "tsx scripts/verify-i18n.ts",
+    "test": "tsx scripts/verify-beta.ts && tsx scripts/verify-gatec.ts && tsx scripts/verify-gatec-step2b.ts && tsx scripts/verify-paywall-security.ts && tsx scripts/verify-columns.ts && tsx scripts/verify-editor-helper-serialization.ts && tsx scripts/verify-analytics-integrity.ts && tsx scripts/verify-seller-connect.ts && tsx scripts/verify-seller-connect-hardening.ts && tsx scripts/verify-connect-onboarding.ts && tsx scripts/verify-connect-sales.ts && tsx scripts/verify-connect-compliance.ts && tsx scripts/verify-plan-billing.ts && tsx scripts/verify-gate20.ts && tsx scripts/verify-gate20-s.ts && tsx scripts/verify-editor-history.ts && tsx scripts/verify-design-system.ts && tsx scripts/verify-i18n.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",

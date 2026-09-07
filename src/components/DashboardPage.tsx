@@ -19,11 +19,14 @@ import {
 } from "@/lib/bookRepository";
 import { trackEvent } from "@/lib/analytics";
 import { summarizeAnalytics } from "@/lib/readerAnalytics";
+import { useUiLocale } from "@/components/UiLocaleProvider";
+import { uiT } from "@/lib/localization";
 
 type SortKey = "updated" | "title" | "status";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { locale } = useUiLocale();
   const [books, setBooks] = useState<CloudBookRecord[]>([]);
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated");
@@ -109,8 +112,8 @@ export default function DashboardPage() {
         <div>
           <p className="maker-kicker">My library</p>
           <HomeBackLink />
-          <h1>マイライブラリ</h1>
-          <p>作成したWeb書籍の保存、編集、公開URL管理を行います。</p>
+          <h1>{locale === "en" ? "My library" : "マイライブラリ"}</h1>
+          <p>{locale === "en" ? "Save, edit, and manage the public URLs for your web books." : "作成したWeb書籍の保存、編集、公開URL管理を行います。"}</p>
         </div>
         <div className="dashboard-heading-actions">
           <Button variant="secondary" href="/settings">
@@ -119,7 +122,7 @@ export default function DashboardPage() {
           <Button variant="secondary" href="/admin/inquiries">
             お問い合わせ管理
           </Button>
-          <Button href="/books/new">新しい作品を作る</Button>
+          <Button href="/books/new">{uiT(locale, "dashboard.createBook")}</Button>
         </div>
       </div>
 
@@ -144,9 +147,9 @@ export default function DashboardPage() {
       {!isLoading && !visibleBooks.length ? (
         <section className="maker-card empty-library">
           <EmptyState
-            title="作品はまだありません"
-            description="最初の1冊を作成して、Web書籍のプレビューと公開URLを試しましょう。"
-            action={{ label: "新しい作品を作る", href: "/books/new" }}
+            title={uiT(locale, "dashboard.empty")}
+            description={locale === "en" ? "Create your first book to try the preview and public URL." : "最初の1冊を作成して、Web書籍のプレビューと公開URLを試しましょう。"}
+            action={{ label: uiT(locale, "dashboard.createBook"), href: "/books/new" }}
           />
         </section>
       ) : null}

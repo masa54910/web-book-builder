@@ -1,6 +1,7 @@
 import AppHeader from "@/components/AppHeader";
 import HomeBackLink from "@/components/HomeBackLink";
 import ContactForm from "@/components/ContactForm";
+import LocalizedText from "@/components/LocalizedText";
 
 export default function ContactPage() {
   return (
@@ -9,7 +10,7 @@ export default function ContactPage() {
       <article className="maker-card">
         <p className="maker-kicker">Contact</p>
         <HomeBackLink />
-        <h1>お問い合わせ</h1>
+        <h1><LocalizedText k="contact.title" /></h1>
         <ContactForm />
         <HomeBackLink
           destination="home"

@@ -199,6 +199,35 @@ a {
   font-weight: 800;
 }
 
+.wbm-language-selector {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 2px;
+}
+
+.wbm-language-selector select {
+  min-height: 38px;
+  max-width: 132px;
+  padding: 6px 28px 6px 10px;
+  border: 1px solid rgba(24, 52, 88, 0.2);
+  border-radius: 999px;
+  color: #334340;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.wbm-language-selector select:focus-visible {
+  outline: 3px solid rgba(35, 126, 232, 0.45);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wbm-language-selector select {
+    transition: none;
+  }
+}
+
 .purchase-page {
   display: grid;
   min-height: 100vh;

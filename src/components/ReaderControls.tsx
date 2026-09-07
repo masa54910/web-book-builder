@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { BindingDirection } from "@/config/bookConfig";
+import { useUiLocale } from "@/components/UiLocaleProvider";
 
 export default function ReaderControls({
   bindingDirection,
@@ -24,12 +25,13 @@ export default function ReaderControls({
   onJumpToPage: (pageNumber: number) => void;
 }) {
   const [pageInput, setPageInput] = useState("");
+  const { locale } = useUiLocale();
   const readableTotal = Math.max(total - 2, 1);
   const displayedPageInput = pageInput || String(Math.min(Math.max(current, 1), readableTotal));
   // Keep the handlers and binding direction untouched; only the visible arrows
   // follow the requested reading-order presentation.
-  const nextLabel = bindingDirection === "rtl" ? "→ 次へ" : "次へ →";
-  const previousLabel = "← 前へ";
+  const nextLabel = bindingDirection === "rtl" ? `→ ${locale === "en" ? "Next" : "次へ"}` : `${locale === "en" ? "Next" : "次へ"} →`;
+  const previousLabel = locale === "en" ? "← Previous" : "← 前へ";
 
   const submitPageJump = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -43,17 +45,17 @@ export default function ReaderControls({
   };
 
   return (
-    <nav className="reader-controls" aria-label="ページ操作">
+    <nav className="reader-controls" aria-label={locale === "en" ? "Page controls" : "ページ操作"}>
       <div className="control-cluster">
         <button className="reader-button" type="button" onClick={onFirst} disabled={current === 0}>
-          最初へ
+          {locale === "en" ? "First" : "最初へ"}
         </button>
         <button className="reader-button" type="button" onClick={onContents}>
-          目次へ
+          {locale === "en" ? "Contents" : "目次へ"}
         </button>
       </div>
       <form className="page-jump-form" onSubmit={submitPageJump}>
-        <label className="page-jump-label" htmlFor="page-jump-input">ページ</label>
+        <label className="page-jump-label" htmlFor="page-jump-input">{locale === "en" ? "Page" : "ページ"}</label>
         <input
           id="page-jump-input"
           className="page-jump-input"
@@ -63,10 +65,10 @@ export default function ReaderControls({
           max={readableTotal}
           value={displayedPageInput}
           onChange={(event) => setPageInput(event.target.value)}
-          aria-label={`ページ番号を入力（1から${readableTotal}）`}
+          aria-label={locale === "en" ? `Enter page number (1 to ${readableTotal})` : `ページ番号を入力（1から${readableTotal}）`}
         />
         <span className="page-jump-total">/ {readableTotal}</span>
-        <button className="page-jump-button" type="submit">移動</button>
+        <button className="page-jump-button" type="submit">{locale === "en" ? "Go" : "移動"}</button>
       </form>
       <div className="control-cluster">
         <button className="reader-button" type="button" onClick={onPrevious} disabled={current === 0}>
