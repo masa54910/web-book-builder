@@ -151,6 +151,13 @@ export type UiTranslationKey =
   | "editor.publish"
   | "editor.undo"
   | "editor.redo"
+  | "editor.addMap"
+  | "map.title"
+  | "map.expand"
+  | "map.close"
+  | "map.openInGoogleMaps"
+  | "map.fallback"
+  | "map.invalidUrl"
   | "reader.tableOfContents"
   | "reader.share"
   | "reader.zoom"
@@ -209,6 +216,13 @@ const uiResources: Record<UiLocale, UiResource> = {
     "editor.publish": "公開する",
     "editor.undo": "元に戻す",
     "editor.redo": "やり直す",
+    "editor.addMap": "Googleマップを埋め込む",
+    "map.title": "Googleマップ",
+    "map.expand": "地図を拡大",
+    "map.close": "地図を閉じる",
+    "map.openInGoogleMaps": "Googleマップで開く",
+    "map.fallback": "地図を読み込めませんでした。Googleマップで開いてください。",
+    "map.invalidUrl": "Googleマップの共有URLまたは埋め込みURLを入力してください。",
     "reader.tableOfContents": "目次",
     "reader.share": "共有",
     "reader.zoom": "拡大・縮小",
@@ -264,6 +278,13 @@ const uiResources: Record<UiLocale, UiResource> = {
     "editor.publish": "Publish",
     "editor.undo": "Undo",
     "editor.redo": "Redo",
+    "editor.addMap": "Embed Google Maps",
+    "map.title": "Google Maps",
+    "map.expand": "Expand map",
+    "map.close": "Close map",
+    "map.openInGoogleMaps": "Open in Google Maps",
+    "map.fallback": "We could not load this map. Open it in Google Maps.",
+    "map.invalidUrl": "Enter an official Google Maps share or embed URL.",
     "reader.tableOfContents": "Table of contents",
     "reader.share": "Share",
     "reader.zoom": "Zoom",

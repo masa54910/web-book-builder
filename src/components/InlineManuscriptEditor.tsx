@@ -20,9 +20,10 @@ import {
   type MediaDisplaySize,
 } from "@/lib/bookProject";
 import { isDisplayableImageUrl } from "@/lib/bookAssetStorage";
-import { createPendingImageBlock, insertImageBlocksAtCursor, insertYouTubeBlockAtCursor } from "@/lib/inlineContentBlocks";
+import { createPendingImageBlock, insertImageBlocksAtCursor, insertYouTubeBlockAtCursor, insertMapBlockAtCursor } from "@/lib/inlineContentBlocks";
 import { countContentCharacters, countUserCharacters } from "@/lib/characterCount";
 import { parseYouTubeUrl, youtubeThumbnailUrl } from "@/lib/youtube";
+import { parseGoogleMapsUrl } from "@/lib/googleMaps";
 import { applyTextMark, marksCoverRange, normalizeTextMarks, sliceTextMarks, TEXT_COLORS, TEXT_COLOR_LABELS, TEXT_FONT_SIZE_LABELS, type TextColor, type TextFontSize, type TextMark } from "@/lib/textStyles";
 
 function fileToDataUrl(file: File) {
@@ -164,6 +165,11 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
         });
         continue;
       }
+      if (child.dataset.nodeType === "map") {
+        const parsedMap = parseGoogleMapsUrl(child.dataset.sourceUrl || child.dataset.embedUrl);
+        if (parsedMap) parsed.push({ id: child.dataset.nodeId || createContentBlockId("map"), type: "map", ...parsedMap, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(child.dataset.displaySize) });
+        continue;
+      }
       const styled = parseStyledParagraph(child);
       parsed.push({
         id: child.dataset.nodeId || paragraphId(),
@@ -217,6 +223,11 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
         displayMode: child.dataset.displayMode === "inline" ? "inline" : "full-page",
         displaySize: normalizeMediaDisplaySize(child.dataset.displaySize),
       });
+      continue;
+    }
+    if (child instanceof HTMLElement && child.dataset.nodeType === "map") {
+      const parsedMap = parseGoogleMapsUrl(child.dataset.sourceUrl || child.dataset.embedUrl);
+      if (parsedMap) blocks.push({ id: child.dataset.nodeId || createContentBlockId("map"), type: "map", ...parsedMap, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(child.dataset.displaySize) });
       continue;
     }
     if (child instanceof HTMLElement && child.dataset.nodeType === "paywall") {
@@ -349,6 +360,24 @@ function createYouTubeElement(block: Extract<BookContentBlock, { type: "youtube"
   return wrapper;
 }
 
+function createMapElement(block: Extract<BookContentBlock, { type: "map" }>) {
+  const wrapper = document.createElement("div");
+  wrapper.dataset.nodeType = "map";
+  wrapper.dataset.nodeId = block.id;
+  wrapper.dataset.sourceUrl = block.sourceUrl;
+  wrapper.dataset.embedUrl = block.embedUrl;
+  wrapper.contentEditable = "false";
+  wrapper.className = "inline-editor-map-node";
+  const label = document.createElement("span");
+  label.className = "inline-editor-map-label";
+  label.textContent = "📍 Googleマップ";
+  const url = document.createElement("span");
+  url.className = "inline-editor-map-url";
+  url.textContent = block.sourceUrl;
+  wrapper.append(label, url);
+  return wrapper;
+}
+
 function createPaywallElement(block: Extract<BookContentBlock, { type: "paywall" }>) {
   const wrapper = document.createElement("div");
   wrapper.dataset.nodeType = "paywall";
@@ -402,7 +431,7 @@ function createColumnsElement(block: BookColumnsBlock) {
     pane.className = `inline-editor-columns-pane inline-editor-columns-pane-${side}`;
     pane.contentEditable = "true";
     for (const child of children) {
-      pane.append(child.type === "text" ? createParagraphElement(child) : child.type === "image" ? createImageElement(child) : createYouTubeElement(child));
+      pane.append(child.type === "text" ? createParagraphElement(child) : child.type === "image" ? createImageElement(child) : child.type === "youtube" ? createYouTubeElement(child) : createMapElement(child));
     }
     if (!children.length) {
       const empty = createParagraphElement({ id: paragraphId(), type: "text", content: "" });
@@ -434,6 +463,8 @@ function renderNodes(root: HTMLElement, nodes: BookContentBlock[], pageBreakAfte
       fragment.append(createImageElement(block));
     } else if (block.type === "youtube") {
       fragment.append(createYouTubeElement(block));
+    } else if (block.type === "map") {
+      fragment.append(createMapElement(block));
     } else if (block.type === "columns") {
       fragment.append(createColumnsElement(block));
     } else {
@@ -718,6 +749,10 @@ function InlineManuscriptEditor({
   const renderedBreakSignatureRef = useRef("");
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [selectedYouTubeId, setSelectedYouTubeId] = useState<string | null>(null);
+  const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [mapUrl, setMapUrl] = useState("");
+  const [mapError, setMapError] = useState("");
   const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [youtubeDisplayMode, setYoutubeDisplayMode] = useState<MediaDisplayMode>("inline");
@@ -890,6 +925,10 @@ function InlineManuscriptEditor({
   const selectedYouTube = useMemo(
     () => selectedYouTubeId ? findContentBlockById(value, selectedYouTubeId) as Extract<BookContentBlock, { type: "youtube" }> | null : null,
     [selectedYouTubeId, value],
+  );
+  const selectedMap = useMemo(
+    () => selectedMapId ? findContentBlockById(value, selectedMapId) as Extract<BookContentBlock, { type: "map" }> | null : null,
+    [selectedMapId, value],
   );
 
   useEffect(() => {
@@ -1473,6 +1512,21 @@ function InlineManuscriptEditor({
     setIsYouTubeModalOpen(false);
   };
 
+  const saveMapBlock = () => {
+    const parsed = parseGoogleMapsUrl(mapUrl);
+    if (!parsed) { setMapError("Googleマップの共有URLまたは埋め込みURLを入力してください。"); return; }
+    if (selectedMap) { updateNode(selectedMap.id, { ...parsed, type: "map", provider: "google_maps", displayMode: "full-page" }); setIsMapModalOpen(false); return; }
+    const root = rootRef.current; if (!root) return;
+    const activeRange = (savedRangeRef.current ?? cloneSelectionRange(root))?.cloneRange() ?? null;
+    const paragraphTarget = findParagraphTarget(root, activeRange);
+    const nodeIndex = paragraphTarget ? editorBlockIndex(root, paragraphTarget) : -1;
+    const mapBlock = { id: createContentBlockId("map"), type: "map" as const, ...parsed, displayMode: "full-page" as const, displaySize: "medium" as const };
+    const nextBlocks = nodeIndex >= 0 && paragraphTarget && activeRange ? insertMapBlockAtCursor({ blocks: nodesRef.current, paragraphIndex: nodeIndex, cursorOffset: splitParagraphAtCaret(paragraphTarget, activeRange).before.length, mapBlock }) : [...nodesRef.current, mapBlock];
+    emitChange(ensureUniqueContentBlockIds(nextBlocks));
+    renderNodes(root, nextBlocks, pageBreakAfterBlockIds);
+    setSelectedMapId(mapBlock.id); setIsMapModalOpen(false); setMapUrl("");
+  };
+
   const insertPageBreakAtCursor = () => {
     const root = rootRef.current;
     if (!root) return;
@@ -1578,6 +1632,15 @@ function InlineManuscriptEditor({
                 }}
               >
                 YouTube動画を埋め込む
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                data-help-insert-action="map"
+                onMouseDown={(event) => { captureSelectionRange(); event.preventDefault(); }}
+                onClick={() => { setIsInsertMenuOpen(false); setSelectedMapId(null); setMapUrl(""); setMapError(""); setIsMapModalOpen(true); }}
+              >
+                Googleマップを埋め込む
               </button>
               <button
                 type="button"
@@ -1688,8 +1751,10 @@ function InlineManuscriptEditor({
               }
               const image = target.closest("[data-node-type='image']") as HTMLElement | null;
               const youtube = target.closest("[data-node-type='youtube']") as HTMLElement | null;
+              const map = target.closest("[data-node-type='map']") as HTMLElement | null;
               setSelectedImageId(image?.dataset.nodeId || null);
               setSelectedYouTubeId(youtube?.dataset.nodeId || null);
+              setSelectedMapId(map?.dataset.nodeId || null);
               captureSelectionRange();
               reportCursor();
             }}
@@ -1907,6 +1972,17 @@ function InlineManuscriptEditor({
               動画を削除
             </button>
           </div>
+        </div>
+      ) : null}
+      {selectedMap ? (
+        <div className="inline-manuscript-popover" role="group" aria-label="Googleマップ設定">
+          <strong>Googleマップ</strong><span className="maker-note">{selectedMap.sourceUrl}</span>
+          <div className="inline-manuscript-popover-actions"><button className="maker-secondary-button" type="button" onClick={() => { setMapUrl(selectedMap.sourceUrl); setMapError(""); setIsMapModalOpen(true); }}>URLを変更</button><button className="maker-secondary-button danger" type="button" onClick={() => removeNode(selectedMap.id)}>地図を削除</button></div>
+        </div>
+      ) : null}
+      {isMapModalOpen ? (
+        <div className="youtube-url-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsMapModalOpen(false); }}>
+          <section className="youtube-url-modal" role="dialog" aria-modal="true" aria-labelledby="map-url-modal-title"><h2 id="map-url-modal-title">Googleマップを埋め込む</h2><p>Googleマップの共有URLまたは埋め込みURLを入力してください。</p><label><span>Google Maps URL</span><input autoFocus type="url" value={mapUrl} placeholder="https://www.google.com/maps/..." onChange={(event) => { setMapUrl(event.target.value); setMapError(""); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); saveMapBlock(); } }} /></label>{mapError ? <p className="youtube-url-error" role="alert">{mapError}</p> : null}<div className="youtube-url-modal-actions"><button className="maker-secondary-button" type="button" onClick={() => setIsMapModalOpen(false)}>キャンセル</button><button className="maker-primary-button" type="button" disabled={!mapUrl.trim()} onClick={saveMapBlock}>追加する</button></div></section>
         </div>
       ) : null}
       {isYouTubeModalOpen ? (

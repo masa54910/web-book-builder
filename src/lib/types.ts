@@ -91,6 +91,16 @@ type ReaderPageShape =
     }
   | {
       id: string;
+      kind: "map";
+      chapterTitle: string;
+      sectionTitle?: string;
+      headingId?: string;
+      sourceUrl: string;
+      embedUrl: string;
+      displaySize?: "small" | "medium" | "large" | "full";
+    }
+  | {
+      id: string;
       kind: "columns";
       chapterTitle: string;
       sectionTitle?: string;
@@ -143,5 +153,12 @@ export type ReaderColumnChild =
       kind: "youtube";
       videoId: string;
       originalUrl: string;
+      displaySize?: "small" | "medium" | "large" | "full";
+    }
+  | {
+      id: string;
+      kind: "map";
+      sourceUrl: string;
+      embedUrl: string;
       displaySize?: "small" | "medium" | "large" | "full";
     };

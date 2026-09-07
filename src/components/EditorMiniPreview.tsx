@@ -36,6 +36,8 @@ function pageLabel(page: ReaderPage) {
       return page.caption || "画像ページ";
     case "youtube":
       return "YouTube動画";
+    case "map":
+      return "Googleマップ";
     case "columns":
       return "2カラム";
     case "colophon":
@@ -74,6 +76,9 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
   if (page.kind === "youtube") {
     return <div className="editor-mini-page-youtube"><span aria-hidden="true">▶</span><strong>YouTube動画</strong></div>;
   }
+  if (page.kind === "map") {
+    return <div className="editor-mini-page-map"><span aria-hidden="true">📍</span><strong>Googleマップ</strong></div>;
+  }
   if (page.kind === "columns") {
     const columnsGrid = page.ratio === "40-60" ? "2fr 3fr" : page.ratio === "60-40" ? "3fr 2fr" : "1fr 1fr";
     const renderPane = (children: typeof page.left) => (
@@ -89,6 +94,8 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
           </p>
         ) : child.kind === "image" ? (
           <MiniImageMarker inline key={child.id} />
+        ) : child.kind === "map" ? (
+          <span className="editor-mini-inline-map" key={child.id}>📍</span>
         ) : (
           <span className="editor-mini-inline-youtube" key={child.id}><span aria-hidden="true">▶</span></span>
         ))}

@@ -4,6 +4,7 @@ import { sliceTextMarks } from "@/lib/textStyles";
 type ImageBlock = Extract<BookContentBlock, { type: "image" }>;
 type TextBlock = Extract<BookContentBlock, { type: "text" }>;
 type YouTubeBlock = Extract<BookContentBlock, { type: "youtube" }>;
+type MapBlock = Extract<BookContentBlock, { type: "map" }>;
 
 export function createPendingImageBlock(id: string, fileName: string, mimeType: string): ImageBlock {
   return {
@@ -112,6 +113,22 @@ export function insertYouTubeBlockAtCursor({
 
   if (beforeText.length > 0) replacement.push(createTextBlock(target.id, beforeText, sliceTextMarks(target.marks, 0, boundedOffset)));
   replacement.push(youtubeBlock);
+  if (afterText.length > 0) replacement.push(createTextBlock(`${target.id}-tail`, afterText, sliceTextMarks(target.marks, boundedOffset, target.content.length)));
+  next.splice(paragraphIndex, 1, ...replacement);
+  return next;
+}
+
+export function insertMapBlockAtCursor({ blocks, paragraphIndex, cursorOffset, mapBlock }: { blocks: BookContentBlock[]; paragraphIndex: number; cursorOffset: number; mapBlock: MapBlock }) {
+  const next = [...blocks];
+  const fallbackIndex = Math.min(Math.max(paragraphIndex, 0), next.length);
+  const target = next[paragraphIndex];
+  if (!target || target.type !== "text") { next.splice(fallbackIndex, 0, mapBlock); return next; }
+  const boundedOffset = Math.max(0, Math.min(target.content.length, cursorOffset));
+  const beforeText = target.content.slice(0, boundedOffset);
+  const afterText = target.content.slice(boundedOffset);
+  const replacement: BookContentBlock[] = [];
+  if (beforeText.length > 0) replacement.push(createTextBlock(target.id, beforeText, sliceTextMarks(target.marks, 0, boundedOffset)));
+  replacement.push(mapBlock);
   if (afterText.length > 0) replacement.push(createTextBlock(`${target.id}-tail`, afterText, sliceTextMarks(target.marks, boundedOffset, target.content.length)));
   next.splice(paragraphIndex, 1, ...replacement);
   return next;

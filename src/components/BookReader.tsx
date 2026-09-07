@@ -39,6 +39,7 @@ import ShareTools from "./ShareTools";
 import TextPage from "./TextPage";
 import TitlePage from "./TitlePage";
 import YouTubePage from "./YouTubePage";
+import MapPage from "./MapPage";
 import HomeBackLink from "./HomeBackLink";
 import PaywallPage from "./PaywallPage";
 import ColumnsPage from "./ColumnsPage";
@@ -542,6 +543,8 @@ export default function BookReader({
       );
     } else if (page.kind === "youtube") {
       content = <YouTubePage videoId={page.videoId} displaySize={page.displaySize} />;
+    } else if (page.kind === "map") {
+      content = <MapPage sourceUrl={page.sourceUrl} embedUrl={page.embedUrl} displaySize={page.displaySize} />;
     } else if (page.kind === "columns") {
       content = <ColumnsPage ratio={page.ratio} left={page.left} right={page.right} columnsBlockId={page.columnsBlockId} />;
     } else if (page.kind === "pageBreak") {
@@ -556,7 +559,7 @@ export default function BookReader({
     return (
       <BookPage
         key={page.id}
-        label={page.kind === "text" || page.kind === "image" || page.kind === "youtube" || page.kind === "columns" ? page.chapterTitle : page.kind}
+        label={page.kind === "text" || page.kind === "image" || page.kind === "youtube" || page.kind === "map" || page.kind === "columns" ? page.chapterTitle : page.kind}
         folio={hard || page.kind === "paywall" ? undefined : logicalFolio}
         hard={hard}
         bookmarked={bookmarkedPageIds.has(page.id)}

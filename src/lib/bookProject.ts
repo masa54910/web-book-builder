@@ -17,6 +17,7 @@ import type { ImageManifestRow, NovelChapter } from "@/lib/types";
 import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
 import { isValidYouTubeVideoId } from "@/lib/youtube";
+import { parseGoogleMapsUrl } from "@/lib/googleMaps";
 import { normalizeTextMarks, type TextMark } from "@/lib/textStyles";
 import { findDocumentHeadings, parseDocumentHeading, parseDocumentStructure } from "@/lib/documentStructure";
 
@@ -64,8 +65,18 @@ export type BookContentYouTubeBlock = {
       displaySize?: MediaDisplaySize;
     };
 
+export type BookContentMapBlock = {
+      id: string;
+      type: "map";
+      provider: "google_maps";
+      sourceUrl: string;
+      embedUrl: string;
+      displayMode?: MediaDisplayMode;
+      displaySize?: MediaDisplaySize;
+    };
+
 /** Columns intentionally allow only renderable media/text children. */
-export type BookColumnChildBlock = BookContentTextBlock | BookContentImageBlock | BookContentYouTubeBlock;
+export type BookColumnChildBlock = BookContentTextBlock | BookContentImageBlock | BookContentYouTubeBlock | BookContentMapBlock;
 export type ColumnsRatio = "50-50" | "40-60" | "60-40";
 
 export type BookColumnsBlock = {
@@ -80,6 +91,7 @@ export type BookContentBlock =
   | BookContentTextBlock
   | BookContentImageBlock
   | BookContentYouTubeBlock
+  | BookContentMapBlock
   | {
       id: string;
       type: "paywall";
@@ -102,7 +114,7 @@ export function ensureUniqueContentBlockIds(blocks: BookContentBlock[]) {
   const used = new Set<string>();
   const repair = (block: BookContentBlock | BookColumnChildBlock): BookContentBlock | BookColumnChildBlock => {
     const original = typeof block.id === "string" ? block.id.trim() : "";
-    const prefix = block.type === "image" ? "image" : block.type === "youtube" ? "youtube" : block.type === "paywall" ? "paywall" : block.type === "columns" ? "columns" : "paragraph";
+    const prefix = block.type === "image" ? "image" : block.type === "youtube" ? "youtube" : block.type === "map" ? "map" : block.type === "paywall" ? "paywall" : block.type === "columns" ? "columns" : "paragraph";
     let nextBlock: BookContentBlock | BookColumnChildBlock = block;
     if (original && !used.has(original)) {
       used.add(original);
@@ -354,6 +366,11 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
             displaySize: normalizeMediaDisplaySize(child.displaySize),
           };
         }
+        if (child?.type === "map") {
+          const map = parseGoogleMapsUrl(child.sourceUrl || child.embedUrl);
+          if (!map) return null;
+          return { id: typeof child.id === "string" ? child.id : blockId("map"), type: "map", ...map, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(child.displaySize) };
+        }
         if (child?.type !== "image") return null;
         const storagePath = typeof child.storagePath === "string" && child.storagePath ? child.storagePath : child.publicUrl || "";
         const uploadState = child.uploadState === "pending" || child.uploadState === "error" || child.uploadState === "ready" ? child.uploadState : undefined;
@@ -402,6 +419,13 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
         displayMode: block.displayMode === "inline" ? "inline" : "full-page",
         displaySize: normalizeMediaDisplaySize(block.displaySize),
       });
+      continue;
+    }
+
+    if (block.type === "map") {
+      const map = parseGoogleMapsUrl(block.sourceUrl || block.embedUrl);
+      if (!map) continue;
+      normalized.push({ id: normalizeBlockId(block.id, "map"), type: "map", ...map, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(block.displaySize) });
       continue;
     }
 
@@ -467,6 +491,10 @@ export function contentBlocksToRawText(blocks: BookContentBlock[]): string {
       return `[[youtube:${block.id}|${block.videoId}|${mode}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
     }
 
+    if (block.type === "map") {
+      return `[[map:${block.id}|${encodeURIComponent(block.sourceUrl)}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
+    }
+
     if (block.type === "paywall") return "";
 
     const caption = block.caption?.trim();
@@ -518,7 +546,7 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
   const imageById = new Map(images.map((image) => [image.id, image]));
   const usedImageIds = new Set<string>();
   const blocks: BookContentBlock[] = [];
-  const pattern = /\[\[(image|youtube):([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]/g;
+  const pattern = /\[\[(image|youtube|map):([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]/g;
   let cursor = 0;
   let match: RegExpExecArray | null = null;
 
@@ -530,6 +558,15 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
         type: "text",
         content: textPart,
       });
+    }
+
+    if (match[1] === "map") {
+      try {
+        const parsedMap = parseGoogleMapsUrl(decodeURIComponent(match[3] || ""));
+        if (parsedMap) blocks.push({ id: match[2], type: "map", ...parsedMap, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(match[5]) });
+      } catch { /* malformed legacy map token remains omitted */ }
+      cursor = pattern.lastIndex;
+      continue;
     }
 
     if (match[1] === "youtube") {

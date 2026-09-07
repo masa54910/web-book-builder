@@ -4,9 +4,11 @@ import type { ImageManifestRow, NovelChapter, ReaderColumnChild, ReaderPage } fr
 import { findPageAdjustment, type PageAdjustment } from "./pageAdjustments";
 import { sliceTextMarks, type TextMark } from "./textStyles";
 import { parseDocumentHeading } from "./documentStructure";
+import { parseGoogleMapsUrl } from "./googleMaps";
 
 const IMAGE_PATTERN = /^\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]$/;
 const YOUTUBE_PATTERN = /^\[\[youtube:([A-Za-z0-9._-]+)(?:\|([A-Za-z0-9_-]{11}))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]$/;
+const MAP_PATTERN = /^\[\[map:([A-Za-z0-9._-]+)\|([^\]|]+)(?:\|(small|medium|large|full))?\]\]$/;
 const COLUMNS_PATTERN = /^\[\[columns:([A-Za-z0-9._-]+)\]\]$/;
 export const INLINE_IMAGE_TOKEN_PREFIX = "[[inline-image:";
 export const INLINE_YOUTUBE_TOKEN_PREFIX = "[[inline-youtube:";
@@ -98,6 +100,7 @@ function blockSerialization(block: BookContentBlock): string {
     const mode = block.displayMode === "inline" ? "inline" : "full-page";
     return `[[youtube:${block.id}|${block.videoId}|${mode}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
   }
+  if (block.type === "map") return `[[map:${block.id}|${encodeURIComponent(block.sourceUrl)}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
   if (block.type === "paywall") return "";
   const mode = block.pageMode === "inline" ? "inline" : "full-page";
   const caption = block.caption?.trim();
@@ -126,6 +129,11 @@ function resolveColumnChild(child: BookColumnChildBlock, imageMap: Map<string, I
   }
   if (child.type === "youtube") {
     return { id: child.id, kind: "youtube", videoId: child.videoId, originalUrl: child.originalUrl, displaySize: normalizeMediaDisplaySize(child.displaySize) };
+  }
+  if (child.type === "map") {
+    const map = parseGoogleMapsUrl(child.sourceUrl || child.embedUrl);
+    if (map) return { id: child.id, kind: "map", sourceUrl: map.sourceUrl, embedUrl: map.embedUrl, displaySize: normalizeMediaDisplaySize(child.displaySize) };
+    return { id: child.id, kind: "text", paragraphs: ["地図を読み込めませんでした。"] };
   }
   const image = imageMap.get(child.id);
   return {
@@ -304,7 +312,7 @@ export function buildReaderPages({
 
     const chapterBody = chapterBodies.get(chapter.slug) ?? chapter.body;
     const segments = chapterBody
-      .replace(/^(\[\[(?:image|youtube|columns):[^\]]+\]\])$/gm, "\n\n$1\n\n")
+      .replace(/^(\[\[(?:image|youtube|map|columns):[^\]]+\]\])$/gm, "\n\n$1\n\n")
       .split(/\n{2,}/)
       .map((segment) => segment.trim());
     let paragraphs: string[] = [];
@@ -423,6 +431,21 @@ export function buildReaderPages({
           if (!paywallInserted && paywallPreviousBlockId === columnsBlock.id) insertPaywallPage();
           continue;
         }
+      }
+      const mapMatch = segment.match(MAP_PATTERN);
+      if (mapMatch) {
+        const storedBlockId = mapMatch[1];
+        const mapBlock = flatContentBlocks.find((block): block is Extract<BookContentBlock, { type: "map" }> => block.type === "map" && block.id === storedBlockId);
+        const parsed = parseGoogleMapsUrl(mapBlock?.sourceUrl || decodeURIComponent(mapMatch[2]));
+        if (parsed) {
+          const sourceId = mapBlock?.id || storedBlockId;
+          if (shouldBreakBefore(sourceId)) flushTextPage();
+          flushTextPage();
+          pages.push({ id: `${chapter.slug}-map-${sourceId}`, kind: "map", chapterTitle: chapter.title, sectionTitle: currentSectionTitle, headingId: pendingHeadingId, sourceUrl: parsed.sourceUrl, embedUrl: parsed.embedUrl, displaySize: normalizeMediaDisplaySize(mapBlock?.displaySize || mapMatch[3]), sourceBlockIds: [sourceId] });
+          pendingHeadingId = undefined;
+          if (!paywallInserted && paywallPreviousBlockId === sourceId) insertPaywallPage();
+        }
+        continue;
       }
       const youtubeMatch = segment.match(YOUTUBE_PATTERN);
       if (youtubeMatch) {

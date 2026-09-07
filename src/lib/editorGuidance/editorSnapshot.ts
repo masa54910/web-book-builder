@@ -21,6 +21,7 @@ function blockHasActualContent(block: BookContentBlock): boolean {
   if (block.type === "text") return Boolean(block.content.trim());
   if (block.type === "image") return true;
   if (block.type === "youtube") return Boolean(block.videoId);
+  if (block.type === "map") return Boolean(block.embedUrl);
   if (block.type === "paywall") return true;
   return [...block.left.blocks, ...block.right.blocks].some((child) =>
     blockHasActualContent(child as BookContentBlock),
@@ -39,6 +40,7 @@ function substantivePage(page: ReaderPage) {
   return page.kind === "text"
     || page.kind === "image"
     || page.kind === "youtube"
+    || page.kind === "map"
     || page.kind === "columns";
 }
 

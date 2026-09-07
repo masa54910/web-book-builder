@@ -72,6 +72,28 @@
   --wbm-breakpoint-desktop: 1024px;
 }
 
+.map-page { width: 100%; display: grid; gap: 12px; }
+.map-frame-shell { width: 100%; aspect-ratio: 16 / 9; min-height: 240px; overflow: hidden; border: 1px solid var(--line, #d9e1ea); border-radius: 14px; background: #eef3f7; }
+.map-frame, .map-modal-frame { width: 100%; height: 100%; min-height: 240px; border: 0; display: block; }
+.map-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.map-expand-button, .map-open-link { border-radius: 999px; padding: 8px 14px; font: inherit; }
+.map-expand-button { border: 1px solid var(--line, #d9e1ea); background: #fff; color: inherit; cursor: pointer; }
+.map-open-link { color: var(--accent, #1d5fbf); }
+.map-expand-button:focus-visible, .map-open-link:focus-visible, .map-modal-close:focus-visible { outline: 3px solid #80bfff; outline-offset: 2px; }
+.map-fallback { min-height: 240px; display: grid; place-content: center; gap: 8px; padding: 24px; text-align: center; color: var(--ink-soft, #536273); }
+.map-modal-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: rgb(8 20 35 / 0.65); }
+.map-modal { width: min(100%, 1100px); max-height: min(90vh, 900px); display: grid; gap: 12px; padding: 16px; background: #fff; border-radius: 16px; box-shadow: 0 24px 80px rgb(0 0 0 / 0.3); }
+.map-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.map-modal-header h2 { margin: 0; font-size: 1.1rem; }
+.map-modal-close { border: 0; background: transparent; font-size: 28px; line-height: 1; cursor: pointer; }
+.map-modal-frame { height: min(70vh, 720px); min-height: 320px; }
+.editor-mini-page-map { display: grid; place-items: center; gap: 8px; min-height: 100px; color: #315a7b; background: #e8f0f5; border: 1px solid #b8cedd; border-radius: 10px; }
+.editor-mini-inline-map { display: inline-flex; align-items: center; justify-content: center; padding: 4px 8px; border-radius: 6px; background: #e8f0f5; }
+.inline-editor-map-node { display: grid; gap: 6px; padding: 18px; margin: 12px 0; border: 1px solid #b8cedd; border-radius: 12px; background: #eef5f8; cursor: pointer; }
+.inline-editor-map-label { font-weight: 700; color: #315a7b; }
+.inline-editor-map-url { overflow: hidden; color: #536273; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) { .map-frame-shell, .map-frame, .map-fallback { min-height: 200px; } .map-controls { align-items: stretch; flex-direction: column; } .map-modal-backdrop { padding: 10px; } .map-modal { padding: 12px; } }
+
 * {
   box-sizing: border-box;
 }

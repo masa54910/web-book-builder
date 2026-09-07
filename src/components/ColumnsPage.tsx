@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import type { ReaderColumnChild } from "@/lib/types";
 import TextPage from "./TextPage";
 import YouTubePage from "./YouTubePage";
+import MapPage from "./MapPage";
 
 function ratioColumns(ratio: "50-50" | "40-60" | "60-40") {
   if (ratio === "40-60") return "2fr 3fr";
@@ -31,6 +32,9 @@ function ColumnChild({ child }: { child: ReaderColumnChild }) {
         <YouTubePage videoId={child.videoId} inline displaySize={child.displaySize} />
       </div>
     );
+  }
+  if (child.kind === "map") {
+    return <div className={`columns-reader-child columns-reader-child-map media-display-size-${child.displaySize || "medium"}`}><MapPage sourceUrl={child.sourceUrl} embedUrl={child.embedUrl} displaySize={child.displaySize} /></div>;
   }
   return (
     <div className={`columns-reader-child columns-reader-child-image media-display-size-${child.displaySize || "medium"}`}>

@@ -74,6 +74,15 @@ export type CanonicalContentBlock =
     }
   | {
       id: string;
+      type: "map";
+      provider: "google_maps";
+      sourceUrl: string;
+      embedUrl: string;
+      displayMode?: "inline" | "full-page";
+      displaySize?: MediaDisplaySize;
+    }
+  | {
+      id: string;
       type: "paywall";
       previousBlockId?: string;
       nextBlockId?: string;
@@ -90,7 +99,9 @@ export type CanonicalContentBlock =
 export type CanonicalColumnChildBlock =
   | Extract<CanonicalContentBlock, { type: "text" }>
   | Extract<CanonicalContentBlock, { type: "image" }>
-  | Extract<CanonicalContentBlock, { type: "youtube" }>;
+  | Extract<CanonicalContentBlock, { type: "youtube" }>
+  | Extract<CanonicalContentBlock, { type: "map" }>;
+
 
 export type CanonicalBookPayload = {
   bookId?: string;
@@ -279,6 +290,7 @@ export function buildCanonicalBookPayload(
         displaySize: block.displaySize,
       };
     }
+    if (block.type === "map") return { ...block, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(block.displaySize) };
 
     if (block.type === "paywall") {
       return {
@@ -440,6 +452,7 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
         displaySize: normalizeMediaDisplaySize(block.displaySize),
       };
     }
+    if (block.type === "map") return { ...block, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(block.displaySize) };
     if (block.type === "paywall") {
       return {
         id: block.id,
@@ -585,6 +598,7 @@ export function canonicalContentBlocksToEditorBlocks(
         displaySize: normalizeMediaDisplaySize(block.displaySize),
       };
     }
+    if (block.type === "map") return { ...block, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(block.displaySize) };
     if (block.type === "paywall") {
       return {
         id: block.id,
