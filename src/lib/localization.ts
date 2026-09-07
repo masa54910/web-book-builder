@@ -162,6 +162,16 @@ export type UiTranslationKey =
   | "map.sizeSmall"
   | "map.sizeMedium"
   | "map.sizeLarge"
+  | "map.alignment"
+  | "map.alignLeft"
+  | "map.alignCenter"
+  | "map.alignRight"
+  | "map.changeUrl"
+  | "map.delete"
+  | "map.cancel"
+  | "map.apply"
+  | "map.urlHelp"
+  | "map.choosePosition"
   | "reader.tableOfContents"
   | "reader.share"
   | "reader.zoom"
@@ -231,6 +241,16 @@ const uiResources: Record<UiLocale, UiResource> = {
     "map.sizeSmall": "小",
     "map.sizeMedium": "中",
     "map.sizeLarge": "大",
+    "map.alignment": "地図の配置",
+    "map.alignLeft": "左寄せ",
+    "map.alignCenter": "中央",
+    "map.alignRight": "右寄せ",
+    "map.changeUrl": "URLを変更",
+    "map.delete": "地図を削除",
+    "map.cancel": "キャンセル",
+    "map.apply": "確定する",
+    "map.urlHelp": "Googleマップの共有URLまたは埋め込みURLを入力してください。",
+    "map.choosePosition": "挿入位置の本文をクリックしてから、地図を追加してください。",
     "reader.tableOfContents": "目次",
     "reader.share": "共有",
     "reader.zoom": "拡大・縮小",
@@ -297,6 +317,16 @@ const uiResources: Record<UiLocale, UiResource> = {
     "map.sizeSmall": "Small",
     "map.sizeMedium": "Medium",
     "map.sizeLarge": "Large",
+    "map.alignment": "Map alignment",
+    "map.alignLeft": "Left",
+    "map.alignCenter": "Center",
+    "map.alignRight": "Right",
+    "map.changeUrl": "Change URL",
+    "map.delete": "Delete map",
+    "map.cancel": "Cancel",
+    "map.apply": "Apply",
+    "map.urlHelp": "Enter a Google Maps share URL or embed URL.",
+    "map.choosePosition": "Click the text at the insertion position before adding a map.",
     "reader.tableOfContents": "Table of contents",
     "reader.share": "Share",
     "reader.zoom": "Zoom",

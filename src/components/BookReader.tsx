@@ -544,7 +544,7 @@ export default function BookReader({
     } else if (page.kind === "youtube") {
       content = <YouTubePage videoId={page.videoId} displaySize={page.displaySize} />;
     } else if (page.kind === "map") {
-      content = <MapPage sourceUrl={page.sourceUrl} embedUrl={page.embedUrl} displaySize={page.displaySize} />;
+      content = <MapPage sourceUrl={page.sourceUrl} embedUrl={page.embedUrl} displaySize={page.displaySize} alignment={page.alignment} />;
     } else if (page.kind === "columns") {
       content = <ColumnsPage ratio={page.ratio} left={page.left} right={page.right} columnsBlockId={page.columnsBlockId} />;
     } else if (page.kind === "pageBreak") {

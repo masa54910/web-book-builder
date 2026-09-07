@@ -97,6 +97,7 @@ type ReaderPageShape =
       headingId?: string;
       sourceUrl: string;
       embedUrl: string;
+      alignment?: "left" | "center" | "right";
       displaySize?: "small" | "medium" | "large" | "full";
     }
   | {
@@ -160,5 +161,6 @@ export type ReaderColumnChild =
       kind: "map";
       sourceUrl: string;
       embedUrl: string;
+      alignment?: "left" | "center" | "right";
       displaySize?: "small" | "medium" | "large" | "full";
     };

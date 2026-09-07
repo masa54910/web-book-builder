@@ -5,6 +5,8 @@ import { INLINE_IMAGE_TOKEN_PREFIX, INLINE_YOUTUBE_TOKEN_PREFIX } from "@/lib/pa
 import type { PageAdjustment } from "@/lib/pageAdjustments";
 import ReferenceBlock, { extractUrls } from "./ReferenceBlock";
 import YouTubePage from "./YouTubePage";
+import MapPage from "./MapPage";
+import { parseInlineMapToken } from "@/lib/mapLayout";
 import type { TextMark } from "@/lib/textStyles";
 import { normalizeTextMarks, TEXT_FONT_SIZE_CSS } from "@/lib/textStyles";
 
@@ -111,6 +113,8 @@ export default function TextPage({
       {showRunningHeader ? <header className="text-page-header"><span>{runningHeader}</span></header> : null}
       {paragraphs.map((paragraph, index) => {
         const key = `${index}-${paragraph.slice(0, 18)}`;
+        const inlineMap = parseInlineMapToken(paragraph);
+        if (inlineMap) return <div className="text-inline-map" key={key}><MapPage {...inlineMap} /></div>;
         const inlineImage = parseInlineImageToken(paragraph);
         if (inlineImage) {
           return (

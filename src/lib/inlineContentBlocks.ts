@@ -133,3 +133,22 @@ export function insertMapBlockAtCursor({ blocks, paragraphIndex, cursorOffset, m
   next.splice(paragraphIndex, 1, ...replacement);
   return next;
 }
+
+/** Resolve the saved logical anchor after a dialog; never append on a stale DOM Range. */
+export function insertMapBlockAtAnchor(blocks: BookContentBlock[], anchorId: string, offset: number, mapBlock: MapBlock): BookContentBlock[] | null {
+  const index = blocks.findIndex((block) => block.id === anchorId);
+  if (index >= 0) return insertMapBlockAtCursor({ blocks, paragraphIndex: index, cursorOffset: offset, mapBlock });
+  for (const [columnIndex, block] of blocks.entries()) {
+    if (block.type !== "columns") continue;
+    for (const side of ["left", "right"] as const) {
+      const children = block[side].blocks;
+      const childIndex = children.findIndex((child) => child.id === anchorId);
+      if (childIndex < 0) continue;
+      const replacement = insertMapBlockAtCursor({ blocks: children, paragraphIndex: childIndex, cursorOffset: offset, mapBlock });
+      const next = [...blocks];
+      next[columnIndex] = { ...block, [side]: { blocks: replacement } } as typeof block;
+      return next;
+    }
+  }
+  return null;
+}

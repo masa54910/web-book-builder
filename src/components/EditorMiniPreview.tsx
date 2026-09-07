@@ -3,6 +3,7 @@
 import type { ReaderPage } from "@/lib/types";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { INLINE_IMAGE_TOKEN_PREFIX, INLINE_YOUTUBE_TOKEN_PREFIX } from "@/lib/paginateText";
+import { normalizeMapAlignment, parseInlineMapToken } from "@/lib/mapLayout";
 import { buildReaderFolioById, readerPageNumberLabel } from "@/lib/readerFolio";
 import { normalizeTextMarks, TEXT_FONT_SIZE_CSS, type TextMark } from "@/lib/textStyles";
 
@@ -77,7 +78,7 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
     return <div className="editor-mini-page-youtube"><span aria-hidden="true">▶</span><strong>YouTube動画</strong></div>;
   }
   if (page.kind === "map") {
-    return <div className={`editor-mini-page-map media-display-size-${page.displaySize || "medium"}`}><span aria-hidden="true">📍</span><strong>Googleマップ</strong></div>;
+    return <div className={`editor-mini-page-map media-display-size-${page.displaySize || "medium"} map-align-${normalizeMapAlignment(page.alignment)}`}><span aria-hidden="true">📍</span><strong>Googleマップ</strong></div>;
   }
   if (page.kind === "columns") {
     const columnsGrid = page.ratio === "40-60" ? "2fr 3fr" : page.ratio === "60-40" ? "3fr 2fr" : "1fr 1fr";
@@ -95,7 +96,7 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
         ) : child.kind === "image" ? (
           <MiniImageMarker inline key={child.id} />
         ) : child.kind === "map" ? (
-          <span className={`editor-mini-inline-map media-display-size-${child.displaySize || "medium"}`} key={child.id}>📍</span>
+          <span className={`editor-mini-inline-map media-display-size-${child.displaySize || "medium"} map-align-${normalizeMapAlignment(child.alignment)}`} key={child.id}>📍</span>
         ) : (
           <span className="editor-mini-inline-youtube" key={child.id}><span aria-hidden="true">▶</span></span>
         ))}
@@ -125,7 +126,9 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
   return (
     <div className="editor-mini-page-text">
       {page.paragraphs.map((paragraph, index) => (
-        isInlineImageToken(paragraph) ? (
+        parseInlineMapToken(paragraph) ? (
+          <span className={`editor-mini-inline-map media-display-size-small map-align-${parseInlineMapToken(paragraph)!.alignment}`} key={`${page.id}-${index}`}>📍</span>
+        ) : isInlineImageToken(paragraph) ? (
           <MiniImageMarker inline key={`${page.id}-${index}`} />
         ) : isInlineYouTubeToken(paragraph) ? (
           <span className="editor-mini-inline-youtube" key={`${page.id}-${index}`}><span aria-hidden="true">▶</span> YouTube動画</span>

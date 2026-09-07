@@ -34,7 +34,7 @@ function ColumnChild({ child }: { child: ReaderColumnChild }) {
     );
   }
   if (child.kind === "map") {
-    return <div className={`columns-reader-child columns-reader-child-map media-display-size-${child.displaySize || "medium"}`}><MapPage sourceUrl={child.sourceUrl} embedUrl={child.embedUrl} displaySize={child.displaySize} /></div>;
+    return <div className={`columns-reader-child columns-reader-child-map media-display-size-${child.displaySize || "medium"}`}><MapPage sourceUrl={child.sourceUrl} embedUrl={child.embedUrl} displaySize={child.displaySize} alignment={child.alignment} /></div>;
   }
   return (
     <div className={`columns-reader-child columns-reader-child-image media-display-size-${child.displaySize || "medium"}`}>

@@ -78,6 +78,7 @@ export type CanonicalContentBlock =
       provider: "google_maps";
       sourceUrl: string;
       embedUrl: string;
+      alignment?: "left" | "center" | "right";
       displayMode?: "inline" | "full-page";
       displaySize?: MediaDisplaySize;
     }

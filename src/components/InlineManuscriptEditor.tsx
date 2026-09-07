@@ -1,6 +1,8 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { normalizeMapAlignment } from "@/lib/mapLayout";
 
 import {
   contentBlocksFromLegacy,
@@ -20,7 +22,7 @@ import {
   type MediaDisplaySize,
 } from "@/lib/bookProject";
 import { isDisplayableImageUrl } from "@/lib/bookAssetStorage";
-import { createPendingImageBlock, insertImageBlocksAtCursor, insertYouTubeBlockAtCursor, insertMapBlockAtCursor } from "@/lib/inlineContentBlocks";
+import { createPendingImageBlock, insertImageBlocksAtCursor, insertYouTubeBlockAtCursor, insertMapBlockAtAnchor } from "@/lib/inlineContentBlocks";
 import { countContentCharacters, countUserCharacters } from "@/lib/characterCount";
 import { parseYouTubeUrl, youtubeThumbnailUrl } from "@/lib/youtube";
 import { parseGoogleMapsUrl } from "@/lib/googleMaps";
@@ -169,7 +171,7 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
       }
       if (child.dataset.nodeType === "map") {
         const parsedMap = parseGoogleMapsUrl(child.dataset.sourceUrl || child.dataset.embedUrl);
-        if (parsedMap) parsed.push({ id: child.dataset.nodeId || createContentBlockId("map"), type: "map", ...parsedMap, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(child.dataset.displaySize) });
+        if (parsedMap) parsed.push({ id: child.dataset.nodeId || createContentBlockId("map"), type: "map", ...parsedMap, alignment: normalizeMapAlignment(child.dataset.alignment), displayMode: "full-page", displaySize: normalizeMediaDisplaySize(child.dataset.displaySize) });
         continue;
       }
       const styled = parseStyledParagraph(child);
@@ -229,7 +231,7 @@ function parseEditorDom(root: HTMLElement): BookContentBlock[] {
     }
     if (child instanceof HTMLElement && child.dataset.nodeType === "map") {
       const parsedMap = parseGoogleMapsUrl(child.dataset.sourceUrl || child.dataset.embedUrl);
-      if (parsedMap) blocks.push({ id: child.dataset.nodeId || createContentBlockId("map"), type: "map", ...parsedMap, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(child.dataset.displaySize) });
+      if (parsedMap) blocks.push({ id: child.dataset.nodeId || createContentBlockId("map"), type: "map", ...parsedMap, alignment: normalizeMapAlignment(child.dataset.alignment), displayMode: "full-page", displaySize: normalizeMediaDisplaySize(child.dataset.displaySize) });
       continue;
     }
     if (child instanceof HTMLElement && child.dataset.nodeType === "paywall") {
@@ -368,9 +370,11 @@ function createMapElement(block: Extract<BookContentBlock, { type: "map" }>) {
   wrapper.dataset.nodeId = block.id;
   wrapper.dataset.sourceUrl = block.sourceUrl;
   wrapper.dataset.embedUrl = block.embedUrl;
+  wrapper.dataset.alignment = normalizeMapAlignment(block.alignment);
   wrapper.dataset.displaySize = normalizeMediaDisplaySize(block.displaySize);
   wrapper.contentEditable = "false";
-  wrapper.className = `inline-editor-map-node media-display-size-${normalizeMediaDisplaySize(block.displaySize)}`;
+  wrapper.tabIndex = 0;
+  wrapper.className = `inline-editor-map-node media-display-size-${normalizeMediaDisplaySize(block.displaySize)} map-align-${normalizeMapAlignment(block.alignment)}`;
   const label = document.createElement("span");
   label.className = "inline-editor-map-label";
   label.textContent = "📍 Googleマップ";
@@ -757,6 +761,13 @@ function InlineManuscriptEditor({
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [mapUrl, setMapUrl] = useState("");
   const [mapError, setMapError] = useState("");
+  const mapInputRef = useRef<HTMLInputElement>(null);
+  const mapPanelRef = useRef<HTMLDivElement>(null);
+  const mapAnchorRef = useRef<{ id: string; offset: number } | null>(null);
+  const mapScrollRef = useRef<{ element: Element; top: number; left: number }[]>([]);
+  const mapWindowScrollRef = useRef({ top: 0, left: 0 });
+  const mapRestoreFrameRef = useRef<number | null>(null);
+  const [mapPanelPosition, setMapPanelPosition] = useState({ top: 12, left: 12 });
   const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [youtubeDisplayMode, setYoutubeDisplayMode] = useState<MediaDisplayMode>("inline");
@@ -931,7 +942,7 @@ function InlineManuscriptEditor({
     [selectedYouTubeId, value],
   );
   const selectedMap = useMemo(
-    () => selectedMapId ? findContentBlockById(value, selectedMapId) as Extract<BookContentBlock, { type: "map" }> | null : null,
+    () => { const block = selectedMapId ? findContentBlockById(value, selectedMapId) : null; return block?.type === "map" ? block : null; },
     [selectedMapId, value],
   );
 
@@ -1043,6 +1054,35 @@ function InlineManuscriptEditor({
       node.classList.toggle("is-selected", node.dataset.nodeId === selectedMapId);
     });
   }, [selectedMapId, value]);
+
+  useEffect(() => {
+    if (!selectedMapId || isMapModalOpen) return;
+    const position = () => {
+      const target = rootRef.current?.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(selectedMapId)}"]`);
+      const panel = mapPanelRef.current;
+      if (!target || !panel) return;
+      const rect = target.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const bottom = window.innerHeight - 100; // leave the fixed editing toolbar accessible
+      const preferredTop = rect.bottom + 8 + panelRect.height <= bottom ? rect.bottom + 8 : rect.top - panelRect.height - 8;
+      setMapPanelPosition({
+        top: Math.max(12, Math.min(preferredTop, bottom - panelRect.height)),
+        left: Math.max(12, Math.min(rect.left, window.innerWidth - panelRect.width - 12)),
+      });
+    };
+    const observer = new ResizeObserver(position);
+    if (mapPanelRef.current) observer.observe(mapPanelRef.current);
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    return () => { observer.disconnect(); window.removeEventListener("resize", position); window.removeEventListener("scroll", position, true); };
+  }, [selectedMapId, isMapModalOpen, value]);
+
+  useEffect(() => {
+    if (isMapModalOpen) mapInputRef.current?.focus({ preventScroll: true });
+  }, [isMapModalOpen]);
+
+  useEffect(() => () => { if (mapRestoreFrameRef.current !== null) cancelAnimationFrame(mapRestoreFrameRef.current); }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1527,19 +1567,65 @@ function InlineManuscriptEditor({
     setIsYouTubeModalOpen(false);
   };
 
+  const openMapModal = (editing = false) => {
+    const root = rootRef.current;
+    if (!root) return;
+    const range = savedRangeRef.current ?? cloneSelectionRange(root);
+    const paragraph = findParagraphTarget(root, range);
+    mapAnchorRef.current = paragraph?.dataset.nodeId && range
+      ? { id: paragraph.dataset.nodeId, offset: splitParagraphAtCaret(paragraph, range).before.length }
+      : null;
+    if (!editing && !mapAnchorRef.current && !columnInsertTargetRef.current) {
+      onStatus(uiT(locale, "map.choosePosition"));
+      setIsInsertMenuOpen(false);
+      return;
+    }
+    const ancestors: Element[] = [];
+    for (let element: Element | null = root; element; element = element.parentElement) ancestors.push(element);
+    mapScrollRef.current = ancestors.map((element) => ({ element, top: element.scrollTop, left: element.scrollLeft }));
+    mapWindowScrollRef.current = { top: window.scrollY, left: window.scrollX };
+    setIsInsertMenuOpen(false);
+    if (!editing) setSelectedMapId(null);
+    setMapUrl(editing && selectedMap ? selectedMap.sourceUrl : "");
+    setMapError("");
+    setIsMapModalOpen(true);
+  };
+
+  const closeMapModal = (targetId?: string) => {
+    setIsMapModalOpen(false);
+    if (mapRestoreFrameRef.current !== null) cancelAnimationFrame(mapRestoreFrameRef.current);
+    mapRestoreFrameRef.current = requestAnimationFrame(() => {
+      for (const saved of mapScrollRef.current) saved.element.scrollTo({ top: saved.top, left: saved.left, behavior: "instant" });
+      window.scrollTo({ top: mapWindowScrollRef.current.top, left: mapWindowScrollRef.current.left, behavior: "instant" });
+      const target = targetId ? rootRef.current?.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(targetId)}"]`) : null;
+      if (target) {
+        target.focus({ preventScroll: true });
+        const rect = target.getBoundingClientRect();
+        if (rect.top < 88 || rect.bottom > window.innerHeight - 150) target.scrollIntoView({ block: "center", behavior: "instant" });
+      } else if (savedRangeRef.current && rootRef.current?.contains(savedRangeRef.current.startContainer)) {
+        rootRef.current.focus({ preventScroll: true });
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(savedRangeRef.current);
+      }
+      mapRestoreFrameRef.current = null;
+    });
+  };
+
   const saveMapBlock = () => {
     const parsed = parseGoogleMapsUrl(mapUrl);
-    if (!parsed) { setMapError("Googleマップの共有URLまたは埋め込みURLを入力してください。"); return; }
-    if (selectedMap) { updateNode(selectedMap.id, { ...parsed, type: "map", provider: "google_maps", displayMode: "full-page" }); setIsMapModalOpen(false); return; }
+    if (!parsed) { setMapError(uiT(locale, "map.urlHelp")); return; }
+    if (selectedMap) { updateNode(selectedMap.id, { ...parsed, type: "map", provider: "google_maps", displayMode: "full-page" }); closeMapModal(selectedMap.id); return; }
     const root = rootRef.current; if (!root) return;
-    const activeRange = (savedRangeRef.current ?? cloneSelectionRange(root))?.cloneRange() ?? null;
-    const paragraphTarget = findParagraphTarget(root, activeRange);
-    const nodeIndex = paragraphTarget ? editorBlockIndex(root, paragraphTarget) : -1;
-    const mapBlock = { id: createContentBlockId("map"), type: "map" as const, ...parsed, displayMode: "full-page" as const, displaySize: "medium" as const };
-    const nextBlocks = nodeIndex >= 0 && paragraphTarget && activeRange ? insertMapBlockAtCursor({ blocks: nodesRef.current, paragraphIndex: nodeIndex, cursorOffset: splitParagraphAtCaret(paragraphTarget, activeRange).before.length, mapBlock }) : [...nodesRef.current, mapBlock];
+    const anchor = mapAnchorRef.current;
+    const mapBlock = { id: createContentBlockId("map"), type: "map" as const, ...parsed, displayMode: "full-page" as const, displaySize: "medium" as const, alignment: "center" as const };
+    const columnTarget = columnInsertTargetRef.current;
+    const nextBlocks = columnTarget ? insertColumnChild(nodesRef.current, columnTarget, mapBlock) : anchor ? insertMapBlockAtAnchor(nodesRef.current, anchor.id, anchor.offset, mapBlock) : null;
+    if (!nextBlocks) { setMapError(uiT(locale, "map.choosePosition")); return; }
+    columnInsertTargetRef.current = null;
     emitChange(ensureUniqueContentBlockIds(nextBlocks));
     renderNodes(root, nextBlocks, pageBreakAfterBlockIds);
-    setSelectedMapId(mapBlock.id); setIsMapModalOpen(false); setMapUrl("");
+    setSelectedMapId(mapBlock.id); closeMapModal(mapBlock.id); setMapUrl("");
   };
 
   const insertPageBreakAtCursor = () => {
@@ -1653,7 +1739,7 @@ function InlineManuscriptEditor({
                 role="menuitem"
                 data-help-insert-action="map"
                 onMouseDown={(event) => { captureSelectionRange(); event.preventDefault(); }}
-                onClick={() => { setIsInsertMenuOpen(false); setSelectedMapId(null); setMapUrl(""); setMapError(""); setIsMapModalOpen(true); }}
+                onClick={() => openMapModal()}
               >
                 Googleマップを埋め込む
               </button>
@@ -1989,9 +2075,11 @@ function InlineManuscriptEditor({
           </div>
         </div>
       ) : null}
-      {selectedMap ? (
-        <div className="inline-manuscript-popover" role="group" aria-label="Googleマップ設定">
-          <strong>Googleマップ</strong><span className="maker-note">{selectedMap.sourceUrl}</span>
+      {selectedMap && !isMapModalOpen ? createPortal(
+        <div ref={mapPanelRef} className="inline-manuscript-popover map-settings-panel" style={mapPanelPosition} role="group" aria-label={uiT(locale, "map.title")}>
+          <div className="map-settings-heading"><strong>{uiT(locale, "map.title")}</strong><button type="button" className="maker-secondary-button" aria-label={uiT(locale, "map.close")} onClick={() => setSelectedMapId(null)}>×</button></div>
+          <span className="maker-note map-settings-url">{selectedMap.sourceUrl}</span>
+          <div className="map-settings-groups">
           <fieldset className="inline-image-layout-fieldset map-size-fieldset">
             <legend>{uiT(locale, "map.size")}</legend>
             <div className="map-size-options" role="group" aria-label={uiT(locale, "map.size")}>
@@ -2008,14 +2096,21 @@ function InlineManuscriptEditor({
               ))}
             </div>
           </fieldset>
-          <div className="inline-manuscript-popover-actions"><button className="maker-secondary-button" type="button" onClick={() => { setMapUrl(selectedMap.sourceUrl); setMapError(""); setIsMapModalOpen(true); }}>URLを変更</button><button className="maker-secondary-button danger" type="button" onClick={() => removeNode(selectedMap.id)}>地図を削除</button></div>
+          <fieldset className="inline-image-layout-fieldset map-size-fieldset">
+            <legend>{uiT(locale, "map.alignment")}</legend>
+            <div className="map-size-options" role="group" aria-label={uiT(locale, "map.alignment")}>
+              {(["left", "center", "right"] as const).map((alignment) => <button key={alignment} type="button" className={`map-size-option ${normalizeMapAlignment(selectedMap.alignment) === alignment ? "is-selected" : ""}`} aria-pressed={normalizeMapAlignment(selectedMap.alignment) === alignment} onClick={() => updateNode(selectedMap.id, { alignment })}>{uiT(locale, alignment === "left" ? "map.alignLeft" : alignment === "right" ? "map.alignRight" : "map.alignCenter")}</button>)}
+            </div>
+          </fieldset>
+          </div>
+          <div className="inline-manuscript-popover-actions"><button className="maker-secondary-button" type="button" onClick={() => openMapModal(true)}>{uiT(locale, "map.changeUrl")}</button><button className="maker-secondary-button danger" type="button" onClick={() => removeNode(selectedMap.id)}>{uiT(locale, "map.delete")}</button></div>
         </div>
-      ) : null}
-      {isMapModalOpen ? (
-        <div className="youtube-url-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsMapModalOpen(false); }}>
-          <section className="youtube-url-modal" role="dialog" aria-modal="true" aria-labelledby="map-url-modal-title"><h2 id="map-url-modal-title">Googleマップを埋め込む</h2><p>Googleマップの共有URLまたは埋め込みURLを入力してください。</p><label><span>Google Maps URL</span><input autoFocus type="url" value={mapUrl} placeholder="https://www.google.com/maps/..." onChange={(event) => { setMapUrl(event.target.value); setMapError(""); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); saveMapBlock(); } }} /></label>{mapError ? <p className="youtube-url-error" role="alert">{mapError}</p> : null}<div className="youtube-url-modal-actions"><button className="maker-secondary-button" type="button" onClick={() => setIsMapModalOpen(false)}>キャンセル</button><button className="maker-primary-button" type="button" disabled={!mapUrl.trim()} onClick={saveMapBlock}>追加する</button></div></section>
+      , document.body) : null}
+      {isMapModalOpen ? createPortal(
+        <div className="youtube-url-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeMapModal(); }}>
+          <section className="youtube-url-modal" role="dialog" aria-modal="true" aria-labelledby="map-url-modal-title" onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); closeMapModal(); } }}><h2 id="map-url-modal-title">{uiT(locale, "map.title")}</h2><p>{uiT(locale, "map.urlHelp")}</p><label><span>Google Maps URL</span><input ref={mapInputRef} type="url" value={mapUrl} placeholder="https://www.google.com/maps/..." onChange={(event) => { setMapUrl(event.target.value); setMapError(""); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); saveMapBlock(); } }} /></label>{mapError ? <p className="youtube-url-error" role="alert">{mapError}</p> : null}<div className="youtube-url-modal-actions"><button className="maker-secondary-button" type="button" onClick={() => closeMapModal()}>{uiT(locale, "map.cancel")}</button><button className="maker-primary-button" type="button" disabled={!mapUrl.trim()} onClick={saveMapBlock}>{uiT(locale, "map.apply")}</button></div></section>
         </div>
-      ) : null}
+      , document.body) : null}
       {isYouTubeModalOpen ? (
         <div className="youtube-url-modal-backdrop" role="presentation" onMouseDown={(event) => {
           if (event.target === event.currentTarget) setIsYouTubeModalOpen(false);

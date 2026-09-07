@@ -5,10 +5,11 @@ import { findPageAdjustment, type PageAdjustment } from "./pageAdjustments";
 import { sliceTextMarks, type TextMark } from "./textStyles";
 import { parseDocumentHeading } from "./documentStructure";
 import { parseGoogleMapsUrl } from "./googleMaps";
+import { createInlineMapToken, normalizeMapAlignment } from "./mapLayout";
 
 const IMAGE_PATTERN = /^\[\[image:([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]$/;
 const YOUTUBE_PATTERN = /^\[\[youtube:([A-Za-z0-9._-]+)(?:\|([A-Za-z0-9_-]{11}))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]$/;
-const MAP_PATTERN = /^\[\[map:([A-Za-z0-9._-]+)\|([^\]|]+)(?:\|(small|medium|large|full))?\]\]$/;
+const MAP_PATTERN = /^\[\[map:([A-Za-z0-9._-]+)\|([^\]|]+)(?:\|(small|medium|large|full))?(?:\|(left|center|right))?\]\]$/;
 const COLUMNS_PATTERN = /^\[\[columns:([A-Za-z0-9._-]+)\]\]$/;
 export const INLINE_IMAGE_TOKEN_PREFIX = "[[inline-image:";
 export const INLINE_YOUTUBE_TOKEN_PREFIX = "[[inline-youtube:";
@@ -100,7 +101,7 @@ function blockSerialization(block: BookContentBlock): string {
     const mode = block.displayMode === "inline" ? "inline" : "full-page";
     return `[[youtube:${block.id}|${block.videoId}|${mode}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
   }
-  if (block.type === "map") return `[[map:${block.id}|${encodeURIComponent(block.sourceUrl)}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
+  if (block.type === "map") return `[[map:${block.id}|${encodeURIComponent(block.sourceUrl)}|${normalizeMediaDisplaySize(block.displaySize)}|${normalizeMapAlignment(block.alignment)}]]`;
   if (block.type === "paywall") return "";
   const mode = block.pageMode === "inline" ? "inline" : "full-page";
   const caption = block.caption?.trim();
@@ -132,7 +133,7 @@ function resolveColumnChild(child: BookColumnChildBlock, imageMap: Map<string, I
   }
   if (child.type === "map") {
     const map = parseGoogleMapsUrl(child.sourceUrl || child.embedUrl);
-    if (map) return { id: child.id, kind: "map", sourceUrl: map.sourceUrl, embedUrl: map.embedUrl, displaySize: normalizeMediaDisplaySize(child.displaySize) };
+    if (map) return { id: child.id, kind: "map", sourceUrl: map.sourceUrl, embedUrl: map.embedUrl, alignment: normalizeMapAlignment(child.alignment), displaySize: normalizeMediaDisplaySize(child.displaySize) };
     return { id: child.id, kind: "text", paragraphs: ["地図を読み込めませんでした。"] };
   }
   const image = imageMap.get(child.id);
@@ -439,9 +440,30 @@ export function buildReaderPages({
         const parsed = parseGoogleMapsUrl(mapBlock?.sourceUrl || decodeURIComponent(mapMatch[2]));
         if (parsed) {
           const sourceId = mapBlock?.id || storedBlockId;
+          const displaySize = normalizeMediaDisplaySize(mapBlock?.displaySize || mapMatch[3]);
+          const alignment = normalizeMapAlignment(mapBlock?.alignment || mapMatch[4]);
           if (shouldBreakBefore(sourceId)) flushTextPage();
+          // Small is atomic inline media, not a full-page reservation.
+          if (displaySize === "small") {
+            const inlineCost = Math.max(64, Math.ceil(charactersPerPage * 0.38));
+            if (paragraphs.length && cost + inlineCost > charactersPerPage) flushTextPage();
+            paragraphs.push(createInlineMapToken(parsed.sourceUrl, alignment));
+            paragraphRuns.push([]);
+            paragraphSourceBlockIds.push(sourceId);
+            cost += inlineCost;
+            if (adjustmentForSource(sourceId)?.pageBreakAfter) {
+              handledBreakAfter.add(sourceId);
+              flushTextPage();
+            }
+            if (!paywallInserted && paywallPreviousBlockId === sourceId) {
+              flushTextPage();
+              insertPaywallPage();
+            }
+            continue;
+          }
           flushTextPage();
-          pages.push({ id: `${chapter.slug}-map-${sourceId}`, kind: "map", chapterTitle: chapter.title, sectionTitle: currentSectionTitle, headingId: pendingHeadingId, sourceUrl: parsed.sourceUrl, embedUrl: parsed.embedUrl, displaySize: normalizeMediaDisplaySize(mapBlock?.displaySize || mapMatch[3]), sourceBlockIds: [sourceId] });
+          pages.push({ id: `${chapter.slug}-map-${sourceId}`, kind: "map", chapterTitle: chapter.title, sectionTitle: currentSectionTitle, headingId: pendingHeadingId, sourceUrl: parsed.sourceUrl, embedUrl: parsed.embedUrl, displaySize, alignment, sourceBlockIds: [sourceId] });
+          if (adjustmentForSource(sourceId)?.pageBreakAfter) handledBreakAfter.add(sourceId);
           pendingHeadingId = undefined;
           if (!paywallInserted && paywallPreviousBlockId === sourceId) insertPaywallPage();
         }

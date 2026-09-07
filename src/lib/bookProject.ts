@@ -18,6 +18,7 @@ import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
 import { isValidYouTubeVideoId } from "@/lib/youtube";
 import { parseGoogleMapsUrl } from "@/lib/googleMaps";
+import { normalizeMapAlignment, type MapAlignment } from "@/lib/mapLayout";
 import { normalizeTextMarks, type TextMark } from "@/lib/textStyles";
 import { findDocumentHeadings, parseDocumentHeading, parseDocumentStructure } from "@/lib/documentStructure";
 
@@ -71,6 +72,7 @@ export type BookContentMapBlock = {
       provider: "google_maps";
       sourceUrl: string;
       embedUrl: string;
+      alignment?: MapAlignment;
       displayMode?: MediaDisplayMode;
       displaySize?: MediaDisplaySize;
     };
@@ -369,7 +371,7 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
         if (child?.type === "map") {
           const map = parseGoogleMapsUrl(child.sourceUrl || child.embedUrl);
           if (!map) return null;
-          return { id: typeof child.id === "string" ? child.id : blockId("map"), type: "map", ...map, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(child.displaySize) };
+          return { id: typeof child.id === "string" ? child.id : blockId("map"), type: "map", ...map, alignment: normalizeMapAlignment(child.alignment), displayMode: "full-page", displaySize: normalizeMediaDisplaySize(child.displaySize) };
         }
         if (child?.type !== "image") return null;
         const storagePath = typeof child.storagePath === "string" && child.storagePath ? child.storagePath : child.publicUrl || "";
@@ -425,7 +427,7 @@ function normalizeContentBlocks(blocks: BookContentBlock[]) {
     if (block.type === "map") {
       const map = parseGoogleMapsUrl(block.sourceUrl || block.embedUrl);
       if (!map) continue;
-      normalized.push({ id: normalizeBlockId(block.id, "map"), type: "map", ...map, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(block.displaySize) });
+      normalized.push({ id: normalizeBlockId(block.id, "map"), type: "map", ...map, alignment: normalizeMapAlignment(block.alignment), displayMode: "full-page", displaySize: normalizeMediaDisplaySize(block.displaySize) });
       continue;
     }
 
@@ -492,7 +494,7 @@ export function contentBlocksToRawText(blocks: BookContentBlock[]): string {
     }
 
     if (block.type === "map") {
-      return `[[map:${block.id}|${encodeURIComponent(block.sourceUrl)}|${normalizeMediaDisplaySize(block.displaySize)}]]`;
+      return `[[map:${block.id}|${encodeURIComponent(block.sourceUrl)}|${normalizeMediaDisplaySize(block.displaySize)}|${normalizeMapAlignment(block.alignment)}]]`;
     }
 
     if (block.type === "paywall") return "";
@@ -546,7 +548,7 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
   const imageById = new Map(images.map((image) => [image.id, image]));
   const usedImageIds = new Set<string>();
   const blocks: BookContentBlock[] = [];
-  const pattern = /\[\[(image|youtube|map):([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?\]\]/g;
+  const pattern = /\[\[(image|youtube|map):([A-Za-z0-9._-]+)(?:\|([^\]|]*))?(?:\|(inline|full-page))?(?:\|(small|medium|large|full))?(?:\|(left|center|right))?\]\]/g;
   let cursor = 0;
   let match: RegExpExecArray | null = null;
 
@@ -563,7 +565,7 @@ export function contentBlocksFromLegacy(rawText: string, images: UploadedBookIma
     if (match[1] === "map") {
       try {
         const parsedMap = parseGoogleMapsUrl(decodeURIComponent(match[3] || ""));
-        if (parsedMap) blocks.push({ id: match[2], type: "map", ...parsedMap, displayMode: "full-page", displaySize: normalizeMediaDisplaySize(match[5]) });
+        if (parsedMap) blocks.push({ id: match[2], type: "map", ...parsedMap, alignment: normalizeMapAlignment(match[6]), displayMode: "full-page", displaySize: normalizeMediaDisplaySize(match[5]) });
       } catch { /* malformed legacy map token remains omitted */ }
       cursor = pattern.lastIndex;
       continue;
