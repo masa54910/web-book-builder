@@ -14,6 +14,7 @@ import TextInput from "@/components/ui/TextInput";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useUiLocale } from "@/components/UiLocaleProvider";
 import { uiT } from "@/lib/localization";
+import LanguageSelector from "@/components/LanguageSelector";
 
 function safeNextPath(value: string | null) {
   if (!value) return "/dashboard";
@@ -113,6 +114,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
           tagline="あなたの文章を、そのままWeb書籍に。"
         />
         <HomeBackLink className="auth-home-link" />
+        <div className="auth-locale"><LanguageSelector /></div>
         <h1>{title}</h1>
         {authMode === "demo" ? (
             <p className="auth-notice">

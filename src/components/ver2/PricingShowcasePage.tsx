@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import styles from "@/components/ver2/PricingShowcasePage.module.css";
 import { useUiLocale } from "@/components/UiLocaleProvider";
 import { uiT } from "@/lib/localization";
+import LanguageSelector from "@/components/LanguageSelector";
 
 type PricingIconName = "book" | "chart" | "check" | "minus" | "share" | "analytics" | "read" | "external" | "lightbulb" | "tag";
 
@@ -126,6 +127,7 @@ export default function PricingShowcasePage() {
       <div className={styles.shell}>
         <div className={styles.topBar}>
           <HomeBackLink label={uiT(locale, "common.backHome")} />
+          <LanguageSelector />
         </div>
 
         <section className={styles.hero} aria-labelledby="pricing-heading">

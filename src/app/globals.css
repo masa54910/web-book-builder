@@ -222,6 +222,12 @@ a {
   outline-offset: 2px;
 }
 
+.auth-locale {
+  display: flex;
+  justify-content: flex-end;
+  margin: 8px 0 4px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wbm-language-selector select {
     transition: none;
