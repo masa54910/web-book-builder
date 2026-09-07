@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import Button from "@/components/ui/Button";
@@ -16,15 +17,9 @@ type SalesResult = {
   paymentLinkUrl?: string;
   reused?: boolean;
   error?: string;
-};
-
-type LegalTerms = {
-  paymentMethod: string;
-  paymentTiming: string;
-  digitalDeliveryTiming: string;
-  refundPolicy: string;
-  additionalCosts: string;
-  applicationDeadline: string;
+  canCreateSale?: boolean;
+  stripeConnected?: boolean;
+  sale?: { amount?: number; currency?: string; paymentLinkUrl?: string | null } | null;
 };
 
 /** Creates or reuses the seller's Connect Payment Link for this book. */
@@ -32,15 +27,11 @@ export default function ConnectSalesPanel({ bookId, hasPaywall }: ConnectSalesPa
   const { user, authMode } = useAuth();
   const [amount, setAmount] = useState("500");
   const [currency, setCurrency] = useState("jpy");
-  const [legalTerms, setLegalTerms] = useState<LegalTerms>({
-    paymentMethod: "",
-    paymentTiming: "",
-    digitalDeliveryTiming: "",
-    refundPolicy: "",
-    additionalCosts: "",
-    applicationDeadline: "",
-  });
   const [paymentLinkUrl, setPaymentLinkUrl] = useState("");
+  const [canCreateSale, setCanCreateSale] = useState(false);
+  const [hasExistingSale, setHasExistingSale] = useState(false);
+  const [stripeConnected, setStripeConnected] = useState(false);
+  const [eligibilityLoaded, setEligibilityLoaded] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -55,16 +46,26 @@ export default function ConnectSalesPanel({ bookId, hasPaywall }: ConnectSalesPa
       if (!token || !active) return;
       const response = await fetch(`/api/connect/sales?bookId=${encodeURIComponent(bookId)}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!response.ok || !active) return;
-      const result = await response.json().catch(() => ({})) as { sale?: { amount?: number; currency?: string; legalTerms?: Partial<LegalTerms> } | null };
-      if (!active || !result.sale) return;
+      const result = await response.json().catch(() => ({})) as SalesResult;
+      if (!active) return;
+      setCanCreateSale(result.canCreateSale === true);
+      setStripeConnected(result.stripeConnected === true);
+      setHasExistingSale(Boolean(result.sale));
+      if (!result.sale) return;
       if (typeof result.sale.amount === "number") setAmount(String(result.sale.amount));
-      if (typeof result.sale.currency === "string") setCurrency(result.sale.currency.toLowerCase());
-      if (result.sale.legalTerms) setLegalTerms((current) => ({ ...current, ...result.sale?.legalTerms }));
-    }).catch(() => undefined);
+      if (typeof result.sale.currency === "string" && (result.sale.currency === "jpy" || result.sale.currency === "usd")) setCurrency(result.sale.currency);
+      if (result.sale.paymentLinkUrl) setPaymentLinkUrl(result.sale.paymentLinkUrl);
+    }).catch(() => undefined).finally(() => { if (active) setEligibilityLoaded(true); });
     return () => { active = false; };
   }, [bookId]);
 
   if (!bookId || !hasPaywall || !user || authMode !== "supabase") return null;
+  if (!eligibilityLoaded) {
+    return <section className="maker-card connect-sales-panel" aria-labelledby="connect-sales-heading"><h2 id="connect-sales-heading">作品販売</h2><p className="maker-note">販売設定を確認しています…</p></section>;
+  }
+  if (eligibilityLoaded && !canCreateSale && !hasExistingSale) {
+    return <section className="maker-card connect-sales-panel" aria-labelledby="connect-sales-heading"><h2 id="connect-sales-heading">作品販売</h2><p className="maker-note">新しい作品販売には出版プランが必要です。</p><Link className="maker-secondary-link" href="/pricing">料金プランを確認</Link></section>;
+  }
 
   const createPaymentLink = async () => {
     setSaving(true);
@@ -79,11 +80,13 @@ export default function ConnectSalesPanel({ bookId, hasPaywall }: ConnectSalesPa
       const response = await fetch("/api/connect/sales", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ bookId, amount: Number(amount), currency, legalTerms }),
+        body: JSON.stringify({ bookId, amount: Number(amount), currency }),
       });
       const result = (await response.json().catch(() => ({}))) as SalesResult;
       if (!response.ok) throw new Error(result.error || "販売リンクを作成できませんでした。");
       setPaymentLinkUrl(result.paymentLinkUrl || "");
+      setHasExistingSale(true);
+      setCanCreateSale(true);
       setMessage(result.reused ? "既存の販売リンクを再利用しました。" : "販売リンクを作成しました。");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "販売リンクを作成できませんでした。");
@@ -96,28 +99,24 @@ export default function ConnectSalesPanel({ bookId, hasPaywall }: ConnectSalesPa
     <section className="maker-card connect-sales-panel" aria-labelledby="connect-sales-heading">
       <h2 id="connect-sales-heading">この作品を販売</h2>
       <p className="maker-note">Paywall以降を購入者へ届ける販売リンクを、接続済みStripeアカウントで用意します。</p>
-      <div className="maker-grid">
+      <p className="maker-note">Stripe接続状況：{stripeConnected ? "接続済み" : "未接続"}（変更は<Link href="/settings">Stripe設定</Link>から）</p>
+      {stripeConnected ? <div className="maker-grid">
         <label>
-          <span>価格（最小単位）</span>
+          <span>価格</span>
           <input inputMode="numeric" min={1} type="number" value={amount} onChange={(event) => setAmount(event.target.value)} />
         </label>
         <label>
           <span>通貨</span>
           <select value={currency} onChange={(event) => setCurrency(event.target.value)}>
             <option value="jpy">JPY</option>
+            <option value="usd">USD</option>
           </select>
         </label>
-      </div>
-      <div className="maker-grid">
-        <label><span>支払方法</span><input value={legalTerms.paymentMethod} onChange={(event) => setLegalTerms((current) => ({ ...current, paymentMethod: event.target.value }))} placeholder="Stripe Payment Link（カード等）" /></label>
-        <label><span>支払時期</span><input value={legalTerms.paymentTiming} onChange={(event) => setLegalTerms((current) => ({ ...current, paymentTiming: event.target.value }))} placeholder="注文時に決済" /></label>
-        <label><span>デジタル配信時期</span><input value={legalTerms.digitalDeliveryTiming} onChange={(event) => setLegalTerms((current) => ({ ...current, digitalDeliveryTiming: event.target.value }))} placeholder="決済確認後すぐに閲覧可能" /></label>
-        <label><span>返品・返金条件</span><textarea rows={2} value={legalTerms.refundPolicy} onChange={(event) => setLegalTerms((current) => ({ ...current, refundPolicy: event.target.value }))} placeholder="返品・返金の条件を記載" /></label>
-        <label><span>追加費用</span><input value={legalTerms.additionalCosts} onChange={(event) => setLegalTerms((current) => ({ ...current, additionalCosts: event.target.value }))} placeholder="追加料金なし" /></label>
-        <label><span>申込期限（任意）</span><input value={legalTerms.applicationDeadline} onChange={(event) => setLegalTerms((current) => ({ ...current, applicationDeadline: event.target.value }))} /></label>
-      </div>
+      </div> : null}
+      {paymentLinkUrl ? <p className="maker-note">Payment Link：<a href={paymentLinkUrl} target="_blank" rel="noopener noreferrer">Stripeで販売リンクを確認</a></p> : null}
+      <p className="maker-note">販売者情報とStripe接続は<Link href="/settings">設定</Link>で管理します。</p>
       <div className="maker-actions">
-        <Button loading={saving} onClick={() => void createPaymentLink()}>販売リンクを用意</Button>
+        {stripeConnected ? <Button loading={saving} onClick={() => void createPaymentLink()}>販売リンクを用意</Button> : <Link className="maker-secondary-link" href="/settings">Stripe設定へ</Link>}
         {paymentLinkUrl ? <a className="maker-secondary-link" href={paymentLinkUrl} target="_blank" rel="noopener noreferrer">販売リンクを確認</a> : null}
       </div>
       {error ? <StatusMessage variant="error" message={error} className="form-error" /> : null}

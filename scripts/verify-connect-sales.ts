@@ -21,7 +21,8 @@ assert(salesModule.includes("application_fee_amount") === false && salesModule.i
 assert(salesModule.includes("idempotencyKey") && salesModule.includes("connect-payment-link"), "creation is idempotent");
 assert(salesModule.includes("webbookmaker_book_id") && salesModule.includes("webbookmaker_owner_id"), "book and owner metadata are attached");
 assert(salesModule.includes("evaluateSalesLegalTerms") && salesModule.includes("legalTerms"), "book-level legal terms are validated and persisted");
-assert(panel.includes("返品・返金条件") && panel.includes("デジタル配信時期"), "sales UI collects reader-facing legal terms");
+assert(panel.includes('option value="jpy"') && panel.includes('option value="usd"'), "sales UI supports JPY and USD");
+assert(!panel.includes("支払時期") && !panel.includes("デジタル配信時期") && !panel.includes("返品・返金条件") && !panel.includes("追加費用") && !panel.includes("申込期限"), "legacy legal-term inputs are removed from editor UI");
 assert(route.includes("requireAuthenticatedUser"), "sales route authenticates owner");
 assert(fulfillment.includes("fulfillConnectedCheckoutSession") && fulfillment.includes("expectedStripeAccountId"), "connected fulfillment validates account boundary");
 assert(fulfillment.includes("listConnectStripeAccountIds") && fulfillment.includes("isStripeResourceMissing"), "platform verification falls back to registered Connect accounts for direct charges");

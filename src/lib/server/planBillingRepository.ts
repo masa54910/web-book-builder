@@ -47,6 +47,21 @@ export async function findPaidPublication(userId: string, bookId: string, livemo
   return data ? mapTransaction(data) : null;
 }
 
+/** Server-side gate for creating a new paid Connect sale. */
+export async function hasPublicationEntitlement(userId: string, bookId: string, livemode: boolean) {
+  const { data, error } = await requireSupabaseAdminClient()
+    .from("plan_entitlements")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("book_id", bookId)
+    .eq("plan_code", "publication")
+    .eq("livemode", livemode)
+    .eq("status", "active")
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+}
+
 export async function findPlanTransactionBySubscription(subscriptionId: string, livemode: boolean) {
   const { data, error } = await requireSupabaseAdminClient().from("plan_billing_transactions").select("*").eq("stripe_subscription_id", subscriptionId).eq("livemode", livemode).maybeSingle();
   if (error) throw error;

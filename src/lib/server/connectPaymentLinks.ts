@@ -5,7 +5,8 @@ import type Stripe from "stripe";
 import { parseBookProjectJson } from "@/lib/bookProjectNormalization";
 import { evaluateSalesLegalTerms, evaluateStripeSellerReadiness, type SalesLegalTerms } from "@/lib/sellerConnect";
 import { getAuthorStripeAccount } from "@/lib/server/sellerConnectRepository";
-import { getConnectBookSale, saveConnectBookSale, updateConnectBookSaleLegalTerms } from "@/lib/server/connectSalesRepository";
+import { getConnectBookSale, saveConnectBookSale } from "@/lib/server/connectSalesRepository";
+import { hasPublicationEntitlement } from "@/lib/server/planBillingRepository";
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
 import { requireStripeClient } from "@/lib/server/stripe";
 import { expectedStripeLivemode } from "@/lib/server/stripeEnvironment";
@@ -43,17 +44,34 @@ export async function createOrReuseConnectPaymentLink(ownerId: string, input: Co
   assertInput(input);
   const livemode = expectedStripeLivemode();
   const book = await ownedBook(input.bookId, ownerId);
+  const existing = await getConnectBookSale(book.id, livemode);
+  if (!existing && !(await hasPublicationEntitlement(ownerId, book.id, livemode))) {
+    throw new Error("新しい作品販売には出版プランが必要です。料金プランから出版プランを有効にしてください。");
+  }
   const account = await getAuthorStripeAccount(ownerId, livemode);
   const readiness = evaluateStripeSellerReadiness(account);
   if (!account || !readiness.connected || !readiness.onboardingComplete || !readiness.merchantActive || !readiness.chargesEnabled || !readiness.payoutsEnabled) {
     throw new Error("Stripe本人確認と入金設定を完了してから販売を設定してください。");
   }
-  const existing = await getConnectBookSale(book.id, livemode);
   if (existing) {
-    if (existing.ownerId !== ownerId || existing.stripeAccountId !== account.stripeAccountId || existing.amount !== input.amount || existing.currency !== input.currency || !existing.enabled) throw new Error("このBookには別の販売設定が存在します。");
-    const existingLink = await requireStripeClient().paymentLinks.retrieve(existing.stripePaymentLinkId, undefined, { stripeAccount: account.stripeAccountId });
-    const updatedSale = await updateConnectBookSaleLegalTerms(book.id, ownerId, livemode, input.legalTerms);
-    return { sale: updatedSale ?? existing, paymentLinkUrl: existingLink.url, reused: true };
+    if (existing.ownerId !== ownerId || existing.stripeAccountId !== account.stripeAccountId || !existing.enabled) throw new Error("このBookには別の販売設定が存在します。");
+    const stripe = requireStripeClient();
+    if (existing.amount === input.amount && existing.currency === input.currency) {
+      const existingLink = await stripe.paymentLinks.retrieve(existing.stripePaymentLinkId, undefined, { stripeAccount: account.stripeAccountId });
+      return { sale: existing, paymentLinkUrl: existingLink.url, reused: true };
+    }
+
+    const requestOptions = { stripeAccount: account.stripeAccountId };
+    const objectMetadata = metadata(book.id, ownerId, account.stripeAccountId, livemode);
+    const price = await stripe.prices.create({ currency: input.currency, unit_amount: input.amount, product: existing.stripeProductId, metadata: objectMetadata }, { ...requestOptions, idempotencyKey: `connect-price:${book.id}:${input.currency}:${input.amount}:${livemode ? "live" : "test"}` });
+    const origin = new URL(process.env.NEXT_PUBLIC_SITE_URL?.trim() || fallbackOrigin).origin;
+    const link = await stripe.paymentLinks.create({
+      line_items: [{ price: price.id, quantity: 1 }],
+      after_completion: { type: "redirect", redirect: { url: `${origin}/purchase/success?session_id={CHECKOUT_SESSION_ID}` } },
+      metadata: objectMetadata,
+    }, { ...requestOptions, idempotencyKey: `connect-payment-link:${book.id}:${input.currency}:${input.amount}:${livemode ? "live" : "test"}` });
+    const sale = await saveConnectBookSale({ ...existing, stripePriceId: price.id, stripePaymentLinkId: link.id, amount: input.amount, currency: input.currency });
+    return { sale, paymentLinkUrl: link.url, reused: false };
   }
 
   const stripe = requireStripeClient();
