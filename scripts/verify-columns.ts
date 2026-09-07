@@ -95,6 +95,77 @@ for (let index = 1; index <= 8; index += 1) {
   );
 }
 
+// Regression fixture: multiple chapters represented by ordinary text blocks
+// (no structureRole metadata), with Columns in the middle of chapter one.
+// Before the paginator fix this path falls back to flattened chapter.body and
+// emits the two child texts as a single vertical text page.
+const unstructuredMultiChapterColumns: BookContentBlock[] = [
+  text("unstructured-h1-1", "# 第1章 前半"),
+  text("unstructured-before", "章1の前文"),
+  {
+    id: "unstructured-columns",
+    type: "columns",
+    ratio: "50-50",
+    left: { blocks: [text("unstructured-left", "左カラム")] },
+    right: { blocks: [text("unstructured-right", "右カラム")] },
+  },
+  text("unstructured-after", "章1の後文"),
+  text("unstructured-h1-2", "# 第2章 後半"),
+  text("unstructured-tail", "章2の本文"),
+];
+const unstructuredChapters = extractChaptersFromText(
+  contentBlocksToRawText(unstructuredMultiChapterColumns),
+  "本文",
+  unstructuredMultiChapterColumns,
+);
+const unstructuredPages = buildReaderPages({
+  chapters: unstructuredChapters,
+  images: [],
+  contentBlocks: unstructuredMultiChapterColumns,
+  charactersPerPage: 380,
+  tableOfContentsItemsPerPage: 12,
+});
+assert.equal(
+  unstructuredPages.filter((page) => page.kind === "columns").length,
+  1,
+  "unstructured multi-chapter Columns must remain one two-pane ReaderPage",
+);
+assert.equal(
+  unstructuredPages.filter((page) => page.kind === "text").flatMap((page) => page.paragraphs).some((paragraph) => paragraph === "左カラム" || paragraph === "右カラム"),
+  false,
+  "Columns children must not fall back to vertical text paragraphs",
+);
+
+// The chapter-to-body mapping is ordinal, not title-based. Two chapters with
+// the same title must still keep the Columns block and each chapter's text in
+// their original order.
+const duplicateTitleBlocks: BookContentBlock[] = [
+  text("duplicate-h1-1", "# 同じ章"),
+  text("duplicate-before", "最初の章本文"),
+  { ...unstructuredMultiChapterColumns[2], id: "duplicate-columns" },
+  text("duplicate-h1-2", "# 同じ章"),
+  text("duplicate-after", "二つ目の章本文"),
+];
+const duplicateTitleChapters = extractChaptersFromText(
+  contentBlocksToRawText(duplicateTitleBlocks),
+  "本文",
+  duplicateTitleBlocks,
+);
+const duplicateTitlePages = buildReaderPages({
+  chapters: duplicateTitleChapters,
+  images: [],
+  contentBlocks: duplicateTitleBlocks,
+  charactersPerPage: 380,
+  tableOfContentsItemsPerPage: 12,
+});
+assert.equal(duplicateTitlePages.filter((page) => page.kind === "columns").length, 1, "same-title chapters must preserve Columns by ordinal range");
+const duplicateTitleText = duplicateTitlePages
+  .filter((page): page is Extract<typeof page, { kind: "text" }> => page.kind === "text")
+  .flatMap((page) => page.paragraphs)
+  .join("\n");
+assert.equal(duplicateTitleText.match(/最初の章本文/g)?.length, 1);
+assert.equal(duplicateTitleText.match(/二つ目の章本文/g)?.length, 1);
+
 assert.deepEqual(swapColumnsBlock(columns).left.blocks, columns.right.blocks);
 assert.deepEqual(unwrapColumnsBlock(columns).map((block) => block.id), ["left-heading", "right-body"]);
 assert.match(contentBlocksToRawText(source), /左カラム\n改行を保持[\s\S]*右カラムの本文/);

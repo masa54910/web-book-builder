@@ -124,6 +124,41 @@ function chapterBlockRanges(blocks: BookContentBlock[]) {
   }));
 }
 
+/**
+ * Build chapter bodies from the ordered canonical stream while keeping
+ * non-text blocks atomic. This covers legacy manuscripts whose H1 headings
+ * are ordinary text blocks without structureRole metadata. Heading detection
+ * deliberately delegates to the shared document parser instead of matching a
+ * second, paginator-specific H1 grammar.
+ */
+function serializedChapterBodies(blocks: BookContentBlock[], chapters: NovelChapter[]) {
+  const serialized = blocks.map(blockSerialization).filter(Boolean).join("\n\n");
+  if (!serialized) return null;
+
+  const headings: Array<{ start: number; end: number }> = [];
+  let offset = 0;
+  for (const line of serialized.split("\n")) {
+    const heading = parseDocumentHeading(line);
+    if (heading?.level === 1) headings.push({ start: offset, end: offset + line.length });
+    offset += line.length + 1;
+  }
+
+  if (chapters.length === 1 && headings.length === 0) {
+    return new Map([[chapters[0].slug, serialized.trim()]]);
+  }
+  if (headings.length !== chapters.length) return null;
+
+  const bodies = new Map<string, string>();
+  chapters.forEach((chapter, index) => {
+    const heading = headings[index];
+    const nextHeading = headings[index + 1];
+    const prefix = index === 0 ? serialized.slice(0, heading.start) : "";
+    const body = serialized.slice(heading.end, nextHeading?.start ?? serialized.length);
+    bodies.set(chapter.slug, `${prefix}${body}`.trim());
+  });
+  return bodies;
+}
+
 function resolveColumnChild(child: BookColumnChildBlock, imageMap: Map<string, ImageManifestRow>): ReaderColumnChild {
   if (child.type === "text") {
     return { id: child.id, kind: "text", paragraphs: [child.content], paragraphRuns: [child.marks || []] };
@@ -259,6 +294,10 @@ export function buildReaderPages({
   // document remains backwards compatible while the Reader receives the real
   // two-pane page.
   const chapterBodies = new Map<string, string>();
+  const serializedBodies = serializedChapterBodies(orderedContentBlocks, chapters);
+  if (serializedBodies) {
+    serializedBodies.forEach((body, slug) => chapterBodies.set(slug, body));
+  }
   const chapterRanges = chapterBlockRanges(orderedContentBlocks);
   // Only rebuild chapter bodies when the canonical block sequence contains
   // explicit chapter blocks. Plain-text paste keeps all chapters in one text
@@ -272,7 +311,7 @@ export function buildReaderPages({
     chapters.length === 1
     || (structuredChapterBlocks.length > 0 && chapterRanges.length === chapters.length)
   );
-  if (canRebuildChapterBodies) {
+  if (canRebuildChapterBodies && !serializedBodies) {
     chapters.forEach((chapter, chapterIndex) => {
       const range = chapterRanges[chapterIndex];
       if (!range) return;
