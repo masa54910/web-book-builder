@@ -378,7 +378,7 @@ export default function ProfileSettingsPage() {
                 </Button>
                 {profile.handle ? (
                   <Button variant="secondary" href={authorPagePath(profile.handle)} openInNewTab>
-                    公開ページを見る
+                    公開プロフィール
                   </Button>
                 ) : null}
                 <LogoutButton />

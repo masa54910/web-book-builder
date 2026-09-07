@@ -10,6 +10,8 @@ import EmptyState from "@/components/ui/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import StatusMessage from "@/components/ui/StatusMessage";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { authorPagePath } from "@/lib/authorPage";
+import { getOwnProfile } from "@/lib/profileRepository";
 import {
   duplicateBook,
   listBooks,
@@ -32,6 +34,7 @@ export default function DashboardPage() {
   const [sortKey, setSortKey] = useState<SortKey>("updated");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [authorPage, setAuthorPage] = useState<{ userId: string; href: string } | null>(null);
 
   const reload = async () => {
     if (!user) return;
@@ -53,6 +56,29 @@ export default function DashboardPage() {
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  useEffect(() => {
+    let active = true;
+    if (!user) {
+      return () => {
+        active = false;
+      };
+    }
+
+    void getOwnProfile(user.id, { email: user.email, displayName: user.displayName })
+      .then((profile) => {
+        if (active && profile.handle.trim()) {
+          setAuthorPage({ userId: user.id, href: authorPagePath(profile.handle) });
+        }
+      })
+      .catch(() => {
+        // Keep the link disabled when the canonical profile handle is unavailable.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   const visibleBooks = useMemo(() => {
     const lower = query.trim().toLowerCase();
@@ -116,9 +142,15 @@ export default function DashboardPage() {
           <p>{locale === "en" ? "Save, edit, and manage the public URLs for your web books." : "作成したWeb書籍の保存、編集、公開URL管理を行います。"}</p>
         </div>
         <div className="dashboard-heading-actions">
-          <Button variant="secondary" href="/settings">
-            プロフィール / 作者ページ
-          </Button>
+          {user && authorPage?.userId === user.id && authorPage.href ? (
+            <Button variant="secondary" href={authorPage.href}>
+              プロフィール / 作者ページ
+            </Button>
+          ) : (
+            <Button variant="secondary" disabled>
+              プロフィール / 作者ページ
+            </Button>
+          )}
           <Button variant="secondary" href="/admin/inquiries">
             お問い合わせ管理
           </Button>

@@ -8,6 +8,7 @@ function source(path: string) {
 
 const profileRepository = source("src/lib/profileRepository.ts");
 const profileSettings = source("src/components/ProfileSettingsPage.tsx");
+const dashboard = source("src/components/DashboardPage.tsx");
 const appHeader = source("src/components/AppHeader.tsx");
 const settingsRoute = source("src/app/settings/page.tsx");
 const dashboardSettingsRoute = source("src/app/dashboard/settings/page.tsx");
@@ -36,5 +37,9 @@ assert.match(initialSchema, /auth\.uid\(\) = id/);
 assert.match(authorPageRepository, /from\("profiles"\)/);
 assert.match(authorPageRepository, /is_public/);
 assert.match(appHeader, /<Link href="\/settings">著者プロフィールを編集<\/Link>/);
+assert.match(dashboard, /getOwnProfile\(user\.id/);
+assert.match(dashboard, /authorPagePath\(profile\.handle\)/);
+assert.doesNotMatch(dashboard, /<Button variant="secondary" href="\/settings">/);
+assert.match(profileSettings, /公開プロフィール/);
 
 console.log("Author profile direct editing / ownership / public display verification: PASS");
