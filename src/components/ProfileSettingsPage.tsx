@@ -300,6 +300,7 @@ export default function ProfileSettingsPage() {
           <p>
             表示名、作者プロフィール、SNS、通知設定を管理できます。ハンドルを変更すると作者ページURLも変わります。
           </p>
+          <h2>著者プロフィール編集</h2>
           {isProfileLoading ? (
             <LoadingState label="プロフィールを読み込んでいます…" className="reader-loading" />
           ) : !profile ? (

@@ -49,6 +49,7 @@ export default function AppHeader({
                 <Link className="nav-cta" href="/dashboard">
                   {uiT(locale, "navigation.library")}
                 </Link>
+                <Link href="/settings">著者プロフィールを編集</Link>
                 <small>このボタンは読者のページには表示されません。</small>
               </div>
             ) : null
