@@ -13,7 +13,10 @@ export function parseGoogleMapsUrl(value: unknown): GoogleMapsEmbed | null {
     const path = parsed.pathname.toLowerCase();
     if (!(path === "/maps" || path.startsWith("/maps/"))) return null;
     const sourceUrl = parsed.toString();
-    const embedUrl = `https://www.google.com${parsed.pathname}${parsed.search}`;
+    const isOfficialEmbed = path.startsWith("/maps/embed") || path.startsWith("/maps/d/embed") || parsed.searchParams.get("output") === "embed";
+    const embedUrl = isOfficialEmbed
+      ? `https://www.google.com${parsed.pathname}${parsed.search}`
+      : `https://www.google.com/maps?q=${encodeURIComponent(sourceUrl)}&output=embed`;
     return { provider: "google_maps", sourceUrl, embedUrl };
   } catch { return null; }
 }
