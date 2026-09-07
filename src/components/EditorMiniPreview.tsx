@@ -77,7 +77,7 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
     return <div className="editor-mini-page-youtube"><span aria-hidden="true">▶</span><strong>YouTube動画</strong></div>;
   }
   if (page.kind === "map") {
-    return <div className="editor-mini-page-map"><span aria-hidden="true">📍</span><strong>Googleマップ</strong></div>;
+    return <div className={`editor-mini-page-map media-display-size-${page.displaySize || "medium"}`}><span aria-hidden="true">📍</span><strong>Googleマップ</strong></div>;
   }
   if (page.kind === "columns") {
     const columnsGrid = page.ratio === "40-60" ? "2fr 3fr" : page.ratio === "60-40" ? "3fr 2fr" : "1fr 1fr";
@@ -95,7 +95,7 @@ function MiniPageContent({ page }: { page: ReaderPage }) {
         ) : child.kind === "image" ? (
           <MiniImageMarker inline key={child.id} />
         ) : child.kind === "map" ? (
-          <span className="editor-mini-inline-map" key={child.id}>📍</span>
+          <span className={`editor-mini-inline-map media-display-size-${child.displaySize || "medium"}`} key={child.id}>📍</span>
         ) : (
           <span className="editor-mini-inline-youtube" key={child.id}><span aria-hidden="true">▶</span></span>
         ))}

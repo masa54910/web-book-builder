@@ -158,6 +158,10 @@ export type UiTranslationKey =
   | "map.openInGoogleMaps"
   | "map.fallback"
   | "map.invalidUrl"
+  | "map.size"
+  | "map.sizeSmall"
+  | "map.sizeMedium"
+  | "map.sizeLarge"
   | "reader.tableOfContents"
   | "reader.share"
   | "reader.zoom"
@@ -223,6 +227,10 @@ const uiResources: Record<UiLocale, UiResource> = {
     "map.openInGoogleMaps": "Googleマップで開く",
     "map.fallback": "地図の埋め込みに失敗しました。Googleマップで開いてください。",
     "map.invalidUrl": "Googleマップの共有URLまたは埋め込みURLを入力してください。",
+    "map.size": "地図サイズ",
+    "map.sizeSmall": "小",
+    "map.sizeMedium": "中",
+    "map.sizeLarge": "大",
     "reader.tableOfContents": "目次",
     "reader.share": "共有",
     "reader.zoom": "拡大・縮小",
@@ -285,6 +293,10 @@ const uiResources: Record<UiLocale, UiResource> = {
     "map.openInGoogleMaps": "Open in Google Maps",
     "map.fallback": "Map embedding failed. Open it in Google Maps.",
     "map.invalidUrl": "Enter an official Google Maps share or embed URL.",
+    "map.size": "Map size",
+    "map.sizeSmall": "Small",
+    "map.sizeMedium": "Medium",
+    "map.sizeLarge": "Large",
     "reader.tableOfContents": "Table of contents",
     "reader.share": "Share",
     "reader.zoom": "Zoom",

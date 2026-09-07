@@ -25,6 +25,8 @@ import { countContentCharacters, countUserCharacters } from "@/lib/characterCoun
 import { parseYouTubeUrl, youtubeThumbnailUrl } from "@/lib/youtube";
 import { parseGoogleMapsUrl } from "@/lib/googleMaps";
 import { applyTextMark, marksCoverRange, normalizeTextMarks, sliceTextMarks, TEXT_COLORS, TEXT_COLOR_LABELS, TEXT_FONT_SIZE_LABELS, type TextColor, type TextFontSize, type TextMark } from "@/lib/textStyles";
+import { useUiLocale } from "@/components/UiLocaleProvider";
+import { uiT } from "@/lib/localization";
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -366,8 +368,9 @@ function createMapElement(block: Extract<BookContentBlock, { type: "map" }>) {
   wrapper.dataset.nodeId = block.id;
   wrapper.dataset.sourceUrl = block.sourceUrl;
   wrapper.dataset.embedUrl = block.embedUrl;
+  wrapper.dataset.displaySize = normalizeMediaDisplaySize(block.displaySize);
   wrapper.contentEditable = "false";
-  wrapper.className = "inline-editor-map-node";
+  wrapper.className = `inline-editor-map-node media-display-size-${normalizeMediaDisplaySize(block.displaySize)}`;
   const label = document.createElement("span");
   label.className = "inline-editor-map-label";
   label.textContent = "📍 Googleマップ";
@@ -738,6 +741,7 @@ function InlineManuscriptEditor({
   helpRequest,
   onHelpRequestResult,
 }: Props) {
+  const { locale } = useUiLocale();
   const editorRef = useRef<HTMLElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1033,10 +1037,19 @@ function InlineManuscriptEditor({
   }, [selectedYouTubeId, value]);
 
   useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    root.querySelectorAll<HTMLElement>("[data-node-type='map']").forEach((node) => {
+      node.classList.toggle("is-selected", node.dataset.nodeId === selectedMapId);
+    });
+  }, [selectedMapId, value]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setSelectedImageId(null);
         setSelectedYouTubeId(null);
+        setSelectedMapId(null);
         setIsYouTubeModalOpen(false);
         setIsInsertMenuOpen(false);
       }
@@ -1093,6 +1106,7 @@ function InlineManuscriptEditor({
     target.focus({ preventScroll: true });
     if (target.dataset.nodeType === "image") setSelectedImageId(scrollRequest.blockId);
     if (target.dataset.nodeType === "youtube") setSelectedYouTubeId(scrollRequest.blockId);
+    if (target.dataset.nodeType === "map") setSelectedMapId(scrollRequest.blockId);
     onCursorChange?.(position, scrollRequest.blockId);
     onScrollRequestResult?.({ nonce: scrollRequest.nonce, status: "handled" });
   }, [onCursorChange, onScrollRequestResult, reportCursor, scrollRequest]);
@@ -1104,6 +1118,7 @@ function InlineManuscriptEditor({
     if (rootRef.current) renderNodes(rootRef.current, next, pageBreakAfterBlockIds);
     setSelectedImageId(null);
     setSelectedYouTubeId(null);
+    setSelectedMapId(null);
   };
 
   async function finishUpload(files: File[], pendingIds: string[]) {
@@ -1977,6 +1992,22 @@ function InlineManuscriptEditor({
       {selectedMap ? (
         <div className="inline-manuscript-popover" role="group" aria-label="Googleマップ設定">
           <strong>Googleマップ</strong><span className="maker-note">{selectedMap.sourceUrl}</span>
+          <fieldset className="inline-image-layout-fieldset map-size-fieldset">
+            <legend>{uiT(locale, "map.size")}</legend>
+            <div className="map-size-options" role="group" aria-label={uiT(locale, "map.size")}>
+              {(["small", "medium", "large"] as const).map((size) => (
+                <button
+                  key={size}
+                  className={`map-size-option ${normalizeMediaDisplaySize(selectedMap.displaySize) === size ? "is-selected" : ""}`}
+                  type="button"
+                  aria-pressed={normalizeMediaDisplaySize(selectedMap.displaySize) === size}
+                  onClick={() => updateNode(selectedMap.id, { displaySize: size })}
+                >
+                  {uiT(locale, size === "small" ? "map.sizeSmall" : size === "medium" ? "map.sizeMedium" : "map.sizeLarge")}
+                </button>
+              ))}
+            </div>
+          </fieldset>
           <div className="inline-manuscript-popover-actions"><button className="maker-secondary-button" type="button" onClick={() => { setMapUrl(selectedMap.sourceUrl); setMapError(""); setIsMapModalOpen(true); }}>URLを変更</button><button className="maker-secondary-button danger" type="button" onClick={() => removeNode(selectedMap.id)}>地図を削除</button></div>
         </div>
       ) : null}
