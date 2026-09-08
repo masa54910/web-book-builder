@@ -85,7 +85,7 @@ function writeDemoUser(email: string, displayName?: string) {
 function mapAuthError(message: string) {
   const lower = message.toLowerCase();
   if (lower.includes("rate limit") || lower.includes("too many") || lower.includes("429")) {
-    return "短時間に認証リクエストが集中しています。少し時間を空けて再度お試しください。";
+    return "メールの送信回数が上限に達しました。しばらく時間を空けてから再度お試しください。";
   }
   if (lower.includes("email not confirmed")) {
     return "メール確認が完了していません。受信した確認メールのリンクを開いてからログインしてください。";

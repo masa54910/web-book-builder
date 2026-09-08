@@ -24,7 +24,10 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     if (isLoading || user || authMode === "blocked") return;
-    setError("パスワード再設定の認証状態を確認できません。メール内のリンクを開き直してください。");
+    const timer = window.setTimeout(() => {
+      setError("パスワード再設定の認証状態を確認できません。メール内のリンクを開き直してください。");
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [authMode, isLoading, user]);
 
   const submit = async () => {
