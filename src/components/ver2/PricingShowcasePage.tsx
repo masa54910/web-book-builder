@@ -156,7 +156,11 @@ export default function PricingShowcasePage() {
             <article key={plan.id} className={`${styles.card} ${styles[`card${plan.id[0].toUpperCase()}${plan.id.slice(1)}`]}`}>
                 {plan.id === "operationPlus" ? <span className={styles.dealRibbon}>お得！</span> : null}
               <span className={styles.badge}>{plan.badge}</span>
-              <h2>{plan.name}</h2>
+              <h2 className={plan.id === "operationStandard" || plan.id === "operationPlus" ? styles.planTitleTwoLine : undefined}>
+                {plan.id === "operationStandard" || plan.id === "operationPlus"
+                  ? plan.name.split(" ").map((part) => <span key={part}>{part}</span>)
+                  : plan.name}
+              </h2>
               <p className={styles.price}><strong>{plan.price}</strong> <small>{plan.unit}</small></p>
               <p className={styles.planLead}>{plan.lead}</p>
               <ul className={styles.featureList}>
@@ -169,7 +173,7 @@ export default function PricingShowcasePage() {
               </ul>
               <div className={styles.cardActions}>
                 <Link className={`maker-primary-link ${styles.planAction}`} href={plan.href}>{plan.actionLabel}</Link>
-                {plan.id === "publish" ? <p className={styles.planTag}><PricingIcon name="tag" size={16} /><span>{plan.note}</span></p> : <small className={styles.planNote}>{plan.note}。請求期間終了時に解約が有効になります。</small>}
+                {plan.id === "publish" ? <p className={styles.planTag}><PricingIcon name="tag" size={16} /><span>{plan.note}</span></p> : <small className={styles.planNote}>{plan.note}</small>}
               </div>
             </article>
           ))}

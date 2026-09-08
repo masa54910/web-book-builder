@@ -44,6 +44,17 @@ export function isOperationPlan(planCode: PlanCode): planCode is "operation_stan
   return planCode === "operation_standard" || planCode === "operation";
 }
 
+export function publicationSlotsForPlan(planCode: PlanCode) {
+  return PLAN_DEFINITIONS[planCode].publicationSlots;
+}
+
+export function bookCreationLimitForPlans(planCodes: readonly PlanCode[], fallback: number) {
+  if (planCodes.includes("operation")) return publicationSlotsForPlan("operation");
+  if (planCodes.includes("operation_standard")) return publicationSlotsForPlan("operation_standard");
+  if (planCodes.includes("publication")) return publicationSlotsForPlan("publication");
+  return fallback;
+}
+
 export function configuredPlanPriceId(plan: PlanCode) {
   const value = process.env[PLAN_DEFINITIONS[plan].priceEnv]?.trim();
   if (!value || !/^price_[A-Za-z0-9]+$/.test(value)) throw new Error(`${PLAN_DEFINITIONS[plan].priceEnv} is not configured.`);

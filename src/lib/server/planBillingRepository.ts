@@ -1,7 +1,8 @@
 import "server-only";
 
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
-import { isOperationPlan, type PlanCode } from "@/lib/planBilling";
+import { bookCreationLimitForPlans, isOperationPlan, publicationSlotsForPlan, type PlanCode } from "@/lib/planBilling";
+import { BETA_LIMITS } from "@/lib/limits";
 
 export type PlanTransaction = {
   id: string;
@@ -73,6 +74,21 @@ export async function hasOperationSalesEntitlement(userId: string, livemode: boo
   return Boolean(await activeOperationPlanForUser(userId, livemode));
 }
 
+export async function getBookCreationLimitForUser(userId: string, livemode: boolean) {
+  const { data, error } = await requireSupabaseAdminClient()
+    .from("plan_entitlements")
+    .select("plan_code")
+    .eq("user_id", userId)
+    .eq("livemode", livemode)
+    .eq("status", "active");
+  if (error) throw error;
+
+  const planCodes = (data ?? [])
+    .map((row) => String(row.plan_code))
+    .filter((value): value is PlanCode => ["publication", "operation_standard", "operation"].includes(value));
+  return bookCreationLimitForPlans(planCodes, BETA_LIMITS.maxBooksPerUser);
+}
+
 export async function canPublishNewBook(userId: string, bookId: string, livemode: boolean) {
   if (await hasPublicationEntitlement(userId, bookId, livemode)) return true;
   const planCode = await activeOperationPlanForUser(userId, livemode);
@@ -85,7 +101,7 @@ export async function canPublishNewBook(userId: string, bookId: string, livemode
     .in("visibility", ["public", "unlisted"])
     .is("deleted_at", null);
   if (error) throw error;
-  return (count ?? 0) < (planCode === "operation" ? 10 : 1);
+  return (count ?? 0) < publicationSlotsForPlan(planCode);
 }
 
 export async function findPlanTransactionBySubscription(subscriptionId: string, livemode: boolean) {

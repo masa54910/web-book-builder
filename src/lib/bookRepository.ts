@@ -425,7 +425,27 @@ async function syncBookSideTables(book: CloudBookRecord) {
   }
 }
 
-const BOOK_LIMIT_ERROR = `安全上の制限により、1ユーザーあたり最大${BETA_LIMITS.maxBooksPerUser}作品まで作成できます。`;
+function bookLimitError(limit: number) {
+  return `安全上の制限により、1ユーザーあたり最大${limit}作品まで作成できます。`;
+}
+
+async function resolveBookCreationLimit(supabase: ReturnType<typeof getSupabaseClient>) {
+  if (!supabase) return BETA_LIMITS.maxBooksPerUser;
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) return BETA_LIMITS.maxBooksPerUser;
+
+  const response = await fetch("/api/billing/limits", {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("作品数上限を確認できませんでした。");
+  const result = await response.json() as { maxBooksPerUser?: unknown };
+  if (!Number.isInteger(result.maxBooksPerUser) || Number(result.maxBooksPerUser) < 1) {
+    throw new Error("作品数上限を確認できませんでした。");
+  }
+  return Number(result.maxBooksPerUser);
+}
 
 /**
  * Check the active-book limit before any book, side-table, or asset write.
@@ -439,10 +459,13 @@ export async function assertBookCreationAvailable(ownerId: string) {
       (book) => book.ownerId === ownerId && !book.deletedAt && book.status !== "archived",
     );
     if (activeBooks.length >= BETA_LIMITS.maxBooksPerUser) {
-      throw new Error(BOOK_LIMIT_ERROR);
+      throw new Error(bookLimitError(BETA_LIMITS.maxBooksPerUser));
     }
     return;
   }
+
+  const maxBooksPerUser = await resolveBookCreationLimit(supabase);
+  const limitError = bookLimitError(maxBooksPerUser);
 
   try {
     const { count, error } = await supabase
@@ -455,8 +478,8 @@ export async function assertBookCreationAvailable(ownerId: string) {
       logSupabaseIssue({ processingName: "saveBook", target: "books.count", error });
       throw error;
     }
-    if ((count ?? 0) >= BETA_LIMITS.maxBooksPerUser) {
-      throw new Error(BOOK_LIMIT_ERROR);
+    if ((count ?? 0) >= maxBooksPerUser) {
+      throw new Error(limitError);
     }
   } catch (error) {
     // A capacity check must never silently switch to localStorage in review or
@@ -465,8 +488,8 @@ export async function assertBookCreationAvailable(ownerId: string) {
     const activeBooks = readLocalBooks().filter(
       (book) => book.ownerId === ownerId && !book.deletedAt && book.status !== "archived",
     );
-    if (activeBooks.length >= BETA_LIMITS.maxBooksPerUser) {
-      throw new Error(BOOK_LIMIT_ERROR);
+    if (activeBooks.length >= maxBooksPerUser) {
+      throw new Error(limitError);
     }
   }
 }
