@@ -3,7 +3,6 @@ import path from "node:path";
 
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import sharp from "sharp";
 
 import { parseBookProjectJson } from "@/lib/bookProjectNormalization";
 import { SAMPLE_BOOK_AUTHOR, SAMPLE_BOOK_COVER_IMAGE, SAMPLE_BOOK_DESCRIPTION, SAMPLE_BOOK_SLUG, SAMPLE_BOOK_TITLE } from "@/lib/sampleBookConstants";
@@ -159,49 +158,6 @@ async function resolveStorageCover(
   }
 }
 
-async function formatOgCover(cover: CoverAsset) {
-  try {
-    const source = Buffer.from(new Uint8Array(cover.body));
-    const metadata = await sharp(source).metadata();
-    const width = metadata.width || 1;
-    const height = metadata.height || 1;
-    const fit = width / height >= 1.35 ? "cover" : "contain";
-    const body = await sharp(source)
-      .resize(1200, 630, {
-        fit,
-        position: "attention",
-        background: { r: 242, g: 248, b: 252, alpha: 1 },
-      })
-      .jpeg({ quality: 88 })
-      .toBuffer();
-    return {
-      body: copyToArrayBuffer(body),
-      contentType: "image/jpeg",
-    };
-  } catch {
-    // If an older or unusual image format cannot be transformed, the original
-    // cover is still preferable to replacing it with a generic fallback.
-    return cover;
-  }
-}
-
-async function rasterizeFallback(svg: string) {
-  try {
-    const body = await sharp(Buffer.from(svg, "utf8"))
-      .jpeg({ quality: 88 })
-      .toBuffer();
-    return {
-      body: copyToArrayBuffer(body),
-      contentType: "image/jpeg",
-    } satisfies CoverAsset;
-  } catch {
-    return {
-      body: copyToArrayBuffer(Buffer.from(svg, "utf8")),
-      contentType: "image/svg+xml; charset=utf-8",
-    } satisfies CoverAsset;
-  }
-}
-
 function imageResponse(asset: CoverAsset) {
   return new NextResponse(asset.body, {
     headers: {
@@ -295,11 +251,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
           : null;
 
     if (cover) {
-      const ogCover = await formatOgCover(cover);
-      return imageResponse(ogCover);
+      return imageResponse(cover);
     }
   }
 
   const svg = fallbackSvg({ title, description, author, slug: decodedSlug });
-  return imageResponse(await rasterizeFallback(svg));
+  return imageResponse({
+    body: copyToArrayBuffer(new TextEncoder().encode(svg)),
+    contentType: "image/svg+xml; charset=utf-8",
+  });
 }
