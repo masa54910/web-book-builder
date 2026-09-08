@@ -71,7 +71,6 @@ const comparisonRows = [
   { icon: "book" as const, label: "作成・プレビュー", free: "○", publish: "○", standard: "○", plus: "○" },
   { icon: "external" as const, label: "公開枠", free: "—", publish: "1冊分", standard: "1冊分", plus: "10冊分" },
   { icon: "read" as const, label: "公開後の編集", free: "—", publish: "継続編集可能", standard: "継続編集可能", plus: "継続編集可能" },
-  { icon: "book" as const, label: "WebBook Gallery掲載", free: "—", publish: "○", standard: "○", plus: "○" },
   { icon: "share" as const, label: "SNS共有（X・note・LINEなど）", free: "—", publish: "○", standard: "○", plus: "○" },
   { icon: "share" as const, label: "URL / QR共有", free: "—", publish: "○", standard: "○", plus: "○" },
   { icon: "analytics" as const, label: "アクセス解析ができる", free: "—", publish: "—", standard: "○", plus: "○" },
@@ -106,7 +105,7 @@ export default function PricingShowcasePage() {
       features: ["1冊分の公開枠", "公開後も継続編集可能", "WebBook Galleryに掲載", "X・note・LINEなどへ共有", "作品販売機能は含まない"],
       actionLabel: uiT(locale, "pricing.startPublication"),
       href: "/signup?plan=publish",
-      note: "買い切り・Stripe Checkout",
+      note: "Stripe Checkout",
     },
     {
       id: "operationStandard",
@@ -195,7 +194,7 @@ export default function PricingShowcasePage() {
                 ))}
                 <tr className={styles.priceRow}>
                   <th scope="row"><PricingIcon name="tag" size={19} /><span>料金</span></th>
-                  <td>¥0</td><td>¥980 / 1冊分（買い切り）</td><td>¥980 / 月</td><td>¥1,980 / 月</td>
+                  <td>¥0</td><td>¥980 / 1冊分</td><td>¥980 / 月</td><td>¥1,980 / 月</td>
                 </tr>
               </tbody>
             </table>
