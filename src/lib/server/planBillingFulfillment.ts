@@ -5,6 +5,7 @@ import { configuredPlanPriceId, isPlanCode, PLAN_DEFINITIONS } from "@/lib/planB
 import { expectedStripeLivemode } from "@/lib/server/stripeEnvironment";
 import { requireStripeClient } from "@/lib/server/stripe";
 import { findPaidPublication, findPlanTransactionBySubscription, insertOrUpdatePlanFulfillment, setPlanEntitlementStatus, updatePlanSubscriptionState, upsertPlanEntitlement, type PlanTransaction } from "@/lib/server/planBillingRepository";
+import { planBillingStateForInvoicePaymentFailed, planBillingStateForSubscriptionStatus, type StripeSubscriptionLifecycleStatus } from "@/lib/planBillingState";
 
 export class PlanBillingError extends Error {
   code: "invalid_session" | "not_paid" | "wrong_plan" | "wrong_user" | "wrong_price" | "wrong_amount" | "wrong_currency" | "wrong_mode" | "already_entitled";
@@ -76,15 +77,18 @@ export async function handlePlanSubscriptionEvent(event: Stripe.Event, expectedE
   if (event.type === "invoice.paid") {
     await upsertPlanEntitlement(await updatePlanSubscriptionState(transaction.id, "paid", transaction.currentPeriodEnd, false));
   } else if (event.type === "invoice.payment_failed") {
-    await updatePlanSubscriptionState(transaction.id, "failed", transaction.currentPeriodEnd, transaction.cancelAtPeriodEnd);
+    const state = planBillingStateForInvoicePaymentFailed();
+    const updated = await updatePlanSubscriptionState(transaction.id, state.transactionStatus, transaction.currentPeriodEnd, transaction.cancelAtPeriodEnd);
+    await setPlanEntitlementStatus(updated, state.entitlementStatus);
   } else if (event.type === "customer.subscription.deleted") {
     const updated = await updatePlanSubscriptionState(transaction.id, "canceled", null, true);
     await setPlanEntitlementStatus(updated, "canceled");
   } else if (event.type === "customer.subscription.updated") {
     const subscription = object as Stripe.Subscription;
     const itemEnd = subscription.items.data[0]?.current_period_end;
-    const status = subscription.status === "active" || subscription.status === "trialing" ? "paid" : subscription.status === "canceled" ? "canceled" : "failed";
-    const updated = await updatePlanSubscriptionState(transaction.id, status, itemEnd ? new Date(itemEnd * 1000).toISOString() : null, subscription.cancel_at_period_end);
-    if (status === "paid") await upsertPlanEntitlement(updated);
+    const state = planBillingStateForSubscriptionStatus(subscription.status as StripeSubscriptionLifecycleStatus);
+    const updated = await updatePlanSubscriptionState(transaction.id, state.transactionStatus, itemEnd ? new Date(itemEnd * 1000).toISOString() : null, subscription.cancel_at_period_end);
+    if (state.entitlementStatus === "active") await upsertPlanEntitlement(updated);
+    else await setPlanEntitlementStatus(updated, state.entitlementStatus);
   }
 }
