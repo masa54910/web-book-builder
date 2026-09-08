@@ -21,6 +21,7 @@ assert.equal(
 assert.equal(isSignupCallback({ flow: "maker-signup", type: null }), true);
 assert.equal(isSignupCallback({ flow: null, type: "signup" }), true);
 assert.equal(isSignupCallback({ flow: "recovery", type: "recovery" }), false);
+assert.match(resolveAuthCallbackDestination({ flow: null, type: "recovery", next: "/login" }), /^\/reset-password\?/);
 assert.match(getAuthCallbackErrorMessage("otp_expired", null), /有効期限/);
 assert.match(getAuthCallbackErrorMessage("invalid_token", null), /無効/);
 assert.match(getAuthCallbackErrorMessage(null, "unexpected failure"), /認証できませんでした/);

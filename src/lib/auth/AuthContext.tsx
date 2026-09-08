@@ -29,6 +29,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: string; message?: string }>;
+  updatePassword: (nextPassword: string) => Promise<{ error?: string; message?: string }>;
   changePassword: (currentPassword: string, nextPassword: string) => Promise<{ error?: string; message?: string }>;
   deleteAccount: () => Promise<{ error?: string; message?: string }>;
 };
@@ -202,6 +203,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           redirectTo: `${location.origin}/auth/callback`,
         });
         return error ? { error: mapAuthError(error.message) } : { message: "再設定メールを送信しました。" };
+      },
+      updatePassword: async (nextPassword) => {
+        const supabase = getSupabaseClient();
+        if (!supabase) {
+          return { error: configurationError || "パスワード再設定を利用できません。" };
+        }
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !data.session) {
+          return { error: "パスワード再設定の認証状態を確認できません。メール内のリンクを開き直してください。" };
+        }
+        const { error } = await supabase.auth.updateUser({ password: nextPassword });
+        return error ? { error: mapAuthError(error.message) } : { message: "パスワードを変更しました。" };
       },
       changePassword: async (currentPassword, nextPassword) => {
         const supabase = getSupabaseClient();
