@@ -1,15 +1,47 @@
 import "server-only";
 
-export const PLAN_CODES = ["publication", "operation"] as const;
+/**
+ * `operation` is the legacy internal id for the ¥1,980 Plus plan.  It is
+ * intentionally retained so existing subscriptions and entitlements remain
+ * valid while the ¥980 Standard plan gets its own id.
+ */
+export const PLAN_CODES = ["publication", "operation_standard", "operation"] as const;
 export type PlanCode = (typeof PLAN_CODES)[number];
 
 export const PLAN_DEFINITIONS = {
-  publication: { amount: 980, currency: "jpy", checkoutMode: "payment" as const, priceEnv: "STRIPE_PUBLICATION_PRICE_ID" },
-  operation: { amount: 1980, currency: "jpy", checkoutMode: "subscription" as const, priceEnv: "STRIPE_OPERATION_PRICE_ID" },
-} satisfies Record<PlanCode, { amount: number; currency: string; checkoutMode: "payment" | "subscription"; priceEnv: string }>;
+  publication: {
+    amount: 980,
+    currency: "jpy",
+    checkoutMode: "payment" as const,
+    priceEnv: "STRIPE_PUBLICATION_PRICE_ID",
+    publicationSlots: 1,
+    salesEnabled: false,
+  },
+  operation_standard: {
+    amount: 980,
+    currency: "jpy",
+    checkoutMode: "subscription" as const,
+    priceEnv: "STRIPE_OPERATION_STANDARD_PRICE_ID",
+    publicationSlots: 1,
+    salesEnabled: true,
+  },
+  // Legacy `operation` transactions are the Plus plan.
+  operation: {
+    amount: 1980,
+    currency: "jpy",
+    checkoutMode: "subscription" as const,
+    priceEnv: "STRIPE_OPERATION_PRICE_ID",
+    publicationSlots: 10,
+    salesEnabled: true,
+  },
+} satisfies Record<PlanCode, { amount: number; currency: string; checkoutMode: "payment" | "subscription"; priceEnv: string; publicationSlots: number; salesEnabled: boolean }>;
 
 export function isPlanCode(value: unknown): value is PlanCode {
-  return value === "publication" || value === "operation";
+  return PLAN_CODES.includes(value as PlanCode);
+}
+
+export function isOperationPlan(planCode: PlanCode): planCode is "operation_standard" | "operation" {
+  return planCode === "operation_standard" || planCode === "operation";
 }
 
 export function configuredPlanPriceId(plan: PlanCode) {

@@ -55,7 +55,7 @@ function PricingIcon({ name, size = 24 }: { name: PricingIconName; size?: number
 }
 
 type PlanCard = {
-  id: "free" | "publish" | "operation";
+  id: "free" | "publish" | "operationStandard" | "operationPlus";
   badge: string;
   name: string;
   price: string;
@@ -68,15 +68,15 @@ type PlanCard = {
 };
 
 const comparisonRows = [
-  { icon: "book" as const, label: "作成・プレビュー", free: "○", publish: "○", operation: "○" },
-  { icon: "external" as const, label: "公開", free: "—", publish: "1作品", operation: "複数作品" },
-  { icon: "read" as const, label: "公開後の編集", free: "—", publish: "継続編集可能", operation: "継続編集可能" },
-  { icon: "book" as const, label: "WebBook Gallery掲載", free: "—", publish: "○", operation: "○" },
-  { icon: "share" as const, label: "SNS共有（X・note・LINEなど）", free: "—", publish: "○", operation: "○" },
-  { icon: "share" as const, label: "URL / QR共有", free: "—", publish: "○", operation: "○" },
-  { icon: "analytics" as const, label: "アクセス解析ができる", free: "—", publish: "—", operation: "○" },
-  { icon: "read" as const, label: "読者の行動分析ができる", free: "—", publish: "—", operation: "○" },
-  { icon: "external" as const, label: "外部リンク・CTA設置", free: "—", publish: "○", operation: "○" },
+  { icon: "book" as const, label: "作成・プレビュー", free: "○", publish: "○", standard: "○", plus: "○" },
+  { icon: "external" as const, label: "公開枠", free: "—", publish: "1冊分", standard: "1冊分", plus: "10冊分" },
+  { icon: "read" as const, label: "公開後の編集", free: "—", publish: "継続編集可能", standard: "継続編集可能", plus: "継続編集可能" },
+  { icon: "book" as const, label: "WebBook Gallery掲載", free: "—", publish: "○", standard: "○", plus: "○" },
+  { icon: "share" as const, label: "SNS共有（X・note・LINEなど）", free: "—", publish: "○", standard: "○", plus: "○" },
+  { icon: "share" as const, label: "URL / QR共有", free: "—", publish: "○", standard: "○", plus: "○" },
+  { icon: "analytics" as const, label: "アクセス解析ができる", free: "—", publish: "—", standard: "○", plus: "○" },
+  { icon: "read" as const, label: "読者の行動分析ができる", free: "—", publish: "—", standard: "○", plus: "○" },
+  { icon: "external" as const, label: "作品販売", free: "—", publish: "—", standard: "○", plus: "○" },
 ];
 
 export default function PricingShowcasePage() {
@@ -101,24 +101,36 @@ export default function PricingShowcasePage() {
       badge: "PUBLISH",
       name: uiT(locale, "pricing.publicationPlan"),
       price: "¥980",
-      unit: "/ 1作品",
-      lead: "完成した作品を、Webで公開したい方へ。",
-      features: ["1作品を公開", "公開後も継続編集可能", "WebBook Galleryに掲載", "X・note・LINEなどへ共有", "公開URLはそのまま継続"],
+      unit: "／1冊分",
+      lead: "まずは1冊を、Webで公開。",
+      features: ["1冊分の公開枠", "公開後も継続編集可能", "WebBook Galleryに掲載", "X・note・LINEなどへ共有", "作品販売機能は含まない"],
       actionLabel: uiT(locale, "pricing.startPublication"),
       href: "/signup?plan=publish",
       note: "買い切り・Stripe Checkout",
     },
     {
-      id: "operation",
-      badge: "OPERATION",
-      name: uiT(locale, "pricing.operationPlan"),
+      id: "operationStandard",
+      badge: "STANDARD",
+      name: uiT(locale, "pricing.operationStandardPlan"),
+      price: "¥980",
+      unit: "／月",
+      lead: "1冊を公開し、販売しながら育てる方へ。",
+      features: ["1冊分の公開枠", "公開後も継続編集可能", "アクセス分析ができる", "作品販売機能あり", "公開後の運用に対応"],
+      actionLabel: uiT(locale, "pricing.startOperationStandard"),
+      href: "/signup?plan=operation_standard",
+      note: "月額・いつでも解約可能",
+    },
+    {
+      id: "operationPlus",
+      badge: "PLUS",
+      name: uiT(locale, "pricing.operationPlusPlan"),
       price: "¥1,980",
-      unit: "/ 月",
-      lead: "公開後も、編集・分析しながら作品を育てたい方へ。",
-      features: ["複数作品を継続運用", "公開後もいつでも編集可能", "アクセス分析ができる", "読者がどのページまで読んだか分かる", "リンクがどれくらい押されたか分かる", "過去の出版済み作品も再編集可能"],
-      actionLabel: uiT(locale, "pricing.startOperation"),
-      href: "/signup?plan=writer",
-      note: "いつでも解約できます",
+      unit: "／月",
+      lead: "複数冊を、販売しながら育てる。",
+      features: ["10冊分の公開枠", "公開後もいつでも編集可能", "アクセス分析ができる", "読者の行動分析ができる", "作品販売機能あり", "過去の出版済み作品も再編集可能"],
+      actionLabel: uiT(locale, "pricing.startOperationPlus"),
+      href: "/signup?plan=operation_plus",
+      note: "月額・いつでも解約可能",
     },
   ];
 
@@ -135,14 +147,14 @@ export default function PricingShowcasePage() {
             <p className={styles.kicker}>WebBooK<span className={styles.brandMaker}>Maker</span></p>
             <h1 id="pricing-heading">{uiT(locale, "pricing.title")}</h1>
             <p className={styles.heroLead}>{uiT(locale, "pricing.lead")}</p>
-            <p className={styles.heroSub}>{locale === "en" ? "Publish one work with Publication, or keep improving it with Operation." : "1作品だけ公開するなら「出版プラン」。公開後も編集・分析しながら育てるなら「運用プラン」。"}</p>
+            <p className={styles.heroSub}>{locale === "en" ? "Publish one book with Publication, or keep selling and improving it with Operation." : "1冊分だけ公開するなら「出版プラン」または「運用スタンダード」。複数冊を販売しながら育てるなら「運用プラス」。"}</p>
           </div>
         </section>
 
         <section className={styles.cards} aria-label={locale === "en" ? "Pricing plans" : "料金プラン一覧"}>
           {plans.map((plan) => (
             <article key={plan.id} className={`${styles.card} ${styles[`card${plan.id[0].toUpperCase()}${plan.id.slice(1)}`]}`}>
-              {plan.id === "operation" ? <span className={styles.dealRibbon}>お得！</span> : null}
+                {plan.id === "operationPlus" ? <span className={styles.dealRibbon}>お得！</span> : null}
               <span className={styles.badge}>{plan.badge}</span>
               <h2>{plan.name}</h2>
               <p className={styles.price}><strong>{plan.price}</strong> <small>{plan.unit}</small></p>
@@ -168,18 +180,18 @@ export default function PricingShowcasePage() {
           <div className={styles.tableWrap}>
             <table>
               <thead>
-                <tr><th scope="col">機能</th><th scope="col">無料プラン</th><th scope="col">出版プラン</th><th scope="col">運用プラン</th></tr>
+                <tr><th scope="col">機能</th><th scope="col">無料プラン</th><th scope="col">出版プラン</th><th scope="col">運用スタンダード</th><th scope="col">運用プラス</th></tr>
               </thead>
               <tbody>
                 {comparisonRows.map((row) => (
                   <tr key={row.label}>
                     <th scope="row"><PricingIcon name={row.icon} size={19} /><span>{row.label}</span></th>
-                    <td>{row.free}</td><td>{row.publish}</td><td>{row.operation}</td>
+                    <td>{row.free}</td><td>{row.publish}</td><td>{row.standard}</td><td>{row.plus}</td>
                   </tr>
                 ))}
                 <tr className={styles.priceRow}>
                   <th scope="row"><PricingIcon name="tag" size={19} /><span>料金</span></th>
-                  <td>¥0</td><td>¥980 / 1作品（買い切り）</td><td>¥1,980 / 月</td>
+                  <td>¥0</td><td>¥980 / 1冊分（買い切り）</td><td>¥980 / 月</td><td>¥1,980 / 月</td>
                 </tr>
               </tbody>
             </table>
@@ -190,7 +202,7 @@ export default function PricingShowcasePage() {
           <PricingIcon name="lightbulb" size={42} />
           <div>
             <h2 id="plan-guide-heading">どのプランが合っている？</h2>
-            <p>まずは作って試したい方は「無料プラン」。1作品だけ公開したい方は「出版プラン」。<br />日々の情報発信や複数の作品を育てていきたい方は「運用プラン」がおすすめです。</p>
+            <p>まずは作って試したい方は「無料プラン」。1冊分を公開したい方は「出版プラン」または「運用スタンダード」。<br />複数冊を販売しながら育てていきたい方は「運用プラス」がおすすめです。</p>
           </div>
           <Link className={`maker-secondary-link ${styles.guideAction}`} href="/use-cases">
             詳しい活用例はこちら<span aria-hidden="true">→</span>

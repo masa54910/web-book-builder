@@ -93,7 +93,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" | "forgot"
       return;
     }
 
-    if (planParam === "publish" || planParam === "writer") {
+    if (["publish", "operation_standard", "operation_plus", "writer"].includes(planParam)) {
       router.push(`/billing/start?plan=${encodeURIComponent(planParam)}`);
     } else {
       router.push(nextPath);

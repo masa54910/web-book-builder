@@ -1,7 +1,7 @@
 import "server-only";
 
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
-import type { PlanCode } from "@/lib/planBilling";
+import { isOperationPlan, type PlanCode } from "@/lib/planBilling";
 
 export type PlanTransaction = {
   id: string;
@@ -62,6 +62,32 @@ export async function hasPublicationEntitlement(userId: string, bookId: string, 
   return Boolean(data);
 }
 
+export async function activeOperationPlanForUser(userId: string, livemode: boolean) {
+  const plans = await findActiveOperationPlansForUser(userId, livemode);
+  if (plans.includes("operation")) return "operation" as const;
+  if (plans.includes("operation_standard")) return "operation_standard" as const;
+  return null;
+}
+
+export async function hasOperationSalesEntitlement(userId: string, livemode: boolean) {
+  return Boolean(await activeOperationPlanForUser(userId, livemode));
+}
+
+export async function canPublishNewBook(userId: string, bookId: string, livemode: boolean) {
+  if (await hasPublicationEntitlement(userId, bookId, livemode)) return true;
+  const planCode = await activeOperationPlanForUser(userId, livemode);
+  if (!planCode) return false;
+  const { count, error } = await requireSupabaseAdminClient()
+    .from("books")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", userId)
+    .eq("status", "published")
+    .in("visibility", ["public", "unlisted"])
+    .is("deleted_at", null);
+  if (error) throw error;
+  return (count ?? 0) < (planCode === "operation" ? 10 : 1);
+}
+
 export async function findPlanTransactionBySubscription(subscriptionId: string, livemode: boolean) {
   const { data, error } = await requireSupabaseAdminClient().from("plan_billing_transactions").select("*").eq("stripe_subscription_id", subscriptionId).eq("livemode", livemode).maybeSingle();
   if (error) throw error;
@@ -73,7 +99,7 @@ export async function findActiveOperationPlanForUser(userId: string, livemode: b
     .from("plan_billing_transactions")
     .select("*")
     .eq("user_id", userId)
-    .eq("plan_code", "operation")
+    .in("plan_code", ["operation_standard", "operation"])
     .eq("livemode", livemode)
     .eq("status", "paid")
     .not("stripe_customer_id", "is", null)
@@ -82,6 +108,18 @@ export async function findActiveOperationPlanForUser(userId: string, livemode: b
     .maybeSingle();
   if (error) throw error;
   return data ? mapTransaction(data) : null;
+}
+
+export async function findActiveOperationPlansForUser(userId: string, livemode: boolean) {
+  const { data, error } = await requireSupabaseAdminClient()
+    .from("plan_entitlements")
+    .select("plan_code, status, livemode")
+    .eq("user_id", userId)
+    .in("plan_code", ["operation_standard", "operation"])
+    .eq("livemode", livemode)
+    .eq("status", "active");
+  if (error) throw error;
+  return (data ?? []).map((row) => String(row.plan_code)).filter((value): value is "operation_standard" | "operation" => isOperationPlan(value as PlanCode));
 }
 
 export async function updatePlanSubscriptionState(transactionId: string, status: PlanTransaction["status"], periodEnd: string | null, cancelAtPeriodEnd: boolean) {
@@ -111,7 +149,7 @@ export async function upsertPlanEntitlement(transaction: PlanTransaction) {
   const scoped = transaction.bookId ? query.eq("book_id", transaction.bookId) : query.is("book_id", null);
   const { data: existing, error: findError } = await scoped.maybeSingle();
   if (findError) throw findError;
-  const values = { user_id: transaction.userId, plan_code: transaction.planCode, book_id: transaction.bookId, transaction_id: transaction.id, livemode: transaction.livemode, status: "active", expires_at: transaction.planCode === "operation" ? transaction.currentPeriodEnd : null, updated_at: new Date().toISOString() };
+  const values = { user_id: transaction.userId, plan_code: transaction.planCode, book_id: transaction.bookId, transaction_id: transaction.id, livemode: transaction.livemode, status: "active", expires_at: isOperationPlan(transaction.planCode) ? transaction.currentPeriodEnd : null, updated_at: new Date().toISOString() };
   if (existing?.id) {
     const { data, error } = await admin.from("plan_entitlements").update(values).eq("id", existing.id).select("*").single();
     if (error) throw error;

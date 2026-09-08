@@ -21,7 +21,7 @@ assert(fulfillment.includes("session.payment_status !== \"paid\"") && fulfillmen
 assert(fulfillment.includes("authenticatedUserId && userId !== authenticatedUserId"), "other-user session is rejected");
 assert(verify.includes("requireAuthenticatedUser") && verify.includes("fulfillPlanCheckoutSession"), "success route requires authenticated user and server fulfillment");
 assert(webhook.includes("STRIPE_PLAN_WEBHOOK_SECRET") && webhook.includes("checkout.session.completed") && webhook.includes("invoice.paid") && webhook.includes("customer.subscription.deleted"), "plan webhook is separate and lifecycle-aware");
-assert(pricing.includes('href: "/signup?plan=publish"') && pricing.includes('href: "/signup?plan=writer"'), "pricing links retain plan intent");
+assert(pricing.includes('href: "/signup?plan=publish"') && pricing.includes('href: "/signup?plan=operation_standard"') && pricing.includes('href: "/signup?plan=operation_plus"'), "pricing links retain final plan intent");
 assert(auth.includes("/billing/start?plan=") && !auth.includes("現在準備中です"), "auth routes selected plans to billing start");
 assert(!checkout.includes("stripeAccount") && !webhook.includes("fulfillCheckoutSession"), "plan billing does not use Connect fulfillment");
 console.log("Plan billing verification passed.");

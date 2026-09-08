@@ -6,7 +6,7 @@ import { parseBookProjectJson } from "@/lib/bookProjectNormalization";
 import { evaluateSalesLegalTerms, evaluateStripeSellerReadiness, type SalesLegalTerms } from "@/lib/sellerConnect";
 import { getAuthorStripeAccount } from "@/lib/server/sellerConnectRepository";
 import { getConnectBookSale, saveConnectBookSale } from "@/lib/server/connectSalesRepository";
-import { hasPublicationEntitlement } from "@/lib/server/planBillingRepository";
+import { hasOperationSalesEntitlement } from "@/lib/server/planBillingRepository";
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
 import { requireStripeClient } from "@/lib/server/stripe";
 import { expectedStripeLivemode } from "@/lib/server/stripeEnvironment";
@@ -45,8 +45,8 @@ export async function createOrReuseConnectPaymentLink(ownerId: string, input: Co
   const livemode = expectedStripeLivemode();
   const book = await ownedBook(input.bookId, ownerId);
   const existing = await getConnectBookSale(book.id, livemode);
-  if (!existing && !(await hasPublicationEntitlement(ownerId, book.id, livemode))) {
-    throw new Error("新しい作品販売には出版プランが必要です。料金プランから出版プランを有効にしてください。");
+  if (!existing && !(await hasOperationSalesEntitlement(ownerId, livemode))) {
+    throw new Error("作品販売には運用プランが必要です。料金プランから運用プランを有効にしてください。");
   }
   const account = await getAuthorStripeAccount(ownerId, livemode);
   const readiness = evaluateStripeSellerReadiness(account);

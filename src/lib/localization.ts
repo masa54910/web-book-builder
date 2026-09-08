@@ -122,9 +122,13 @@ export type UiTranslationKey =
   | "pricing.compare"
   | "pricing.freePlan"
   | "pricing.publicationPlan"
+  | "pricing.operationStandardPlan"
+  | "pricing.operationPlusPlan"
   | "pricing.operationPlan"
   | "pricing.startFree"
   | "pricing.startPublication"
+  | "pricing.startOperationStandard"
+  | "pricing.startOperationPlus"
   | "pricing.startOperation"
   | "contact.title"
   | "contact.description"
@@ -201,9 +205,13 @@ const uiResources: Record<UiLocale, UiResource> = {
     "pricing.compare": "プラン比較表",
     "pricing.freePlan": "無料プラン",
     "pricing.publicationPlan": "出版プラン",
+    "pricing.operationStandardPlan": "運用プラン スタンダード",
+    "pricing.operationPlusPlan": "運用プラン プラス",
     "pricing.operationPlan": "運用プラン",
     "pricing.startFree": "無料ではじめる",
     "pricing.startPublication": "出版プランではじめる",
+    "pricing.startOperationStandard": "スタンダードではじめる",
+    "pricing.startOperationPlus": "プラスではじめる",
     "pricing.startOperation": "運用プランではじめる",
     "contact.title": "お問い合わせ",
     "contact.description": "ご質問や不具合のご連絡を、こちらのフォームからお送りください。",
@@ -277,9 +285,13 @@ const uiResources: Record<UiLocale, UiResource> = {
     "pricing.compare": "Compare plans",
     "pricing.freePlan": "Free plan",
     "pricing.publicationPlan": "Publication plan",
+    "pricing.operationStandardPlan": "Operation Standard",
+    "pricing.operationPlusPlan": "Operation Plus",
     "pricing.operationPlan": "Operation plan",
     "pricing.startFree": "Start for free",
     "pricing.startPublication": "Start Publication plan",
+    "pricing.startOperationStandard": "Start Operation Standard",
+    "pricing.startOperationPlus": "Start Operation Plus",
     "pricing.startOperation": "Start Operation plan",
     "contact.title": "Contact",
     "contact.description": "Send us your questions or report a problem using this form.",

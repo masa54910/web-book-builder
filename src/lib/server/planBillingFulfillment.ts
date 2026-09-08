@@ -1,7 +1,7 @@
 import "server-only";
 
 import type Stripe from "stripe";
-import { configuredPlanPriceId, isPlanCode, PLAN_DEFINITIONS } from "@/lib/planBilling";
+import { configuredPlanPriceId, isOperationPlan, isPlanCode, PLAN_DEFINITIONS } from "@/lib/planBilling";
 import { expectedStripeLivemode } from "@/lib/server/stripeEnvironment";
 import { requireStripeClient } from "@/lib/server/stripe";
 import { findPaidPublication, findPlanTransactionBySubscription, insertOrUpdatePlanFulfillment, setPlanEntitlementStatus, updatePlanSubscriptionState, upsertPlanEntitlement, type PlanTransaction } from "@/lib/server/planBillingRepository";
@@ -46,6 +46,7 @@ export async function fulfillPlanCheckoutSession(sessionId: string, authenticate
   if ((price.currency || "").toLowerCase() !== definition.currency) throw new PlanBillingError("wrong_currency");
   const bookId = metadata.book_id || null;
   if (planCode === "publication" && !bookId) throw new PlanBillingError("wrong_plan");
+  if (isOperationPlan(planCode) && bookId) throw new PlanBillingError("wrong_plan");
   if (planCode === "publication" && authenticatedUserId && await findPaidPublication(authenticatedUserId, bookId!, expectedLive)) {
     const existing = await findPaidPublication(authenticatedUserId, bookId!, expectedLive);
     if (existing?.checkoutSessionId !== session.id) throw new PlanBillingError("already_entitled");

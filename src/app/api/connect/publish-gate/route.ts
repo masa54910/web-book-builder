@@ -8,6 +8,7 @@ import { CONNECT_TERMS_VERSION, getSalesConsent } from "@/lib/server/salesConsen
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
 import { expectedStripeLivemode } from "@/lib/server/stripeEnvironment";
 import { requireAuthenticatedUser } from "@/lib/server/requestAuth";
+import { canPublishNewBook } from "@/lib/server/planBillingRepository";
 
 export async function POST(request: Request) {
   try {
@@ -15,12 +16,15 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: "認証が必要です。" }, { status: 401 });
     const body = await request.json() as { bookId?: unknown };
     const bookId = typeof body.bookId === "string" ? body.bookId : "";
-    const { data: book, error } = await requireSupabaseAdminClient().from("books").select("id,owner_id,book_project_json").eq("id", bookId).eq("owner_id", user.id).maybeSingle();
+    const { data: book, error } = await requireSupabaseAdminClient().from("books").select("id,owner_id,status,book_project_json").eq("id", bookId).eq("owner_id", user.id).maybeSingle();
     if (error || !book) return NextResponse.json({ error: "作品が見つかりません。" }, { status: 404 });
+    const mode = expectedStripeLivemode();
+    if (book.status !== "published" && !(await canPublishNewBook(user.id, bookId, mode))) {
+      return NextResponse.json({ allowed: false, required: true, error: "公開枠がありません。料金プランを確認してください。" }, { status: 422 });
+    }
     const project = parseBookProjectJson(book.book_project_json);
     const hasPaywall = Boolean(project?.contentBlocks?.some((block) => block.type === "paywall"));
     if (!hasPaywall) return NextResponse.json({ allowed: true, required: false });
-    const mode = expectedStripeLivemode();
     const sale = await getConnectBookSale(bookId, mode);
     if (!sale?.enabled) return NextResponse.json({ allowed: true, required: false });
     const profile = await getAuthorSellerProfile(user.id);

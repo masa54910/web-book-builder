@@ -64,7 +64,7 @@ export default function ConnectSalesPanel({ bookId, hasPaywall }: ConnectSalesPa
     return <section className="maker-card connect-sales-panel" aria-labelledby="connect-sales-heading"><h2 id="connect-sales-heading">作品販売</h2><p className="maker-note">販売設定を確認しています…</p></section>;
   }
   if (eligibilityLoaded && !canCreateSale && !hasExistingSale) {
-    return <section className="maker-card connect-sales-panel" aria-labelledby="connect-sales-heading"><h2 id="connect-sales-heading">作品販売</h2><p className="maker-note">新しい作品販売には出版プランが必要です。</p><Link className="maker-secondary-link" href="/pricing">料金プランを確認</Link></section>;
+    return <section className="maker-card connect-sales-panel" aria-labelledby="connect-sales-heading"><h2 id="connect-sales-heading">作品販売</h2><p className="maker-note">新しい作品販売には運用プランが必要です。</p><Link className="maker-secondary-link" href="/pricing">料金プランを確認</Link></section>;
   }
 
   const createPaymentLink = async () => {

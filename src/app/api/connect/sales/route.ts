@@ -4,7 +4,7 @@ import { createOrReuseConnectPaymentLink } from "@/lib/server/connectPaymentLink
 import { getConnectBookSale } from "@/lib/server/connectSalesRepository";
 import { requireAuthenticatedUser } from "@/lib/server/requestAuth";
 import { expectedStripeLivemode } from "@/lib/server/stripeEnvironment";
-import { hasPublicationEntitlement } from "@/lib/server/planBillingRepository";
+import { hasOperationSalesEntitlement } from "@/lib/server/planBillingRepository";
 import { requireStripeClient } from "@/lib/server/stripe";
 import { getAuthorStripeAccount } from "@/lib/server/sellerConnectRepository";
 import { evaluateStripeSellerReadiness } from "@/lib/sellerConnect";
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const livemode = expectedStripeLivemode();
     const sale = await getConnectBookSale(bookId, livemode);
     if (!sale || sale.ownerId !== user.id) {
-      const canCreateSale = Boolean(bookId && await hasPublicationEntitlement(user.id, bookId, livemode));
+      const canCreateSale = Boolean(bookId && await hasOperationSalesEntitlement(user.id, livemode));
       const readiness = evaluateStripeSellerReadiness(await getAuthorStripeAccount(user.id, livemode));
       return NextResponse.json({ sale: null, canCreateSale, stripeConnected: readiness.connected && readiness.onboardingComplete && readiness.merchantActive && readiness.chargesEnabled && readiness.payoutsEnabled });
     }

@@ -42,7 +42,7 @@ assert.match(contactForm, /message/);
 assert.match(portalRoute, /billingPortal\.sessions\.create/);
 assert.match(portalRoute, /findActiveOperationPlanForUser/);
 assert.match(pricing, /継続編集可能/);
-assert.match(pricing, /複数作品/);
+assert.match(pricing, /複数冊/);
 for (const stale of [/公開後7日間/, /最大10作品/, /PayPay/] as const) {
   assert.doesNotMatch(pricing, stale);
 }
