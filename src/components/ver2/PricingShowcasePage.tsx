@@ -70,7 +70,7 @@ type PlanCard = {
 const comparisonRows = [
   { icon: "book" as const, label: "作成・プレビュー", free: "○", publish: "○", standard: "○", plus: "○" },
   { icon: "external" as const, label: "公開枠", free: "—", publish: "1冊分", standard: "1冊分", plus: "10冊分" },
-  { icon: "read" as const, label: "公開後の編集", free: "—", publish: "継続編集可能", standard: "継続編集可能", plus: "継続編集可能" },
+  { icon: "read" as const, label: "公開後の編集", free: "—", publish: "7日間", standard: "継続編集可能", plus: "継続編集可能" },
   { icon: "share" as const, label: "SNS共有（X・note・LINEなど）", free: "—", publish: "○", standard: "○", plus: "○" },
   { icon: "share" as const, label: "URL / QR共有", free: "—", publish: "○", standard: "○", plus: "○" },
   { icon: "analytics" as const, label: "アクセス解析ができる", free: "—", publish: "—", standard: "○", plus: "○" },
@@ -102,7 +102,7 @@ export default function PricingShowcasePage() {
       price: "¥980",
       unit: "／1冊分",
       lead: "まずは1冊を、Webで公開。",
-      features: ["1冊分の公開枠", "公開後も継続編集可能", "X・note・LINEなどへ共有", "作品販売機能は含まない"],
+      features: ["1冊分の公開枠", "公開後7日間は編集可能", "X・note・LINEなどへ共有", "作品販売機能は含まない"],
       actionLabel: uiT(locale, "pricing.startPublication"),
       href: "/signup?plan=publish",
       note: "Stripe Checkout",

@@ -60,6 +60,8 @@ import {
 } from "@/lib/bookAssetStorage";
 import { normalizeSlugInput, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
+import { getPublicationEditAccess } from "@/lib/publicationEditAccessClient";
+import type { PublicationEditDecision } from "@/lib/publicationEditWindow";
 import { safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
 import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
 import { contrastRatio, type BookThemeSettings } from "@/lib/themeSystem";
@@ -637,6 +639,11 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [didRestorePreviewDraft, setDidRestorePreviewDraft] = useState(false);
   const [pendingScrollRestore, setPendingScrollRestore] = useState<number | null>(null);
   const [slugAvailabilityMessage, setSlugAvailabilityMessage] = useState("");
+  const [editAccess, setEditAccess] = useState<PublicationEditDecision | null>(mode === "new" ? { allowed: true, reason: "unpublished", expiresAt: null } : null);
+  const isEditLocked = mode === "edit" && editAccess !== null && !editAccess.allowed;
+  const editLockMessage = editAccess?.reason === "window-expired"
+    ? "出版プランの公開後7日間の編集期間が終了しています。StandardまたはPlusへ変更すると編集を再開できます。"
+    : "公開日時を確認できないため、この作品は現在編集できません。";
   const isMountedRef = useRef(true);
   const consumedPreviewDraftIdRef = useRef<string | null>(null);
   const restoredAutosaveKeyRef = useRef<string | null>(null);
@@ -644,11 +651,12 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
   const historySnapshot = useMemo<EditorHistorySnapshot>(() => ({ state, contentBlocks, images }), [contentBlocks, images, state]);
   const editorHistory = useEditorHistory(historySnapshot, {
-    enabled: !isLoading,
+    enabled: !isLoading && !isEditLocked,
     areEqual: (left, right) => left.state === right.state && left.contentBlocks === right.contentBlocks && left.images === right.images,
   });
   const resetEditorHistory = editorHistory.reset;
   const applyHistorySnapshot = useCallback((next: EditorHistorySnapshot, message: string) => {
+    if (isEditLocked) return;
     setState(next.state);
     setContentBlocks(next.contentBlocks);
     setImages(next.images);
@@ -658,15 +666,17 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     setSmartFormatSummary(null);
     setEditorRevision((current) => current + 1);
     setStatusMessage(message);
-  }, []);
+  }, [isEditLocked]);
   const handleEditorUndo = useCallback(() => {
+    if (isEditLocked) return;
     const previous = editorHistory.undo();
     if (previous) applyHistorySnapshot(previous, "操作を元に戻しました。");
-  }, [applyHistorySnapshot, editorHistory]);
+  }, [applyHistorySnapshot, editorHistory, isEditLocked]);
   const handleEditorRedo = useCallback(() => {
+    if (isEditLocked) return;
     const next = editorHistory.redo();
     if (next) applyHistorySnapshot(next, "操作をやり直しました。");
-  }, [applyHistorySnapshot, editorHistory]);
+  }, [applyHistorySnapshot, editorHistory, isEditLocked]);
   useEffect(() => {
     const onEditorHistoryShortcut = (event: KeyboardEvent) => {
       if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
@@ -811,6 +821,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         const materializedProject = await materializeBookProjectAssets(book.bookProject);
         const materializedBook = { ...book, bookProject: materializedProject };
         if (!active) return;
+        const access = await getPublicationEditAccess(materializedBook.id);
+        if (!active) return;
+        setEditAccess(access);
         const persistedState = fromRecord(materializedBook);
         const persistedImages = imagesFromRecord(materializedBook);
         const persistedBlocks = contentBlocksFromRecord(materializedBook);
@@ -822,7 +835,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           autosave &&
             Number.isFinite(autosaveAtValue) &&
             Number.isFinite(persistedAt) &&
-            autosaveAtValue > persistedAt,
+            autosaveAtValue > persistedAt &&
+            access.allowed,
         );
 
         if (canRestoreAutosave && autosave) {
@@ -877,7 +891,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         );
         setAutosaveAt(null);
         setEditorRevision((current) => current + 1);
-        setStatusMessage("作品を読み込みました。");
+        setStatusMessage(access.allowed ? "作品を読み込みました。" : editLockMessage);
       })
       .catch(() => {
         if (active) {
@@ -892,7 +906,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     return () => {
       active = false;
     };
-  }, [didRestorePreviewDraft, hasRestoredDraft, mode, params.id, previewDraftId, resetEditorHistory, user]);
+  }, [didRestorePreviewDraft, editLockMessage, hasRestoredDraft, mode, params.id, previewDraftId, resetEditorHistory, user]);
 
   useEffect(() => {
     if (
@@ -1285,6 +1299,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const update = <K extends keyof EditorState>(key: K, value: EditorState[K]) => {
+    if (isEditLocked) return;
     setState((current) => {
       const next = {
         ...current,
@@ -1341,6 +1356,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const updateColor = (key: "textColor" | "accentColor", value: string) => {
+    if (isEditLocked) return;
     if (key === "textColor") {
       setState((current) => {
         const normalized = normalizeColorHex(value, current.textColor);
@@ -1392,6 +1408,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   }, [bookId, state.slug, user]);
 
   const syncContentBlocks = (nextBlocks: BookContentBlock[]) => {
+    if (isEditLocked) return;
     const normalizedBlocks = ensureUniqueContentBlockIds(nextBlocks);
     setContentBlocks(normalizedBlocks);
     setImages(uploadedImagesFromBlocks(normalizedBlocks));
@@ -1400,11 +1417,13 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const applyImportedContent = (nextBlocks: BookContentBlock[]) => {
+    if (isEditLocked) return;
     syncContentBlocks(nextBlocks);
     setEditorRevision((current) => current + 1);
   };
 
   const handlePasteUndo = () => {
+    if (isEditLocked) return;
     if (!pasteUndoBlocks) return;
     syncContentBlocks(pasteUndoBlocks);
     setPasteUndoBlocks(null);
@@ -1413,6 +1432,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const handleSmartFormat = () => {
+    if (isEditLocked) return;
     if (!contentBlocks.length) return;
     const result = smartFormatContentBlocks(contentBlocks);
     setSmartFormatUndoBlocks(contentBlocks);
@@ -1423,6 +1443,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const handleSmartFormatUndo = () => {
+    if (isEditLocked) return;
     if (!smartFormatUndoBlocks) return;
     handleEditorUndo();
     setSmartFormatUndoBlocks(null);
@@ -1572,7 +1593,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const handleCanonicalSave = async () => {
-    if (!user || isSaving) return null;
+    if (!user || isSaving || isEditLocked) return null;
     if (!validateRequiredBeforeAction()) return null;
     if (pendingImageCount > 0) {
       setStatusMessage("画像の読み込みが完了するまで保存できません。");
@@ -1655,7 +1676,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const handleCanonicalPublish = async () => {
-    if (!user || isSaving) return;
+    if (!user || isSaving || isEditLocked) return;
     if (!validateRequiredBeforeAction()) return;
     if (pendingImageCount > 0) {
       setStatusMessage("画像の読み込みが完了するまで公開できません。");
@@ -1697,7 +1718,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const unpublish = async () => {
-    if (!user || !bookId) return;
+    if (!user || !bookId || isEditLocked) return;
     const record = await updatePublication(bookId, user.id, { status: "draft", visibility: "private" });
     setState((current) => ({ ...current, status: record.status, visibility: record.visibility }));
     setStatusMessage("公開を停止しました。");
@@ -1839,10 +1860,10 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           />
           <button className="maker-secondary-button editor-history-button" type="button" onClick={handleEditorUndo} disabled={!editorHistory.canUndo || isSaving} aria-label="元に戻す" title="元に戻す (Ctrl/Cmd+Z)">↶ 元に戻す</button>
           <button className="maker-secondary-button editor-history-button" type="button" onClick={handleEditorRedo} disabled={!editorHistory.canRedo || isSaving} aria-label="やり直す" title="やり直す (Ctrl/Cmd+Y または Ctrl/Cmd+Shift+Z)">↷ やり直す</button>
-          <Button data-help-target="save" variant="primary" type="button" disabled={isSaving} onClick={() => void handleCanonicalSave()}>
+          <Button data-help-target="save" variant="primary" type="button" disabled={isSaving || isEditLocked} onClick={() => void handleCanonicalSave()}>
             {isSaving ? "保存中…" : "保存"}
           </Button>
-          <button ref={publishTargetRef} className="maker-secondary-button" type="button" onClick={() => void handleCanonicalPublish()}>
+          <button ref={publishTargetRef} className="maker-secondary-button" type="button" disabled={isEditLocked} onClick={() => void handleCanonicalPublish()}>
             公開
           </button>
           {state.status === "published" && state.slug ? (
@@ -1870,7 +1891,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         />
       ) : null}
 
+      {isEditLocked ? <div className="maker-warning" role="status"><strong>編集はロックされています。</strong><p>{editLockMessage}</p></div> : null}
 
+      <fieldset className="editor-edit-lock-fieldset" disabled={isEditLocked}>
       <section className="editor-workbench">
         <div className="editor-main-column">
         <div className="maker-card">
@@ -2060,6 +2083,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             onPasteAutoFormat={handlePasteAutoFormat}
             helpRequest={inlineHelpRequest}
             onHelpRequestResult={handleInlineHelpRequestResult}
+            readOnly={isEditLocked}
           />
           <p className="inline-manuscript-character-count" aria-live="polite">
             <strong>{Math.min(cursorPosition, bodyCharacterCount).toLocaleString("ja-JP")}</strong>
@@ -2257,6 +2281,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         </div>
         </aside>
       </section>
+      </fieldset>
 
       {warnings.length ? <div className="maker-warning">{warnings.map((warning) => <p key={warning}>{warning}</p>)}</div> : null}
       {requiredErrorMessage ? (
@@ -2269,17 +2294,17 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       <div className="maker-actions sticky-actions">
         <button className="maker-secondary-button editor-history-button" type="button" onClick={handleEditorUndo} disabled={!editorHistory.canUndo || isSaving} aria-label="元に戻す" title="元に戻す (Ctrl/Cmd+Z)">↶</button>
         <button className="maker-secondary-button editor-history-button" type="button" onClick={handleEditorRedo} disabled={!editorHistory.canRedo || isSaving} aria-label="やり直す" title="やり直す (Ctrl/Cmd+Y または Ctrl/Cmd+Shift+Z)">↷</button>
-        <Button variant="primary" type="button" disabled={isSaving} onClick={() => void handleCanonicalSave()}>
+        <Button variant="primary" type="button" disabled={isSaving || isEditLocked} onClick={() => void handleCanonicalSave()}>
           {isSaving ? "保存中…" : "保存"}
         </Button>
         <button ref={previewTargetRef} className="maker-secondary-button" type="button" onClick={() => void handleCanonicalPreview()}>
           プレビュー
         </button>
-        <button className="maker-secondary-button" type="button" onClick={() => void handleCanonicalPublish()}>
+        <button className="maker-secondary-button" type="button" disabled={isEditLocked} onClick={() => void handleCanonicalPublish()}>
           公開する
         </button>
         {state.status === "published" ? (
-          <button className="maker-secondary-button danger" type="button" onClick={() => void unpublish()}>
+          <button className="maker-secondary-button danger" type="button" disabled={isEditLocked} onClick={() => void unpublish()}>
             公開停止
           </button>
         ) : null}

@@ -724,6 +724,7 @@ type Props = {
   onPasteAutoFormat?: (previousBlocks: BookContentBlock[]) => void;
   helpRequest?: InlineEditorHelpRequest | null;
   onHelpRequestResult?: (result: { nonce: number; status: "handled" | "not-found" }) => void;
+  readOnly?: boolean;
 };
 
 function InlineManuscriptEditor({
@@ -744,6 +745,7 @@ function InlineManuscriptEditor({
   onPasteAutoFormat,
   helpRequest,
   onHelpRequestResult,
+  readOnly = false,
 }: Props) {
   const { locale } = useUiLocale();
   const editorRef = useRef<HTMLElement | null>(null);
@@ -833,11 +835,12 @@ function InlineManuscriptEditor({
   }, []);
 
   const emitChange = useCallback((next: BookContentBlock[]) => {
+    if (readOnly) return;
     nodesRef.current = next;
     onChange(next);
     const nextPending = flattenContentBlocks(next).filter((block) => block.type === "image" && block.uploadState === "pending").length;
     onPendingChange(nextPending);
-  }, [onChange, onPendingChange]);
+  }, [onChange, onPendingChange, readOnly]);
 
   const handleColumnsAction = useCallback((id: string, action: "ratio" | "swap" | "unwrap", ratio?: ColumnsRatio) => {
     const index = nodesRef.current.findIndex((block) => block.id === id && block.type === "columns");
@@ -1811,12 +1814,13 @@ function InlineManuscriptEditor({
           <div
             ref={rootRef}
             className="inline-manuscript-surface"
-            contentEditable
+            contentEditable={!readOnly}
             suppressContentEditableWarning
             role="textbox"
             aria-multiline="true"
             aria-label="本文入力欄"
               onClick={(event) => {
+              if (readOnly) return;
               const target = event.target as HTMLElement;
               const columnAdd = target.closest("[data-column-add]") as HTMLElement | null;
               if (columnAdd) {
@@ -1868,6 +1872,10 @@ function InlineManuscriptEditor({
               reportCursor();
             }}
             onKeyDown={(event) => {
+              if (readOnly) {
+                event.preventDefault();
+                return;
+              }
               if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b" && savedRangeRef.current && !savedRangeRef.current.collapsed) {
                 event.preventDefault();
                 applyMarkToSelection({ bold: true });
@@ -1885,6 +1893,7 @@ function InlineManuscriptEditor({
               reportCursor();
             }}
             onInput={() => {
+              if (readOnly) return;
               const root = rootRef.current;
               if (!root) return;
               const next = parseEditorDom(root);
@@ -1903,6 +1912,10 @@ function InlineManuscriptEditor({
               }
             }}
             onPaste={(event) => {
+              if (readOnly) {
+                event.preventDefault();
+                return;
+              }
               const files = Array.from(event.clipboardData.files || []).filter(isImageFile);
               if (files.length) {
                 event.preventDefault();
@@ -1915,6 +1928,10 @@ function InlineManuscriptEditor({
               insertPastedText(text);
             }}
             onDrop={(event) => {
+              if (readOnly) {
+                event.preventDefault();
+                return;
+              }
               const files = Array.from(event.dataTransfer.files || []).filter(isImageFile);
               if (!files.length) return;
               event.preventDefault();

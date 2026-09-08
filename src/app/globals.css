@@ -4604,6 +4604,17 @@ button.reader-edit-link:disabled {
   align-items: start;
 }
 
+.editor-edit-lock-fieldset {
+  border: 0;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.editor-edit-lock-fieldset:disabled {
+  opacity: 0.82;
+}
+
 .editor-main-column,
 .editor-side-column {
   display: grid;

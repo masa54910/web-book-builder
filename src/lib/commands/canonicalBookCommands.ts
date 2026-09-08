@@ -10,6 +10,7 @@ import {
 import type { BookContentBlock, BookProject } from "@/lib/bookProject";
 import {
   assertBookCreationAvailable,
+  assertPublicationEditAccess,
   getBook,
   isPersistedBookId,
   saveBook,
@@ -151,6 +152,7 @@ export async function saveCanonicalBookCommand(
     } else {
       const existing = await getBook(existingId, ownerId);
       if (!existing) throw new CanonicalBookCommandError("The requested book was not found");
+      await assertPublicationEditAccess(existing.id);
       const projectForUpload: BookProject = {
         ...project,
         config: { ...project.config, bookId: existingId, publicationRevision: payload.publicationRevision || existing.bookProject.config.publicationRevision || 1 },

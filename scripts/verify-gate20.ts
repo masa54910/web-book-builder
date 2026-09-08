@@ -43,7 +43,7 @@ assert.match(portalRoute, /billingPortal\.sessions\.create/);
 assert.match(portalRoute, /findActiveOperationPlanForUser/);
 assert.match(pricing, /継続編集可能/);
 assert.match(pricing, /複数冊/);
-for (const stale of [/公開後7日間/, /最大10作品/, /PayPay/] as const) {
+for (const stale of [/最大10作品/, /PayPay/] as const) {
   assert.doesNotMatch(pricing, stale);
 }
 assert.match(terms, /作者.*販売者|Author.*Seller/);

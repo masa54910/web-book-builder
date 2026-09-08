@@ -9,6 +9,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { parseBookProjectJson } from "@/lib/bookProjectNormalization";
 import { stripRuntimeAssetUrls } from "@/lib/bookProject";
 import { logSupabaseIssue } from "@/lib/supabaseDebug";
+import { getPublicationEditAccess } from "@/lib/publicationEditAccessClient";
 
 export type CloudBookRecord = {
   id: string;
@@ -70,6 +71,18 @@ function canFallbackToLocal() {
 
 function now() {
   return new Date().toISOString();
+}
+
+export async function assertPublicationEditAccess(bookId: string) {
+  const decision = await getPublicationEditAccess(bookId);
+  if (decision.allowed) return decision;
+  if (decision.reason === "window-expired") {
+    throw new Error("出版プランの公開後7日間の編集期間が終了しています。StandardまたはPlusへ変更すると編集を再開できます。");
+  }
+  if (decision.reason === "missing-first-published-at") {
+    throw new Error("公開日時を確認できないため、この作品は編集できません。");
+  }
+  throw new Error("この作品は現在編集できません。");
 }
 
 function browserId() {
@@ -626,6 +639,7 @@ export async function saveBook(
   options: { skipSideTables?: boolean } = {},
 ) {
   const existing = existingId ? await getBook(existingId, ownerId) : null;
+  if (existing) await assertPublicationEditAccess(existing.id);
   if (!existing) {
     // This is deliberately outside the write try/catch. If the limit is
     // reached, no books, side tables, or Storage assets may be written.
@@ -729,6 +743,7 @@ export async function updatePublication(
 ) {
   const book = await getBook(bookId, ownerId);
   if (!book) throw new Error("作品が見つかりません。");
+  if (changes.status === "published") await assertPublicationEditAccess(book.id);
   const timestamp = now();
   const next: CloudBookRecord = {
     ...book,
