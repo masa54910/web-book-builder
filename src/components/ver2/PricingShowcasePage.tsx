@@ -102,7 +102,7 @@ export default function PricingShowcasePage() {
       price: "¥980",
       unit: "／1冊分",
       lead: "まずは1冊を、Webで公開。",
-      features: ["1冊分の公開枠", "公開後も継続編集可能", "WebBook Galleryに掲載", "X・note・LINEなどへ共有", "作品販売機能は含まない"],
+      features: ["1冊分の公開枠", "公開後も継続編集可能", "X・note・LINEなどへ共有", "作品販売機能は含まない"],
       actionLabel: uiT(locale, "pricing.startPublication"),
       href: "/signup?plan=publish",
       note: "Stripe Checkout",
