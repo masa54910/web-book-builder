@@ -140,18 +140,23 @@ async function resolveStorageCover(
   supabaseUrl: string,
   supabaseAnonKey: string,
 ) {
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-  });
+  try {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    });
 
-  const signed = await supabase.storage.from(reference.bucket).createSignedUrl(reference.path, 60 * 60);
-  if (!signed.error && signed.data?.signedUrl) {
-    const fetched = await fetchRemoteCover(signed.data.signedUrl, request, supabaseUrl);
-    if (fetched) return fetched;
+    const signed = await supabase.storage.from(reference.bucket).createSignedUrl(reference.path, 60 * 60);
+    if (!signed.error && signed.data?.signedUrl) {
+      const fetched = await fetchRemoteCover(signed.data.signedUrl, request, supabaseUrl);
+      if (fetched) return fetched;
+    }
+
+    const publicUrl = supabase.storage.from(reference.bucket).getPublicUrl(reference.path).data.publicUrl;
+    return fetchRemoteCover(publicUrl, request, supabaseUrl);
+  } catch (error) {
+    console.error("[og/book] cover resolution failed", error instanceof Error ? error.message : String(error));
+    return null;
   }
-
-  const publicUrl = supabase.storage.from(reference.bucket).getPublicUrl(reference.path).data.publicUrl;
-  return fetchRemoteCover(publicUrl, request, supabaseUrl);
 }
 
 async function formatOgCover(cover: CoverAsset) {
@@ -214,18 +219,27 @@ async function loadPublishedBook(slug: string) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnonKey) return null;
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-  });
-  const { data } = await supabase
-    .from("books")
-    .select("title,description,author_name,cover_path,book_project_json")
-    .eq("slug", slug)
-    .eq("status", "published")
-    .in("visibility", ["public", "unlisted"])
-    .is("deleted_at", null)
-    .maybeSingle<PublicBookOgRow>();
-  return data || null;
+  try {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    });
+    const { data, error } = await supabase
+      .from("books")
+      .select("title,description,author_name,cover_path,book_project_json")
+      .eq("slug", slug)
+      .eq("status", "published")
+      .in("visibility", ["public", "unlisted"])
+      .is("deleted_at", null)
+      .maybeSingle<PublicBookOgRow>();
+    if (error) {
+      console.error("[og/book] published book lookup failed", error.message);
+      return null;
+    }
+    return data || null;
+  } catch (error) {
+    console.error("[og/book] published book lookup failed", error instanceof Error ? error.message : String(error));
+    return null;
+  }
 }
 
 function fallbackSvg({ title, description, author, slug }: { title: string; description: string; author: string; slug: string }) {
