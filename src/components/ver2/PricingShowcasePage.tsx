@@ -89,7 +89,7 @@ export default function PricingShowcasePage() {
       name: uiT(locale, "pricing.freePlan"),
       price: "¥0",
       unit: "",
-      lead: "まずは無料で、Webブックを作って試せます。",
+      lead: "まずはWebブックを作って試せます。",
       features: ["ご自身の閲覧用", "作成・プレビュー", "表紙・ページ調整", "公開前の仕上がりを確認", "一般公開はできません"],
       actionLabel: uiT(locale, "pricing.startFree"),
       href: startHref,
