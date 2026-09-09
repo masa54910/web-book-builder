@@ -53,5 +53,8 @@ assert.match(pageFlipFork, /const previous = collection\.getSpread\(\)\[collecti
 assert.match(globalStyles, /\.reader-binding-rtl \.book-viewport\[data-book-edge="cover"\]/);
 assert.match(globalStyles, /transform: translateX\(-25%\)/);
 assert.match(globalStyles, /sample-book-viewport \.flip-book::after[\s\S]*left: -13px/);
+assert.match(globalStyles, /\.reader-writing-vertical-rl \.contents-page[\s\S]*writing-mode: vertical-rl/);
+assert.match(globalStyles, /\.reader-writing-vertical-rl \.contents-list[\s\S]*flex-direction: row-reverse/);
+assert.match(globalStyles, /\.reader-writing-vertical-rl \.contents-link[\s\S]*writing-mode: vertical-rl/);
 
 console.log("Gate36 RTL/vertical writing invariants passed.");

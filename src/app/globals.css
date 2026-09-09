@@ -3716,6 +3716,61 @@ button.reader-edit-link:disabled {
   margin-block: 0;
   margin-inline: 0 0.95em;
 }
+.reader-writing-vertical-rl .contents-page {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  overflow: hidden;
+}
+.reader-writing-vertical-rl .contents-page h2,
+.reader-writing-vertical-rl .contents-book-title,
+.reader-writing-vertical-rl .contents-page .editorial-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+.reader-writing-vertical-rl .contents-list {
+  display: flex;
+  width: 100%;
+  height: calc(100% - 110px);
+  writing-mode: horizontal-tb;
+  flex-direction: row-reverse;
+  align-items: stretch;
+  gap: 10px;
+  overflow: hidden;
+}
+.reader-writing-vertical-rl .contents-link {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 6px;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 1px solid rgba(29, 31, 31, 0.2);
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: flex-start;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  text-align: start;
+}
+.reader-writing-vertical-rl .contents-link-level-2 {
+  padding-left: 6px;
+  border-left-color: rgba(29, 31, 31, 0.1);
+}
+.reader-writing-vertical-rl .contents-index,
+.reader-writing-vertical-rl .contents-title,
+.reader-writing-vertical-rl .contents-page-number,
+.reader-writing-vertical-rl .contents-arrow {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  white-space: nowrap;
+}
+.reader-writing-vertical-rl .contents-title {
+  overflow-wrap: anywhere;
+}
+.reader-writing-vertical-rl .contents-page-number {
+  text-align: start;
+}
 .reader-writing-vertical-rl .text-inline-image,
 .reader-writing-vertical-rl .text-inline-youtube,
 .reader-writing-vertical-rl .map-page,
