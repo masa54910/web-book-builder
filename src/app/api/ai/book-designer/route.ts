@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { parseBookDesignSpec } from "@/lib/designSpec";
-import { sanitizeDesignPrompt } from "@/lib/aiBookDesigner";
+import { normalizeAIBookDesignerSpecForPausedVertical, sanitizeDesignPrompt } from "@/lib/aiBookDesigner";
 import { getBookDesignPreset, getBookDesignPresetCatalog, mergeBookDesignPreset } from "@/lib/designPresets";
 import { resolveAIBookDesignerQuotaScope } from "@/lib/server/aiBookDesignerQuota";
 import { requireAuthenticatedUser } from "@/lib/server/requestAuth";
@@ -16,7 +16,7 @@ mood: { keywords: string[], density: compact | balanced | airy }
 theme: classic | modern | minimal | magazine | novel | photo | research | portfolio
 typography: { fontFamily: mincho | gothic | serif | sans, fontScale: small | medium | large, lineHeight: tight | normal | relaxed }
 palette: { textColor: #RRGGBB, accentColor: #RRGGBB }
-page: { background: paper | ivory | cafe | night | green | white, marginScale: compact | standard | wide, pageWidth: narrow | standard | wide, bindingDirection: rtl | ltr, writingMode: horizontal-tb | vertical-rl, readerMode: book | scroll | magazine | photo, paragraphSpacing: compact | normal | wide }
+page: { background: paper | ivory | cafe | night | green | white, marginScale: compact | standard | wide, pageWidth: narrow | standard | wide, bindingDirection: rtl | ltr, writingMode: horizontal-tb, readerMode: book | scroll | magazine | photo, paragraphSpacing: compact | normal | wide }
 cover: { coverStyle: overlay | solid | band, layout: layout-01 through layout-10, titlePosition: top-left | top-center | top-right | center-left | center | center-right | bottom-left | bottom-center | bottom-right, authorPosition: same values, imagePosition: same values, imageFit: contain | cover, titleVisible: boolean, authorVisible: boolean, titleScale: 0.3-1, authorScale: 0.7-1.5, imageScale: 0.3-1, overlayOpacity: 0-0.6, titleTextOverride?: string }
 image: { layout: framed | full | contained }
 motion: { reveal: none | subtle | standard, reducedMotion: respect }
@@ -142,11 +142,12 @@ export async function POST(request: Request) {
       console.error(`[ai-book-designer] OpenAI response failed status=${response.status} stage=preset-selection reason=unknown-preset`);
       return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
     }
-    const spec = mergeBookDesignPreset(preset, envelope.overrides);
-    if (!spec.success) {
-      console.error(`[ai-book-designer] OpenAI response failed status=${response.status} stage=design-spec-validation reason=${safeValidationReason(spec.error)}`);
+    const parsedSpec = mergeBookDesignPreset(preset, envelope.overrides);
+    if (!parsedSpec.success) {
+      console.error(`[ai-book-designer] OpenAI response failed status=${response.status} stage=design-spec-validation reason=${safeValidationReason(parsedSpec.error)}`);
       return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
     }
+    const spec = { ...parsedSpec, data: normalizeAIBookDesignerSpecForPausedVertical(parsedSpec.data) };
 
     const safeRequestContext = safeContext(body.context);
     const currentDesign = safeRequestContext.currentDesign;

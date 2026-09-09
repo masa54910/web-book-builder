@@ -2304,17 +2304,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
                 <option value="ltr">左綴じ</option>
               </select>
             </label>
-            <label>
-              <span>文字方向</span>
-              <select value={state.writingMode} onChange={(event) => {
-                const next = event.target.value as WritingMode;
-                update("writingMode", next);
-                if (next === "vertical-rl" && state.bindingDirection !== "rtl") update("bindingDirection", "rtl");
-              }}>
-                <option value="horizontal-tb">横書き</option>
-                <option value="vertical-rl">縦書き</option>
-              </select>
-            </label>
+            {/* Gate36 vertical writing is paused. Persisted writingMode remains compatible, but no new selection is exposed. */}
             <label>
               <span>フォント</span>
               <select value={state.fontFamily} onChange={(event) => update("fontFamily", event.target.value as BookThemeSettings["fontFamily"])}>

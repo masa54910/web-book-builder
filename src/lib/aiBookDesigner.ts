@@ -28,6 +28,21 @@ export function sanitizeDesignPrompt(value: unknown) {
   return typeof value === "string" ? value.trim().slice(0, AI_BOOK_DESIGNER_MAX_PROMPT_LENGTH) : "";
 }
 
+/**
+ * Gate36 is paused in Production. Keep the persisted vertical-writing model
+ * and existing books intact, but prevent a new AI proposal from selecting it.
+ */
+export function normalizeAIBookDesignerSpecForPausedVertical(spec: BookDesignSpec): BookDesignSpec {
+  if (spec.page.writingMode !== "vertical-rl") return spec;
+  return {
+    ...spec,
+    page: {
+      ...spec.page,
+      writingMode: "horizontal-tb",
+    },
+  };
+}
+
 /** Apply only the allow-listed presentation fields. Content/identity fields are never touched. */
 export function applyDesignSpecToState<T extends DesignEditableState>(state: T, spec: BookDesignSpec): T {
   return {

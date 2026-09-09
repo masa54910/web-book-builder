@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendDesignHistory, applyDesignSpecToState, buildDesignContext } from "../src/lib/aiBookDesigner";
+import { appendDesignHistory, applyDesignSpecToState, buildDesignContext, normalizeAIBookDesignerSpecForPausedVertical } from "../src/lib/aiBookDesigner";
 import { DEFAULT_BOOK_DESIGN_SPEC, parseBookDesignSpec } from "../src/lib/designSpec";
 import { BOOK_DESIGN_PRESETS, getBookDesignPreset, getBookDesignPresetCatalog, mergeBookDesignPreset } from "../src/lib/designPresets";
 
@@ -19,6 +19,7 @@ const parsed = parseBookDesignSpec(DEFAULT_BOOK_DESIGN_SPEC);
 assert.equal(parsed.success, true);
 const verticalSpec = parseBookDesignSpec({ ...DEFAULT_BOOK_DESIGN_SPEC, page: { ...DEFAULT_BOOK_DESIGN_SPEC.page, writingMode: "vertical-rl", bindingDirection: "rtl" } });
 assert.equal(verticalSpec.success, true);
+if (verticalSpec.success) assert.equal(normalizeAIBookDesignerSpecForPausedVertical(verticalSpec.data).page.writingMode, "horizontal-tb");
 const invalidWritingMode = parseBookDesignSpec({ ...DEFAULT_BOOK_DESIGN_SPEC, page: { ...DEFAULT_BOOK_DESIGN_SPEC.page, writingMode: "diagonal" } });
 assert.equal(invalidWritingMode.success, false);
 
@@ -75,10 +76,11 @@ assert.match(route, /getBookDesignPresetCatalog/);
 assert.match(route, /unknown-preset/);
 assert.match(route, /theme: classic \| modern \| minimal \| magazine \| novel \| photo \| research \| portfolio/);
 assert.match(route, /readerMode: book \| scroll \| magazine \| photo/);
-assert.match(route, /writingMode: horizontal-tb \| vertical-rl/);
+assert.match(route, /writingMode: horizontal-tb,/);
+assert.doesNotMatch(route, /writingMode: horizontal-tb \| vertical-rl/);
 assert.match(route, /cover: \{ coverStyle: overlay \| solid \| band/);
 const openAiRequestIndex = route.indexOf('fetch("https://api.openai.com/v1/chat/completions"');
-const specValidationIndex = route.indexOf("const spec = mergeBookDesignPreset(preset, envelope.overrides);");
+const specValidationIndex = route.indexOf("const parsedSpec = mergeBookDesignPreset(preset, envelope.overrides);");
 const quotaRpcIndex = route.indexOf('rpc("consume_ai_book_designer_plan_quota"');
 const responseIndex = route.indexOf("return NextResponse.json({ spec: spec.data");
 assert.ok(openAiRequestIndex >= 0);
@@ -92,5 +94,5 @@ assert.match(route, /stage=response-json-parse/);
 assert.match(route, /stage=missing-content/);
 assert.match(route, /stage=design-spec-json-parse/);
 assert.match(route, /stage=design-spec-validation/);
-assert.match(route, /reason=\$\{safeValidationReason\(spec\.error\)\}/);
+assert.match(route, /reason=\$\{safeValidationReason\(parsedSpec\.error\)\}/);
 console.log("AI Book Designer safety verification passed.");
