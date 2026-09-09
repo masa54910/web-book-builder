@@ -635,6 +635,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [smartFormatSummary, setSmartFormatSummary] = useState<string | null>(null);
   const [designPrompt, setDesignPrompt] = useState("");
   const [designPreviewSpec, setDesignPreviewSpec] = useState<BookDesignSpec | null>(null);
+  const [designPreviewPreset, setDesignPreviewPreset] = useState<{ id: string; name: string } | null>(null);
   const [designBusy, setDesignBusy] = useState(false);
   const [designError, setDesignError] = useState("");
   const [cursorPosition, setCursorPosition] = useState(0);
@@ -1404,9 +1405,10 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           context: buildDesignContext({ title: state.title, description: state.description, rawText: state.rawText, contentBlocks, current: state }),
         }),
       });
-      const payload = await response.json() as { spec?: BookDesignSpec; error?: string };
+      const payload = await response.json() as { spec?: BookDesignSpec; presetId?: string; presetName?: string; error?: string };
       if (!response.ok || !payload.spec) throw new Error(payload.error || "生成できませんでした。");
       setDesignPreviewSpec(payload.spec);
+      setDesignPreviewPreset(payload.presetId && payload.presetName ? { id: payload.presetId, name: payload.presetName } : null);
       setStatusMessage("AIデザイン案をプレビューしています。適用するまで保存内容は変わりません。");
     } catch (error) {
       setDesignError(error instanceof Error ? error.message : "デザインを生成できませんでした。少し時間を空けてもう一度お試しください。");
@@ -1435,6 +1437,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       bookId: bookId || "draft",
       ownerId: user?.id,
       spec: designPreviewSpec,
+      presetId: designPreviewPreset?.id,
+      presetName: designPreviewPreset?.name,
       prompt: sanitizeDesignPrompt(designPrompt),
       createdAt: new Date().toISOString(),
       name: designPrompt.trim().slice(0, 80) || "AIデザイン案",
@@ -1442,6 +1446,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     };
     setState({ ...nextState, designHistory: appendDesignHistory(baseHistory, entry), activeDesignVersionId: versionId });
     setDesignPreviewSpec(null);
+    setDesignPreviewPreset(null);
     setDirty(true);
     setStatusMessage("AIデザインを適用しました。保存するまで公開内容は変わりません。");
   };
@@ -2422,13 +2427,13 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             {designPreviewSpec ? (
               <>
                 <button className="maker-primary-button" type="button" onClick={applyGeneratedDesign} disabled={isEditLocked}>このデザインを使う</button>
-                <button className="maker-secondary-button" type="button" onClick={() => setDesignPreviewSpec(null)} disabled={designBusy}>元に戻す</button>
+                <button className="maker-secondary-button" type="button" onClick={() => { setDesignPreviewSpec(null); setDesignPreviewPreset(null); }} disabled={designBusy}>元に戻す</button>
               </>
             ) : null}
           </div>
           {designPreviewSpec ? (
             <div className="ai-design-preview" style={{ backgroundColor: designPreviewSpec.palette.textColor === "#f2efe8" ? "#1f2528" : "#fffaf0", color: designPreviewSpec.palette.textColor, borderColor: designPreviewSpec.palette.accentColor }}>
-              <strong style={{ color: designPreviewSpec.palette.accentColor }}>AIデザイン案 · {designPreviewSpec.genre}</strong>
+              <strong style={{ color: designPreviewSpec.palette.accentColor }}>AIデザイン案 · {designPreviewPreset?.name || designPreviewSpec.genre}</strong>
               <span>見出し・本文・表紙の既存レンダラーへ適用できる安全なトークンのみを仮表示しています。</span>
             </div>
           ) : null}
@@ -2440,7 +2445,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               <ul>
                 {state.designHistory.slice().reverse().map((entry) => (
                   <li key={entry.id}>
-                    <span>{entry.name || "AIデザイン案"} · {new Date(entry.createdAt).toLocaleString("ja-JP")}</span>
+                    <span>{entry.presetName ? `${entry.presetName} · ` : ""}{entry.name || "AIデザイン案"} · {new Date(entry.createdAt).toLocaleString("ja-JP")}</span>
                     <button className="maker-small-button" type="button" onClick={() => restoreDesignVersion(entry)} disabled={isEditLocked}>このデザインに戻す</button>
                   </li>
                 ))}

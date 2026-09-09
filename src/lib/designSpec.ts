@@ -68,6 +68,9 @@ export type BookDesignHistoryEntry = {
   bookId: string;
   ownerId?: string;
   spec: BookDesignSpec;
+  /** Optional metadata added by the code-defined Preset Library. */
+  presetId?: string;
+  presetName?: string;
   prompt: string;
   createdAt: string;
   name?: string;

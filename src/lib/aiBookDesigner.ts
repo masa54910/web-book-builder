@@ -104,6 +104,8 @@ export function normalizeDesignHistory(value: unknown, fallbackBookId = "draft")
       bookId: typeof item.bookId === "string" && item.bookId ? item.bookId : fallbackBookId,
       ownerId: typeof item.ownerId === "string" ? item.ownerId : undefined,
       spec: parsed.data,
+      presetId: typeof item.presetId === "string" ? item.presetId.slice(0, 40) : undefined,
+      presetName: typeof item.presetName === "string" ? item.presetName.slice(0, 80) : undefined,
       prompt: sanitizeDesignPrompt(item.prompt),
       createdAt: item.createdAt,
       name: typeof item.name === "string" ? item.name.slice(0, 80) : undefined,

@@ -3,6 +3,17 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { appendDesignHistory, applyDesignSpecToState, buildDesignContext } from "../src/lib/aiBookDesigner";
 import { DEFAULT_BOOK_DESIGN_SPEC, parseBookDesignSpec } from "../src/lib/designSpec";
+import { BOOK_DESIGN_PRESETS, getBookDesignPreset, getBookDesignPresetCatalog } from "../src/lib/designPresets";
+
+assert.equal(BOOK_DESIGN_PRESETS.length, 26);
+assert.equal(new Set(BOOK_DESIGN_PRESETS.map((preset) => preset.id)).size, 26);
+assert.equal(new Set(BOOK_DESIGN_PRESETS.map((preset) => preset.category)).size, 6);
+assert.deepEqual(getBookDesignPreset("NOT-A-PRESET"), undefined);
+assert.equal(getBookDesignPresetCatalog().every((preset) => !("spec" in preset)), true);
+for (const preset of BOOK_DESIGN_PRESETS) {
+  const presetSpec = parseBookDesignSpec(preset.spec);
+  assert.equal(presetSpec.success, true, `${preset.id} must pass BookDesignSpec validation`);
+}
 
 const parsed = parseBookDesignSpec(DEFAULT_BOOK_DESIGN_SPEC);
 assert.equal(parsed.success, true);
@@ -46,11 +57,13 @@ assert.match(route, /OPENAI_API_KEY/);
 assert.match(route, /AI_BOOK_DESIGNER_ENABLED/);
 assert.match(route, /OPENAI_BOOK_DESIGNER_MODEL/);
 assert.doesNotMatch(route, /NEXT_PUBLIC_OPENAI/);
+assert.match(route, /getBookDesignPresetCatalog/);
+assert.match(route, /unknown-preset/);
 assert.match(route, /theme: classic \| modern \| minimal \| magazine \| novel \| photo \| research \| portfolio/);
 assert.match(route, /readerMode: book \| scroll \| magazine \| photo/);
 assert.match(route, /cover: \{ coverStyle: overlay \| solid \| band/);
 const openAiRequestIndex = route.indexOf('fetch("https://api.openai.com/v1/chat/completions"');
-const specValidationIndex = route.indexOf("const spec = parseBookDesignSpec(parsed);");
+const specValidationIndex = route.indexOf("const spec = parseBookDesignSpec(envelope.spec);");
 const quotaRpcIndex = route.indexOf('rpc("consume_ai_book_designer_quota"');
 const responseIndex = route.indexOf("return NextResponse.json({ spec: spec.data");
 assert.ok(openAiRequestIndex >= 0);
