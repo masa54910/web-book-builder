@@ -56,4 +56,8 @@ assert.ok(quotaRpcIndex > specValidationIndex, "quota must be consumed after val
 assert.ok(responseIndex > quotaRpcIndex);
 assert.match(migration, /on conflict \(user_id, usage_date\)/i);
 assert.match(migration, /next_count > p_limit/);
+assert.match(route, /stage=response-json-parse/);
+assert.match(route, /stage=missing-content/);
+assert.match(route, /stage=design-spec-json-parse/);
+assert.match(route, /stage=design-spec-validation/);
 console.log("AI Book Designer safety verification passed.");

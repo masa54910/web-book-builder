@@ -75,13 +75,30 @@ export async function POST(request: Request) {
       );
       return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
     }
-    const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+    let payload: { choices?: Array<{ message?: { content?: string } }> };
+    try {
+      payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+    } catch {
+      console.error(`[ai-book-designer] OpenAI response failed status=${response.status} stage=response-json-parse`);
+      return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
+    }
     const raw = payload.choices?.[0]?.message?.content;
-    if (!raw) return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
+    if (!raw) {
+      console.error(`[ai-book-designer] OpenAI response failed status=${response.status} stage=missing-content`);
+      return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
+    }
     let parsed: unknown;
-    try { parsed = JSON.parse(raw); } catch { return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502); }
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      console.error(`[ai-book-designer] OpenAI response failed status=${response.status} stage=design-spec-json-parse`);
+      return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
+    }
     const spec = parseBookDesignSpec(parsed);
-    if (!spec.success) return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
+    if (!spec.success) {
+      console.error(`[ai-book-designer] OpenAI response failed status=${response.status} stage=design-spec-validation`);
+      return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
+    }
 
     // Count only a generation that reached a valid, renderer-safe DesignSpec.
     // The RPC performs an atomic increment/rollback so concurrent successes
