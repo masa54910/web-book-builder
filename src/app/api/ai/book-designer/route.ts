@@ -4,7 +4,18 @@ import { sanitizeDesignPrompt } from "@/lib/aiBookDesigner";
 import { requireAuthenticatedUser } from "@/lib/server/requestAuth";
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
 
-const SYSTEM_PROMPT = `You are WebBookMaker AI Book Designer. Return JSON only, matching the supplied BookDesignSpec shape. Choose only existing enum values. Never include HTML, CSS, arbitrary keys, book content, IDs, URLs, pricing, paywall, or publication changes. Preserve the requested current design when the prompt is vague. The output is presentation-only.`;
+const SYSTEM_PROMPT = `You are WebBookMaker AI Book Designer. Return exactly one JSON object matching this BookDesignSpec contract; do not invent values or omit required sections.
+version: 1
+genre: magazine | novel | photo_book | guide | catalog | simple
+mood: { keywords: string[], density: compact | balanced | airy }
+theme: classic | modern | minimal | magazine | novel | photo | research | portfolio
+typography: { fontFamily: mincho | gothic | serif | sans, fontScale: small | medium | large, lineHeight: tight | normal | relaxed }
+palette: { textColor: #RRGGBB, accentColor: #RRGGBB }
+page: { background: paper | ivory | cafe | night | green | white, marginScale: compact | standard | wide, pageWidth: narrow | standard | wide, bindingDirection: rtl | ltr, readerMode: book | scroll | magazine | photo, paragraphSpacing: compact | normal | wide }
+cover: { coverStyle: overlay | solid | band, layout: layout-01 through layout-10, titlePosition: top-left | top-center | top-right | center-left | center | center-right | bottom-left | bottom-center | bottom-right, authorPosition: same values, imagePosition: same values, imageFit: contain | cover, titleVisible: boolean, authorVisible: boolean, titleScale: 0.3-1, authorScale: 0.7-1.5, imageScale: 0.3-1, overlayOpacity: 0-0.6, titleTextOverride?: string }
+image: { layout: framed | full | contained }
+motion: { reveal: none | subtle | standard, reducedMotion: respect }
+Use only the listed enum values, numeric ranges, and #RRGGBB colors. Return no extra keys. Never include HTML, CSS, arbitrary keys, book content, IDs, URLs, pricing, paywall, or publication changes. Preserve the requested current design when the prompt is vague. The output is presentation-only.`;
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
