@@ -58,7 +58,29 @@ export async function POST(request: Request) {
         ],
       }),
     });
-    if (!response.ok) return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
+    if (!response.ok) {
+      const upstreamPayload = await response.json().catch(() => null);
+      const upstreamError =
+        upstreamPayload && typeof upstreamPayload === "object" && "error" in upstreamPayload
+          ? upstreamPayload.error
+          : null;
+      console.error("[ai-book-designer] OpenAI request failed", {
+        status: response.status,
+        type:
+          upstreamError && typeof upstreamError === "object" && "type" in upstreamError
+            ? typeof upstreamError.type === "string"
+              ? upstreamError.type
+              : undefined
+            : undefined,
+        code:
+          upstreamError && typeof upstreamError === "object" && "code" in upstreamError
+            ? typeof upstreamError.code === "string"
+              ? upstreamError.code
+              : undefined
+            : undefined,
+      });
+      return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
+    }
     const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
     const raw = payload.choices?.[0]?.message?.content;
     if (!raw) return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
