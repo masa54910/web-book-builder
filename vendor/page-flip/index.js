@@ -8,7 +8,6 @@ const pageFlip = require("./dist/js/page-flip.browser.js");
 
 const FLIP_FORWARD = 0;
 const FLIP_BACK = 1;
-const STATE_FLIPPING = "flipping";
 const STATE_READ = "read";
 const LEFT_BOUND = "left-bound";
 const RIGHT_BOUND = "right-bound";
@@ -21,15 +20,11 @@ function installRightBoundMethods(app) {
   const controller = app.getFlipController();
   if (controller.flipRightBoundNext) return controller;
 
-  const originalStart = controller.start;
-  const originalAnimate = controller.animateFlippingTo;
-  const originalSetState = controller.setState;
   const originalReset = controller.reset;
-  const originalGetBoundsRect = controller.getBoundsRect;
   const originalFlipNext = controller.flipNext;
   const originalFlipPrev = controller.flipPrev;
 
-  const withPhysicalPages = (direction, pageMethod, bottomMethod, startPoint, destPoint) => {
+  const withPhysicalPages = (direction, pageMethod, bottomMethod, physicalFlip, corner) => {
     if (controller.getState() !== STATE_READ) return;
 
     const collection = app.getPageCollection();
@@ -61,20 +56,12 @@ function installRightBoundMethods(app) {
     };
 
     try {
-      if (!originalStart.call(controller, startPoint)) {
-        restore();
-        return;
-      }
-
-      // Flip.animateFlippingTo normally chooses the logical callback from its
-      // direction. Keep its physical direction, but map completion back to
-      // the canonical page progression without reversing page arrays.
+      // Reuse page-flip's tested corner/geometry primitive. Only map its
+      // completion callback back to canonical page progression; never invent
+      // a second coordinate system for the cover turn.
       if (direction === FLIP_BACK) app.turnToPrevPage = originalTurnNext;
       else app.turnToNextPage = originalTurnPrev;
-
-      originalSetState.call(controller, STATE_FLIPPING);
-      controller.calc.calc(startPoint);
-      originalAnimate.call(controller, startPoint, destPoint, true);
+      physicalFlip.call(controller, corner);
 
       // The upstream callback runs asynchronously and invokes the patched
       // turn method. Restore the collection hooks after that callback.
@@ -86,28 +73,22 @@ function installRightBoundMethods(app) {
   };
 
   controller.flipRightBoundNext = function (corner = "top") {
-    const rect = originalGetBoundsRect.call(controller);
-    const margin = rect.height / 10;
-    const y = corner === "bottom" ? rect.height - margin : margin;
     withPhysicalPages(
       FLIP_BACK,
       (getFlippingPage, collection) => getFlippingPage.call(collection, FLIP_FORWARD),
       (getBottomPage, collection) => getBottomPage.call(collection, FLIP_FORWARD),
-      { x: -rect.pageWidth + margin, y },
-      { x: rect.pageWidth, y: corner === "bottom" ? rect.height : 0 },
+      originalFlipPrev,
+      corner,
     );
   };
 
   controller.flipRightBoundPrevious = function (corner = "top") {
-    const rect = originalGetBoundsRect.call(controller);
-    const margin = rect.height / 10;
-    const y = corner === "bottom" ? rect.height - margin : margin;
     withPhysicalPages(
       FLIP_FORWARD,
       (getFlippingPage, collection) => getFlippingPage.call(collection, FLIP_FORWARD),
       (getBottomPage, collection) => getBottomPage.call(collection, FLIP_BACK),
-      { x: rect.pageWidth * 2 - margin, y },
-      { x: -rect.pageWidth, y: corner === "bottom" ? rect.height : 0 },
+      originalFlipNext,
+      corner,
     );
   };
 
