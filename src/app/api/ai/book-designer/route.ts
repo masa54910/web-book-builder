@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { parseBookDesignSpec } from "@/lib/designSpec";
 import { sanitizeDesignPrompt } from "@/lib/aiBookDesigner";
 import { getBookDesignPreset, getBookDesignPresetCatalog, mergeBookDesignPreset } from "@/lib/designPresets";
+import { resolveAIBookDesignerQuotaScope } from "@/lib/server/aiBookDesignerQuota";
 import { requireAuthenticatedUser } from "@/lib/server/requestAuth";
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
 
@@ -68,6 +69,7 @@ function safeContext(value: unknown) {
     textSample: typeof candidate.textSample === "string" ? candidate.textSample.slice(0, 1800) : "",
     imageCount: typeof candidate.imageCount === "number" ? Math.max(0, Math.min(1000, candidate.imageCount)) : 0,
     contentBlockCount: typeof candidate.contentBlockCount === "number" ? Math.max(0, Math.min(1000, candidate.contentBlockCount)) : 0,
+    bookId: typeof candidate.bookId === "string" ? candidate.bookId.trim().slice(0, 80) : null,
     currentDesign: candidate.currentDesign,
   };
 }
@@ -82,8 +84,6 @@ export async function POST(request: Request) {
     if (!prompt) return jsonError("デザインの希望を入力してください。", 400);
     const apiKey = process.env.OPENAI_API_KEY?.trim();
     if (!apiKey) return jsonError("AIデザイン機能は現在利用できません。", 503);
-    const dailyLimit = Number.parseInt(process.env.AI_BOOK_DESIGNER_DAILY_LIMIT || "10", 10);
-    const quotaLimit = Number.isFinite(dailyLimit) ? Math.min(100, Math.max(1, dailyLimit)) : 10;
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -148,22 +148,35 @@ export async function POST(request: Request) {
       return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
     }
 
-    const currentDesign = safeContext(body.context).currentDesign;
+    const safeRequestContext = safeContext(body.context);
+    const currentDesign = safeRequestContext.currentDesign;
     const original = parseBookDesignSpec(currentDesign);
     console.info(`[ai-book-designer] generation succeeded presetId=${preset.id} presetToFinalChangedFields=${changedFieldCount(preset.spec, spec.data)} originalToFinalChangedFields=${original.success ? changedFieldCount(original.data, spec.data) : "unknown"}`);
 
     // Count only a generation that reached a valid, renderer-safe DesignSpec.
-    // The RPC performs an atomic increment/rollback so concurrent successes
-    // cannot move the daily count past the configured limit.
-    const { data: allowed, error: quotaError } = await requireSupabaseAdminClient().rpc("consume_ai_book_designer_quota", {
+    // Plan resolution is server-owned and the RPC atomically checks/increments
+    // JST daily, monthly, and publication lifetime limits.
+    const quotaScope = await resolveAIBookDesignerQuotaScope(user.id, safeRequestContext.bookId);
+    const { data: quotaResult, error: quotaError } = await requireSupabaseAdminClient().rpc("consume_ai_book_designer_plan_quota", {
       p_user_id: user.id,
-      p_limit: quotaLimit,
+      p_plan_code: quotaScope.planCode,
+      p_book_id: quotaScope.bookId,
     });
     if (quotaError) {
       console.error("ai.book-designer quota failed", quotaError.message);
       return jsonError("AIデザイン機能は現在利用できません。", 503);
     }
-    if (allowed !== true) return jsonError("本日のAIデザイン生成回数の上限に達しました。", 429);
+    const quota = quotaResult && typeof quotaResult === "object" ? quotaResult as { allowed?: unknown; reason?: unknown } : {};
+    if (quota.allowed !== true) {
+      const reason = quota.reason === "monthly"
+        ? "今月のAIデザイン生成回数の上限に達しました。"
+        : quota.reason === "lifetime"
+          ? "この作品で利用できるAIデザイン生成回数の上限に達しました。"
+          : quota.reason === "book_required"
+            ? "出版プランのAIデザインには保存済みの作品が必要です。"
+            : "本日のAIデザイン生成回数の上限に達しました。";
+      return jsonError(reason, quota.reason === "book_required" ? 400 : 429);
+    }
     return NextResponse.json({ spec: spec.data, presetId: preset.id, presetName: preset.name, model: process.env.OPENAI_BOOK_DESIGNER_MODEL?.trim() || "gpt-5.4" }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("ai.book-designer failed", error instanceof Error ? error.message : "unknown");

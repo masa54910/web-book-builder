@@ -1410,7 +1410,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           prompt,
-          context: buildDesignContext({ title: state.title, description: state.description, rawText: state.rawText, contentBlocks, current: state }),
+          context: { ...buildDesignContext({ title: state.title, description: state.description, rawText: state.rawText, contentBlocks, current: state }), bookId: bookId || null },
         }),
       });
       const payload = await response.json() as { spec?: BookDesignSpec; presetId?: string; presetName?: string; error?: string };
