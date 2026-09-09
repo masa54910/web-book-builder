@@ -1,0 +1,7 @@
+{
+  "name": "page-flip",
+  "version": "2.0.7-wbm-right-bound",
+  "private": true,
+  "main": "index.js",
+  "browser": "index.js"
+}

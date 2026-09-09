@@ -56,11 +56,11 @@ function getSafeLocalStorage() {
 type PageFlipApi = {
   flipNext: (corner?: "top" | "bottom") => void;
   flipPrev: (corner?: "top" | "bottom") => void;
+  flipRightBoundNext?: (corner?: "top" | "bottom") => void;
+  flipRightBoundPrevious?: (corner?: "top" | "bottom") => void;
+  setPhysicalBinding?: (binding: "left-bound" | "right-bound") => void;
   turnToPage: (page: number) => void;
   update: () => void;
-  /** page-flip's public methods, used by the right-bound physical adapter. */
-  turnToNextPage?: () => void;
-  turnToPrevPage?: () => void;
 };
 
 type FlipBookHandle = {
@@ -308,68 +308,30 @@ export default function BookReader({
   );
 
   const pageFlip = useCallback(() => flipBookRef.current?.pageFlip(), []);
-  const physicalFlipRestoreRef = useRef<(() => void) | null>(null);
-  const physicalFlipRestoreTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      pageFlip()?.setPhysicalBinding?.(config.writingMode === "vertical-rl" ? "right-bound" : "left-bound");
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [config.writingMode, pageFlip, pagesWithAdjustments.length]);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const suppressClickAfterSwipeRef = useRef(false);
-  const restorePhysicalFlip = useCallback(() => {
-    if (physicalFlipRestoreTimerRef.current !== null) {
-      window.clearTimeout(physicalFlipRestoreTimerRef.current);
-      physicalFlipRestoreTimerRef.current = null;
-    }
-    const restore = physicalFlipRestoreRef.current;
-    physicalFlipRestoreRef.current = null;
-    restore?.();
-  }, []);
   const flipReaderPage = useCallback(
     (direction: "next" | "previous") => {
       const api = pageFlip();
       if (!api) return;
 
-      restorePhysicalFlip();
-
-      // page-flip's default forward animation starts at the right edge and
-      // moves right-to-left. For a vertical Japanese book, the logical next
-      // page must still be +1, but the physical sheet must travel left-to-right.
-      // We use the engine's opposite edge and temporarily remap only the
-      // completion callback; canonical page order and page IDs never change.
-      const rightBound = config.writingMode === "vertical-rl";
-      const physicalMethod = physicalFlipMethod(config.writingMode, direction);
-      if (!rightBound) {
-        api[physicalMethod]("top");
-        return;
+      api.setPhysicalBinding?.(config.writingMode === "vertical-rl" ? "right-bound" : "left-bound");
+      if (config.writingMode === "vertical-rl") {
+        const physicalTurn = direction === "next" ? api.flipRightBoundNext : api.flipRightBoundPrevious;
+        if (physicalTurn) {
+          physicalTurn("top");
+          return;
+        }
       }
-      // The page-flip engine cannot start a BACK animation at canonical page
-      // zero. Keep the cover-opening transition usable; all subsequent
-      // vertical pages use the right-bound physical adapter below.
-      if (activePageIndex === 0) {
-        api[direction === "next" ? "flipNext" : "flipPrev"]("top");
-        return;
-      }
-
-      const originalNext = api.turnToNextPage;
-      const originalPrevious = api.turnToPrevPage;
-      if (!originalNext || !originalPrevious) {
-        api[physicalMethod]("top");
-        return;
-      }
-
-      const restore = () => {
-        api.turnToNextPage = originalNext;
-        api.turnToPrevPage = originalPrevious;
-      };
-      physicalFlipRestoreRef.current = restore;
-      physicalFlipRestoreTimerRef.current = window.setTimeout(restorePhysicalFlip, 1100);
-
-      if (physicalMethod === "flipPrev") {
-        api.turnToPrevPage = originalNext;
-        api.flipPrev("top");
-      } else {
-        api.turnToNextPage = originalPrevious;
-        api.flipNext("top");
-      }
+      api[physicalFlipMethod(config.writingMode, direction)]("top");
     },
-    [activePageIndex, config.writingMode, pageFlip, restorePhysicalFlip],
+    [config.writingMode, pageFlip],
   );
   const handleReaderTouchStart = useCallback(
     (event: React.TouchEvent<HTMLElement>) => {
@@ -418,7 +380,6 @@ export default function BookReader({
     event.stopPropagation();
     suppressClickAfterSwipeRef.current = false;
   }, []);
-  useEffect(() => () => restorePhysicalFlip(), [restorePhysicalFlip]);
   const goToPage = useCallback(
     (pageIndex: number) => {
       if (pageIndex < 0 || pageIndex >= pagesWithAdjustments.length) return;
@@ -821,7 +782,6 @@ export default function BookReader({
             showPageCorners
             disableFlipByClick={false}
             onFlip={(event: { data: number }) => {
-              restorePhysicalFlip();
               setCurrentPage(event.data);
               const activePage = pagesWithAdjustments[event.data];
               activePageIdRef.current = activePage?.id || null;

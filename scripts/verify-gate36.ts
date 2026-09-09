@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { DEFAULT_BOOK_DESIGN_SPEC, designSpecFromBookConfig, parseBookDesignSpec } from "../src/lib/designSpec";
 import { toBoundPageOrder } from "../src/lib/paginateText";
 import { physicalFlipMethod, verticalSwipeDirection } from "../src/lib/readerNavigation";
@@ -20,5 +21,19 @@ assert.equal(physicalFlipMethod("vertical-rl", "previous"), "flipNext");
 assert.equal(physicalFlipMethod("horizontal-tb", "next"), "flipNext");
 assert.equal(verticalSwipeDirection(80), "next");
 assert.equal(verticalSwipeDirection(-80), "previous");
+
+const pageFlipFork = fs.readFileSync(new URL("../vendor/page-flip/index.js", import.meta.url), "utf8");
+assert.match(pageFlipFork, /setPhysicalBinding/);
+assert.match(pageFlipFork, /flipRightBoundNext/);
+assert.match(pageFlipFork, /flipRightBoundPrevious/);
+assert.match(pageFlipFork, /x: -rect\.pageWidth \+ margin/);
+assert.match(pageFlipFork, /x: rect\.pageWidth/);
+assert.match(pageFlipFork, /x: rect\.pageWidth \* 2 - margin/);
+assert.match(pageFlipFork, /x: -rect\.pageWidth/);
+assert.match(pageFlipFork, /PageFlip\.prototype\.userStop/);
+assert.match(pageFlipFork, /this\.flipRightBoundNext\("top"\)/);
+assert.match(pageFlipFork, /this\.flipRightBoundPrevious\("top"\)/);
+assert.match(pageFlipFork, /this\.flipRightBoundNext\(corner\)/);
+assert.match(pageFlipFork, /this\.flipRightBoundPrevious\(corner\)/);
 
 console.log("Gate36 RTL/vertical writing invariants passed.");

@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     "dist/**",
     "out/**",
     "build/**",
+    "vendor/page-flip/dist/**",
     "next-env.d.ts",
   ]),
 ]);

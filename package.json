@@ -41,12 +41,18 @@
     "jszip": "^3.10.1",
     "mammoth": "^1.12.0",
     "next": "^16.2.12",
+    "page-flip": "file:vendor/page-flip",
     "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-pageflip": "^2.0.3",
     "server-only": "^0.0.1",
     "stripe": "^22.5.0"
+  },
+  "overrides": {
+    "react-pageflip": {
+      "page-flip": "file:vendor/page-flip"
+    }
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
