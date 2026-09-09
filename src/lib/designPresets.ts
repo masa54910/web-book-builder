@@ -1,4 +1,4 @@
-import { DEFAULT_BOOK_DESIGN_SPEC, type BookDesignSpec } from "@/lib/designSpec";
+import { DEFAULT_BOOK_DESIGN_SPEC, parseBookDesignSpec, type BookDesignSpec, type DesignSpecParseResult } from "@/lib/designSpec";
 import type { BookTheme } from "@/config/bookConfig";
 
 export type BookDesignPresetCategory = "magazine" | "business" | "novel" | "photo" | "education" | "catalog";
@@ -13,6 +13,18 @@ export type BookDesignPreset = {
   visualTraits: string[];
   spec: BookDesignSpec;
 };
+
+export type BookDesignSpecOverrides = Partial<{
+  genre: BookDesignSpec["genre"];
+  mood: Partial<BookDesignSpec["mood"]>;
+  theme: BookDesignSpec["theme"];
+  typography: Partial<BookDesignSpec["typography"]>;
+  palette: Partial<BookDesignSpec["palette"]>;
+  page: Partial<BookDesignSpec["page"]>;
+  cover: Partial<BookDesignSpec["cover"]>;
+  image: Partial<BookDesignSpec["image"]>;
+  motion: Partial<BookDesignSpec["motion"]>;
+}>;
 
 type SpecOverrides = {
   genre?: BookDesignSpec["genre"];
@@ -98,3 +110,62 @@ export function getBookDesignPresetCatalog() {
   return BOOK_DESIGN_PRESETS.map(({ id, name, category, description, keywords, bestFor, visualTraits }) => ({ id, name, category, description, keywords, bestFor, visualTraits }));
 }
 
+const OVERRIDE_KEYS = new Set(["genre", "mood", "theme", "typography", "palette", "page", "cover", "image", "motion"]);
+const NESTED_OVERRIDE_KEYS: Record<string, Set<string>> = {
+  mood: new Set(["keywords", "density"]),
+  typography: new Set(["fontFamily", "fontScale", "lineHeight"]),
+  palette: new Set(["textColor", "accentColor"]),
+  page: new Set(["background", "marginScale", "pageWidth", "bindingDirection", "readerMode", "paragraphSpacing"]),
+  cover: new Set(["coverStyle", "layout", "titlePosition", "authorPosition", "imagePosition", "imageFit", "titleVisible", "authorVisible", "titleScale", "authorScale", "imageScale", "overlayOpacity", "titleTextOverride"]),
+  image: new Set(["layout"]),
+  motion: new Set(["reveal", "reducedMotion"]),
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Keep AI output as a narrow patch. Unknown keys are rejected before the
+ * patch can replace any part of a code-defined preset.
+ */
+export function sanitizeBookDesignOverrides(value: unknown): BookDesignSpecOverrides | null {
+  if (!isRecord(value)) return {};
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, candidate] of Object.entries(value)) {
+    if (!OVERRIDE_KEYS.has(key)) return null;
+    if (["mood", "typography", "palette", "page", "cover", "image", "motion"].includes(key)) {
+      if (!isRecord(candidate)) return null;
+      const allowed = NESTED_OVERRIDE_KEYS[key];
+      const nested: Record<string, unknown> = {};
+      for (const [nestedKey, nestedValue] of Object.entries(candidate)) {
+        if (!allowed.has(nestedKey)) return null;
+        nested[nestedKey] = nestedValue;
+      }
+      sanitized[key] = nested;
+    } else {
+      sanitized[key] = candidate;
+    }
+  }
+  return sanitized as BookDesignSpecOverrides;
+}
+
+export function mergeBookDesignPreset(
+  preset: BookDesignPreset,
+  rawOverrides: unknown,
+): DesignSpecParseResult {
+  const overrides = sanitizeBookDesignOverrides(rawOverrides);
+  if (!overrides) return { success: false, error: "design overrides contain an unknown key" };
+  const merged = {
+    ...preset.spec,
+    ...overrides,
+    mood: { ...preset.spec.mood, ...overrides.mood },
+    typography: { ...preset.spec.typography, ...overrides.typography },
+    palette: { ...preset.spec.palette, ...overrides.palette },
+    page: { ...preset.spec.page, ...overrides.page },
+    cover: { ...preset.spec.cover, ...overrides.cover },
+    image: { ...preset.spec.image, ...overrides.image },
+    motion: { ...preset.spec.motion, ...overrides.motion },
+  };
+  return parseBookDesignSpec(merged);
+}

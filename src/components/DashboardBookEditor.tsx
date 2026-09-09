@@ -142,6 +142,7 @@ type EditorState = {
   lineHeight: BookThemeSettings["lineHeight"];
   marginScale: BookThemeSettings["marginScale"];
   pageWidth: BookThemeSettings["pageWidth"];
+  paragraphSpacing: NonNullable<BookThemeSettings["paragraphSpacing"]>;
   background: BookThemeSettings["background"];
   textColor: string;
   accentColor: string;
@@ -203,6 +204,7 @@ const INITIAL_EDITOR: EditorState = {
   lineHeight: "normal",
   marginScale: "standard",
   pageWidth: "standard",
+  paragraphSpacing: "normal",
   background: "paper",
   textColor: "#2f251d",
   accentColor: "#6bb9ad",
@@ -367,6 +369,7 @@ function fromRecord(record: CloudBookRecord): EditorState {
     lineHeight: record.bookProject.config.themeSettings?.lineHeight || "normal",
     marginScale: record.bookProject.config.themeSettings?.marginScale || "standard",
     pageWidth: record.bookProject.config.themeSettings?.pageWidth || "standard",
+    paragraphSpacing: record.bookProject.config.themeSettings?.paragraphSpacing || "normal",
     background: record.bookProject.config.themeSettings?.background || "paper",
     textColor: record.bookProject.config.themeSettings?.textColor || "#2f251d",
     accentColor: record.bookProject.config.themeSettings?.accentColor || "#6bb9ad",
@@ -517,6 +520,7 @@ function stateFromPreviewProject(project: BookProject): EditorState {
     lineHeight: project.config.themeSettings?.lineHeight || "normal",
     marginScale: project.config.themeSettings?.marginScale || "standard",
     pageWidth: project.config.themeSettings?.pageWidth || "standard",
+    paragraphSpacing: project.config.themeSettings?.paragraphSpacing || "normal",
     background: project.config.themeSettings?.background || "paper",
     textColor: project.config.themeSettings?.textColor || "#2f251d",
     accentColor: project.config.themeSettings?.accentColor || "#6bb9ad",
@@ -1632,6 +1636,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       lineHeight: payload.themeSettings.lineHeight || state.lineHeight,
       marginScale: payload.themeSettings.marginScale || state.marginScale,
       pageWidth: payload.themeSettings.pageWidth || state.pageWidth,
+      paragraphSpacing: payload.themeSettings.paragraphSpacing || state.paragraphSpacing,
       background: payload.themeSettings.background || state.background,
       textColor: payload.themeSettings.textColor || state.textColor,
       accentColor: payload.themeSettings.accentColor || state.accentColor,
@@ -2241,6 +2246,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             logicalPages={miniPreviewLogicalPages}
             activePageId={activeMiniPageId}
             onPageClick={handleMiniPageClick}
+            design={designPreviewSpec || designSpecForState(state)}
           />
 
           <ConnectSalesPanel

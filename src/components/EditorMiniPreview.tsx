@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReaderPage } from "@/lib/types";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import type { BookDesignSpec } from "@/lib/designSpec";
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { INLINE_IMAGE_TOKEN_PREFIX, INLINE_YOUTUBE_TOKEN_PREFIX } from "@/lib/paginateText";
 import { normalizeMapAlignment, parseInlineMapToken } from "@/lib/mapLayout";
 import { buildReaderFolioById, readerPageNumberLabel } from "@/lib/readerFolio";
@@ -148,11 +149,13 @@ function EditorMiniPreview({
   logicalPages,
   activePageId,
   onPageClick,
+  design,
 }: {
   pages: ReaderPage[];
   logicalPages?: ReaderPage[];
   activePageId?: string | null;
   onPageClick?: (page: ReaderPage) => void;
+  design?: BookDesignSpec;
 }) {
   const listRef = useRef<HTMLDivElement | null>(null);
   const [materializedIndices, setMaterializedIndices] = useState<Set<number>>(() => new Set());
@@ -214,8 +217,19 @@ function EditorMiniPreview({
     return () => window.clearTimeout(handle);
   }, [activePageIndex]);
 
+  const designStyle = design ? {
+    "--editor-mini-text": design.palette.textColor,
+    "--editor-mini-accent": design.palette.accentColor,
+    "--editor-mini-bg": ({ paper: "#fffaf0", ivory: "#f5efe2", cafe: "#f1e1cf", night: "#1f2528", green: "#e8f0ea", white: "#ffffff" } as const)[design.page.background],
+    "--editor-mini-font-size": ({ small: "7px", medium: "8px", large: "10px" } as const)[design.typography.fontScale],
+    "--editor-mini-line-height": ({ tight: "1.25", normal: "1.45", relaxed: "1.7" } as const)[design.typography.lineHeight],
+  } as CSSProperties : undefined;
   return (
-    <section className="editor-mini-preview" aria-label="ページ一覧ミニプレビュー">
+    <section
+      className={`editor-mini-preview editor-mini-design-${design?.theme || "classic"} editor-mini-design-bg-${design?.page.background || "paper"} editor-mini-design-font-${design?.typography.fontFamily || "mincho"} editor-mini-design-width-${design?.page.pageWidth || "standard"} editor-mini-design-spacing-${design?.page.paragraphSpacing || "normal"}`}
+      style={designStyle}
+      aria-label="ページ一覧ミニプレビュー"
+    >
       <div className="editor-mini-preview-heading">
         <div>
           <p className="maker-kicker">Mini preview</p>

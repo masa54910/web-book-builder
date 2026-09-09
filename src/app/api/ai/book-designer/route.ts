@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { parseBookDesignSpec } from "@/lib/designSpec";
 import { sanitizeDesignPrompt } from "@/lib/aiBookDesigner";
-import { getBookDesignPreset, getBookDesignPresetCatalog } from "@/lib/designPresets";
+import { getBookDesignPreset, getBookDesignPresetCatalog, mergeBookDesignPreset } from "@/lib/designPresets";
 import { requireAuthenticatedUser } from "@/lib/server/requestAuth";
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
 
 const PRESET_CATALOG = JSON.stringify(getBookDesignPresetCatalog());
 
-const SYSTEM_PROMPT = `You are WebBookMaker AI Book Designer. First choose exactly one presetId from the supplied catalog, then return a final spec that keeps that preset's visual direction while making only safe allow-listed adjustments. Return exactly one JSON object with this shape: {"presetId":"MAG-01","spec":{...}}. Do not invent preset IDs, values, or omit required sections.
+const SYSTEM_PROMPT = `You are WebBookMaker AI Book Designer. First choose exactly one presetId from the supplied catalog, then return only a safe allow-listed override patch for that preset. Return exactly one JSON object with this shape: {"presetId":"MAG-01","overrides":{...}}. Do not invent preset IDs, values, or keys.
 Available preset catalog (metadata only): ${PRESET_CATALOG}
 version: 1
 genre: magazine | novel | photo_book | guide | catalog | simple
@@ -19,7 +19,7 @@ page: { background: paper | ivory | cafe | night | green | white, marginScale: c
 cover: { coverStyle: overlay | solid | band, layout: layout-01 through layout-10, titlePosition: top-left | top-center | top-right | center-left | center | center-right | bottom-left | bottom-center | bottom-right, authorPosition: same values, imagePosition: same values, imageFit: contain | cover, titleVisible: boolean, authorVisible: boolean, titleScale: 0.3-1, authorScale: 0.7-1.5, imageScale: 0.3-1, overlayOpacity: 0-0.6, titleTextOverride?: string }
 image: { layout: framed | full | contained }
 motion: { reveal: none | subtle | standard, reducedMotion: respect }
-Use only the listed enum values, numeric ranges, and #RRGGBB colors. Return no extra keys inside spec. Never include HTML, CSS, arbitrary keys, book content, IDs, URLs, pricing, paywall, or publication changes. Preserve the selected preset direction and the requested current design when the prompt is vague. The output is presentation-only.`;
+Use only the listed enum values, numeric ranges, and #RRGGBB colors. The overrides object may contain only genre, mood, theme, typography, palette, page, cover, image, and motion, with the nested keys listed above. Do not return a complete spec. Never include HTML, CSS, arbitrary keys, book content, IDs, URLs, pricing, paywall, or publication changes. Preserve the selected preset direction and make only small, purposeful adjustments. The output is presentation-only.`;
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -36,6 +36,26 @@ function safeUpstreamField(value: unknown, maxLength = 240) {
 function safeValidationReason(value: unknown) {
   if (typeof value !== "string") return "unknown";
   return value.replace(/[\r\n]+/g, " ").slice(0, 160);
+}
+
+const SPEC_PATHS = [
+  "genre", "theme", "mood.density", "typography.fontFamily", "typography.fontScale", "typography.lineHeight",
+  "palette.textColor", "palette.accentColor", "page.background", "page.marginScale", "page.pageWidth",
+  "page.bindingDirection", "page.readerMode", "page.paragraphSpacing", "cover.coverStyle", "cover.layout",
+  "cover.titlePosition", "cover.authorPosition", "cover.imagePosition", "cover.imageFit", "cover.titleVisible",
+  "cover.authorVisible", "cover.titleScale", "cover.authorScale", "cover.imageScale", "cover.overlayOpacity",
+  "image.layout", "motion.reveal",
+] as const;
+
+function specPathValue(value: unknown, path: string) {
+  return path.split(".").reduce<unknown>((current, key) => {
+    if (!current || typeof current !== "object") return undefined;
+    return (current as Record<string, unknown>)[key];
+  }, value);
+}
+
+function changedFieldCount(before: unknown, after: unknown) {
+  return SPEC_PATHS.reduce((count, path) => count + (JSON.stringify(specPathValue(before, path)) === JSON.stringify(specPathValue(after, path)) ? 0 : 1), 0);
 }
 
 function safeContext(value: unknown) {
@@ -122,11 +142,15 @@ export async function POST(request: Request) {
       console.error(`[ai-book-designer] OpenAI response failed status=${response.status} stage=preset-selection reason=unknown-preset`);
       return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
     }
-    const spec = parseBookDesignSpec(envelope.spec);
+    const spec = mergeBookDesignPreset(preset, envelope.overrides);
     if (!spec.success) {
       console.error(`[ai-book-designer] OpenAI response failed status=${response.status} stage=design-spec-validation reason=${safeValidationReason(spec.error)}`);
       return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
     }
+
+    const currentDesign = safeContext(body.context).currentDesign;
+    const original = parseBookDesignSpec(currentDesign);
+    console.info(`[ai-book-designer] generation succeeded presetId=${preset.id} presetToFinalChangedFields=${changedFieldCount(preset.spec, spec.data)} originalToFinalChangedFields=${original.success ? changedFieldCount(original.data, spec.data) : "unknown"}`);
 
     // Count only a generation that reached a valid, renderer-safe DesignSpec.
     // The RPC performs an atomic increment/rollback so concurrent successes

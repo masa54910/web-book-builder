@@ -14,6 +14,7 @@ export type DesignEditableState = {
   lineHeight: NonNullable<BookConfig["themeSettings"]>["lineHeight"];
   marginScale: NonNullable<BookConfig["themeSettings"]>["marginScale"];
   pageWidth: NonNullable<BookConfig["themeSettings"]>["pageWidth"];
+  paragraphSpacing?: NonNullable<BookConfig["themeSettings"]>["paragraphSpacing"];
   background: NonNullable<BookConfig["themeSettings"]>["background"];
   textColor: string;
   accentColor: string;
@@ -37,6 +38,7 @@ export function applyDesignSpecToState<T extends DesignEditableState>(state: T, 
     lineHeight: spec.typography.lineHeight,
     marginScale: spec.page.marginScale,
     pageWidth: spec.page.pageWidth,
+    paragraphSpacing: spec.page.paragraphSpacing,
     background: spec.page.background,
     textColor: spec.palette.textColor,
     accentColor: spec.palette.accentColor,
@@ -70,6 +72,7 @@ export function designSpecForState(state: DesignEditableState): BookDesignSpec {
       lineHeight: state.lineHeight,
       marginScale: state.marginScale,
       pageWidth: state.pageWidth,
+      paragraphSpacing: state.paragraphSpacing || "normal",
       background: state.background,
       textColor: state.textColor,
       accentColor: state.accentColor,

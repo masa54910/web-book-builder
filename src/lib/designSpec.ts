@@ -207,7 +207,7 @@ export function designSpecFromBookConfig(config: Partial<BookConfig>): BookDesig
     theme,
     typography: { fontFamily: settings.fontFamily, fontScale: settings.fontScale, lineHeight: settings.lineHeight },
     palette: { textColor: settings.textColor, accentColor: settings.accentColor },
-    page: { background: settings.background, marginScale: settings.marginScale, pageWidth: settings.pageWidth, bindingDirection: config.bindingDirection === "ltr" ? "ltr" : "rtl", readerMode: config.readerMode && READER_MODES.includes(config.readerMode) ? config.readerMode : "book", paragraphSpacing: "normal" },
+    page: { background: settings.background, marginScale: settings.marginScale, pageWidth: settings.pageWidth, bindingDirection: config.bindingDirection === "ltr" ? "ltr" : "rtl", readerMode: config.readerMode && READER_MODES.includes(config.readerMode) ? config.readerMode : "book", paragraphSpacing: settings.paragraphSpacing || "normal" },
     cover: { coverStyle: settings.coverStyle, layout: cover.layout, titlePosition: cover.titlePosition, authorPosition: cover.authorPosition, imagePosition: cover.imagePosition, imageFit: cover.imageFit, titleVisible: cover.titleVisible !== false, authorVisible: cover.authorVisible !== false, titleScale: cover.titleScale, authorScale: cover.authorScale, imageScale: cover.imageScale, overlayOpacity: cover.overlayOpacity, ...(cover.titleTextOverride ? { titleTextOverride: cover.titleTextOverride } : {}) },
     image: { layout: settings.imageLayout },
   };

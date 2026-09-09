@@ -3652,6 +3652,17 @@ button.reader-edit-link:disabled {
   margin-bottom: 1.65em;
 }
 
+/* Page width is a renderer token, not an arbitrary user CSS value. */
+.book-width-narrow .text-page,
+.book-width-narrow .chapter-title-page,
+.book-width-narrow .contents-page { max-width: 72%; margin-inline: auto; }
+.book-width-standard .text-page,
+.book-width-standard .chapter-title-page,
+.book-width-standard .contents-page { max-width: 88%; margin-inline: auto; }
+.book-width-wide .text-page,
+.book-width-wide .chapter-title-page,
+.book-width-wide .contents-page { max-width: 100%; margin-inline: auto; }
+
 .text-page-header {
   display: flex;
   margin-bottom: 22px;
@@ -5036,6 +5047,42 @@ button.reader-edit-link:disabled {
   color: var(--wb-text-muted, #5d7488);
   font-style: italic;
 }
+
+/* AI Book Designer tokens are intentionally mapped to the existing miniature
+   renderer rather than injecting arbitrary CSS from model output. */
+.editor-mini-preview[class*="editor-mini-design-"] {
+  color: var(--editor-mini-text, #314b62);
+  background: var(--editor-mini-bg, #fffaf0);
+}
+.editor-mini-preview[class*="editor-mini-design-"] .editor-mini-page-frame {
+  background: color-mix(in srgb, var(--editor-mini-bg, #fffaf0) 76%, white);
+}
+.editor-mini-preview[class*="editor-mini-design-"] .editor-mini-page-text,
+.editor-mini-preview[class*="editor-mini-design-"] .editor-mini-columns-pane {
+  color: var(--editor-mini-text, #314b62);
+  font-size: var(--editor-mini-font-size, 8px);
+  line-height: var(--editor-mini-line-height, 1.45);
+}
+.editor-mini-preview[class*="editor-mini-design-"] .editor-mini-page-heading strong,
+.editor-mini-preview[class*="editor-mini-design-"] .editor-mini-page-lines strong {
+  color: var(--editor-mini-accent, #168dcc);
+}
+.editor-mini-design-font-mincho .editor-mini-page-text,
+.editor-mini-design-font-mincho .editor-mini-columns-pane { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; }
+.editor-mini-design-font-gothic .editor-mini-page-text,
+.editor-mini-design-font-gothic .editor-mini-columns-pane { font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif; }
+.editor-mini-design-font-serif .editor-mini-page-text,
+.editor-mini-design-font-serif .editor-mini-columns-pane { font-family: Georgia, "Times New Roman", serif; }
+.editor-mini-design-font-sans .editor-mini-page-text,
+.editor-mini-design-font-sans .editor-mini-columns-pane { font-family: Inter, Arial, sans-serif; }
+.editor-mini-design-width-narrow .editor-mini-page-text,
+.editor-mini-design-width-narrow .editor-mini-columns { max-width: 72%; margin-inline: auto; }
+.editor-mini-design-width-standard .editor-mini-page-text,
+.editor-mini-design-width-standard .editor-mini-columns { max-width: 88%; margin-inline: auto; }
+.editor-mini-design-width-wide .editor-mini-page-text,
+.editor-mini-design-width-wide .editor-mini-columns { max-width: 100%; margin-inline: auto; }
+.editor-mini-design-spacing-compact .editor-mini-page-text { gap: 3px; }
+.editor-mini-design-spacing-wide .editor-mini-page-text { gap: 8px; }
 
 .editor-mini-page-lines i,
 .editor-mini-page-heading i {

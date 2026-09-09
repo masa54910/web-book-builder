@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { appendDesignHistory, applyDesignSpecToState, buildDesignContext } from "../src/lib/aiBookDesigner";
 import { DEFAULT_BOOK_DESIGN_SPEC, parseBookDesignSpec } from "../src/lib/designSpec";
-import { BOOK_DESIGN_PRESETS, getBookDesignPreset, getBookDesignPresetCatalog } from "../src/lib/designPresets";
+import { BOOK_DESIGN_PRESETS, getBookDesignPreset, getBookDesignPresetCatalog, mergeBookDesignPreset } from "../src/lib/designPresets";
 
 assert.equal(BOOK_DESIGN_PRESETS.length, 26);
 assert.equal(new Set(BOOK_DESIGN_PRESETS.map((preset) => preset.id)).size, 26);
@@ -28,6 +28,7 @@ const original = {
   lineHeight: "normal" as const,
   marginScale: "standard" as const,
   pageWidth: "standard" as const,
+  paragraphSpacing: "normal" as const,
   background: "paper" as const,
   textColor: "#2f251d",
   accentColor: "#6bb9ad",
@@ -40,6 +41,13 @@ assert.equal(next.title, original.title);
 assert.equal(next.rawText, original.rawText);
 assert.equal(next.theme, "modern");
 assert.equal(next.fontFamily, "sans");
+const mergedPreset = mergeBookDesignPreset(getBookDesignPreset("MAG-01")!, { page: { paragraphSpacing: "wide" } });
+assert.equal(mergedPreset.success, true);
+if (mergedPreset.success) {
+  assert.equal(mergedPreset.data.theme, "modern");
+  assert.equal(mergedPreset.data.page.paragraphSpacing, "wide");
+}
+assert.equal(mergeBookDesignPreset(getBookDesignPreset("MAG-01")!, { page: { unsupported: "x" } }).success, false);
 
 const history = appendDesignHistory([], { id: "ai-1", bookId: "book-1", spec: DEFAULT_BOOK_DESIGN_SPEC, prompt: "simple", createdAt: new Date().toISOString(), active: true });
 assert.equal(history.length, 1);
@@ -63,7 +71,7 @@ assert.match(route, /theme: classic \| modern \| minimal \| magazine \| novel \|
 assert.match(route, /readerMode: book \| scroll \| magazine \| photo/);
 assert.match(route, /cover: \{ coverStyle: overlay \| solid \| band/);
 const openAiRequestIndex = route.indexOf('fetch("https://api.openai.com/v1/chat/completions"');
-const specValidationIndex = route.indexOf("const spec = parseBookDesignSpec(envelope.spec);");
+const specValidationIndex = route.indexOf("const spec = mergeBookDesignPreset(preset, envelope.overrides);");
 const quotaRpcIndex = route.indexOf('rpc("consume_ai_book_designer_quota"');
 const responseIndex = route.indexOf("return NextResponse.json({ spec: spec.data");
 assert.ok(openAiRequestIndex >= 0);

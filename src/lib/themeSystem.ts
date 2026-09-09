@@ -7,6 +7,7 @@ export type BookThemeSettings = {
   lineHeight: "tight" | "normal" | "relaxed";
   marginScale: "compact" | "standard" | "wide";
   pageWidth: "narrow" | "standard" | "wide";
+  paragraphSpacing?: "compact" | "normal" | "wide";
   textColor: string;
   accentColor: string;
   coverStyle: "overlay" | "solid" | "band";

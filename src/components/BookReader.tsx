@@ -526,7 +526,12 @@ export default function BookReader({
           onJumpToPrevious={
             previousChapter ? () => jumpToId(`chapter-${previousChapter.slug}`) : undefined
           }
-          adjustment={adjustmentForPage(pageAdjustments, page)}
+          adjustment={(() => {
+            const pageAdjustment = adjustmentForPage(pageAdjustments, page);
+            return pageAdjustment
+              ? { ...pageAdjustment, paragraphSpacing: pageAdjustment.paragraphSpacing || config.themeSettings?.paragraphSpacing }
+              : undefined;
+          })()}
           showRunningHeader={isMobile || pageIndex % 2 === 0}
         />
       );

@@ -167,6 +167,7 @@ export type CanonicalEditorState = {
   lineHeight: BookThemeSettings["lineHeight"];
   marginScale: BookThemeSettings["marginScale"];
   pageWidth: BookThemeSettings["pageWidth"];
+  paragraphSpacing?: NonNullable<BookThemeSettings["paragraphSpacing"]>;
   background: BookThemeSettings["background"];
   textColor: string;
   accentColor: string;
@@ -380,6 +381,7 @@ export function buildCanonicalBookPayload(
       lineHeight: state.lineHeight,
       marginScale: state.marginScale,
       pageWidth: state.pageWidth,
+      paragraphSpacing: state.paragraphSpacing,
       background: state.background,
       textColor: state.textColor,
       accentColor: state.accentColor,
