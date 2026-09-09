@@ -60,4 +60,5 @@ assert.match(route, /stage=response-json-parse/);
 assert.match(route, /stage=missing-content/);
 assert.match(route, /stage=design-spec-json-parse/);
 assert.match(route, /stage=design-spec-validation/);
+assert.match(route, /reason=\$\{safeValidationReason\(spec\.error\)\}/);
 console.log("AI Book Designer safety verification passed.");

@@ -18,6 +18,11 @@ function safeUpstreamField(value: unknown, maxLength = 240) {
     .slice(0, maxLength);
 }
 
+function safeValidationReason(value: unknown) {
+  if (typeof value !== "string") return "unknown";
+  return value.replace(/[\r\n]+/g, " ").slice(0, 160);
+}
+
 function safeContext(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const candidate = value as Record<string, unknown>;
@@ -96,7 +101,7 @@ export async function POST(request: Request) {
     }
     const spec = parseBookDesignSpec(parsed);
     if (!spec.success) {
-      console.error(`[ai-book-designer] OpenAI response failed status=${response.status} stage=design-spec-validation`);
+      console.error(`[ai-book-designer] OpenAI response failed status=${response.status} stage=design-spec-validation reason=${safeValidationReason(spec.error)}`);
       return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
     }
 
