@@ -335,8 +335,15 @@ export default function BookReader({
       // completion callback; canonical page order and page IDs never change.
       const rightBound = config.writingMode === "vertical-rl";
       const physicalMethod = physicalFlipMethod(config.writingMode, direction);
-      if (!rightBound || activePageIndex === 0) {
+      if (!rightBound) {
         api[physicalMethod]("top");
+        return;
+      }
+      // The page-flip engine cannot start a BACK animation at canonical page
+      // zero. Keep the cover-opening transition usable; all subsequent
+      // vertical pages use the right-bound physical adapter below.
+      if (activePageIndex === 0) {
+        api[direction === "next" ? "flipNext" : "flipPrev"]("top");
         return;
       }
 
