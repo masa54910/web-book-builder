@@ -363,8 +363,8 @@ function fromRecord(record: CloudBookRecord): EditorState {
       (isDisplayableImageUrl(coverStoragePath) ? coverStoragePath : undefined),
     coverImageStoragePath: isStorageReference(coverStoragePath) ? coverStoragePath : undefined,
     coverFileName: record.coverPath ? "保存済み表紙" : undefined,
-    bindingDirection: record.bindingDirection,
     writingMode: record.bookProject.config.writingMode === "vertical-rl" ? "vertical-rl" : "horizontal-tb",
+    bindingDirection: record.bookProject.config.writingMode === "vertical-rl" ? "rtl" : record.bindingDirection,
     theme: record.theme,
     language: record.bookProject.config.language,
     fontFamily: record.bookProject.config.themeSettings?.fontFamily || "mincho",
@@ -515,8 +515,8 @@ function stateFromPreviewProject(project: BookProject): EditorState {
       project.config.coverImageUrl ||
       (isDisplayableImageUrl(coverStoragePath) ? coverStoragePath : undefined),
     coverImageStoragePath: isStorageReference(coverStoragePath) ? coverStoragePath : undefined,
-    bindingDirection: project.config.bindingDirection,
     writingMode: project.config.writingMode === "vertical-rl" ? "vertical-rl" : "horizontal-tb",
+    bindingDirection: project.config.writingMode === "vertical-rl" ? "rtl" : project.config.bindingDirection,
     theme: project.config.theme,
     language: project.config.language,
     fontFamily: project.config.themeSettings?.fontFamily || "mincho",
@@ -1632,8 +1632,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       coverImage: payload.coverAsset?.localPreviewUrl || payload.coverAsset?.storagePath,
       coverImageStoragePath: payload.coverAsset?.storagePath,
       coverFileName: payload.coverAsset?.fileName,
-      bindingDirection: payload.bindingDirection,
       writingMode: payload.writingMode || state.writingMode,
+      bindingDirection: payload.writingMode === "vertical-rl" ? "rtl" : payload.bindingDirection,
       theme: payload.theme,
       language: payload.language,
       fontFamily: payload.themeSettings.fontFamily || state.fontFamily,
@@ -2299,7 +2299,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             </label>
             <label>
               <span>綴じ方向</span>
-              <select value={state.bindingDirection} onChange={(event) => update("bindingDirection", event.target.value as "rtl" | "ltr")}>
+              <select value={state.writingMode === "vertical-rl" ? "rtl" : state.bindingDirection} disabled={state.writingMode === "vertical-rl"} onChange={(event) => update("bindingDirection", event.target.value as "rtl" | "ltr")}>
                 <option value="rtl">右綴じ</option>
                 <option value="ltr">左綴じ</option>
               </select>

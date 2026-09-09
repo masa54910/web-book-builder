@@ -158,6 +158,9 @@ export default function BookReader({
   const [autoFlipLoop, setAutoFlipLoop] = useState(false);
   const [autoFlipStartMode, setAutoFlipStartMode] = useState<"cover" | "current">("current");
   const [isCoverDesignOpen, setIsCoverDesignOpen] = useState(false);
+  // Vertical Japanese writing is always a right-bound reading experience.
+  // Keep this presentation rule separate from the DOM/text direction.
+  const bindingDirection = config.writingMode === "vertical-rl" ? "rtl" : config.bindingDirection;
   const coverDesign = normalizeCoverDesign(config.coverDesign);
   const pageAdjustments = useMemo(
     () => normalizePageAdjustments(config.pageAdjustments),
@@ -194,8 +197,8 @@ export default function BookReader({
     [access, chapters, config.charactersPerPage, config.tableOfContentsItemsPerPage, contentBlocks, displayMode, images, isMobile, pageAdjustments],
   );
   const pages = useMemo(
-    () => toBoundPageOrder(logicalPages, isMobile, config.bindingDirection),
-    [config.bindingDirection, logicalPages, isMobile],
+    () => toBoundPageOrder(logicalPages, isMobile, bindingDirection),
+    [bindingDirection, logicalPages, isMobile],
   );
   const logicalFolioById = useMemo(
     () => buildReaderFolioById(logicalPages),
@@ -444,8 +447,8 @@ export default function BookReader({
         return;
       }
       if (displayMode === "preview" && isCoverDesignOpen) return;
-      const nextKey = config.bindingDirection === "rtl" ? "ArrowLeft" : "ArrowRight";
-      const previousKey = config.bindingDirection === "rtl" ? "ArrowRight" : "ArrowLeft";
+      const nextKey = bindingDirection === "rtl" ? "ArrowLeft" : "ArrowRight";
+      const previousKey = bindingDirection === "rtl" ? "ArrowRight" : "ArrowLeft";
       if (event.key === nextKey) {
         event.preventDefault();
         pageFlip()?.flipNext("top");
@@ -456,7 +459,7 @@ export default function BookReader({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [config.bindingDirection, displayMode, isCoverDesignOpen, pageFlip]);
+  }, [bindingDirection, displayMode, isCoverDesignOpen, pageFlip]);
 
   useEffect(() => {
     if (displayMode !== "preview" || !isCoverDesignOpen) return;
@@ -575,14 +578,14 @@ export default function BookReader({
   };
 
   const directionLabel =
-    config.bindingDirection === "rtl" ? "RIGHT-BOUND · 次へは左方向 ←" : "LEFT-BOUND · 次へは右方向 →";
+    bindingDirection === "rtl" ? "RIGHT-BOUND · 次へは左方向 ←" : "LEFT-BOUND · 次へは右方向 →";
   const helpText =
-    config.bindingDirection === "rtl"
+    bindingDirection === "rtl"
       ? "左矢印キーで次へ、右矢印キーで前へ。ページの角をドラッグ、またはタップしても移動できます。"
       : "右矢印キーで次へ、左矢印キーで前へ。ページの角をドラッグ、またはタップしても移動できます。";
 
   return (
-    <main className={`reader-shell reader-binding-${config.bindingDirection} reader-writing-${config.writingMode || "horizontal-tb"} ${themeClassNames(config.theme, config.themeSettings)}`} style={readerStyle} dir={config.bindingDirection}>
+    <main className={`reader-shell reader-binding-${bindingDirection} reader-writing-${config.writingMode || "horizontal-tb"} ${themeClassNames(config.theme, config.themeSettings)}`} style={readerStyle}>
       <header className="reader-masthead">
         <div>
           <p className="reader-kicker">Digital Book Builder · Static Preview</p>
@@ -744,7 +747,7 @@ export default function BookReader({
       ) : null}
 
       <ReaderControls
-        bindingDirection={config.bindingDirection}
+        bindingDirection={bindingDirection}
         current={activePageIndex}
         total={pagesWithAdjustments.length}
         onFirst={() => pageFlip()?.turnToPage(0)}

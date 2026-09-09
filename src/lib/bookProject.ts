@@ -886,7 +886,7 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
         description: input.description.trim(),
         language: normalizeLocale(input.language),
         coverImage: input.coverImage,
-        bindingDirection: input.bindingDirection,
+        bindingDirection: input.writingMode === "vertical-rl" ? "rtl" : input.bindingDirection,
         writingMode: input.writingMode === "vertical-rl" ? "vertical-rl" : "horizontal-tb",
         theme: input.theme,
         themeSettings: input.themeSettings,

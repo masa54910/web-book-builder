@@ -175,6 +175,7 @@ export function parseBookDesignSpec(input: unknown): DesignSpecParseResult {
     const paragraphSpacing = page.paragraphSpacing;
     const writingMode = page.writingMode === undefined ? "horizontal-tb" : page.writingMode;
     if (!hasValue(BACKGROUNDS, page.background) || !hasValue(MARGINS, page.marginScale) || !hasValue(WIDTHS, page.pageWidth) || !hasValue(DIRECTIONS, page.bindingDirection) || !hasValue(WRITING_MODES, writingMode) || !hasValue(READER_MODES, page.readerMode) || !["compact", "normal", "wide"].includes(paragraphSpacing as string)) throw new Error("page option is not allowed");
+    if (writingMode === "vertical-rl" && page.bindingDirection !== "rtl") throw new Error("vertical writing requires rtl binding");
     if (!hasValue(IMAGE_LAYOUTS, image.layout)) throw new Error("image.layout is not allowed");
     if (motion.reveal !== "none" && motion.reveal !== "subtle" && motion.reveal !== "standard") throw new Error("motion.reveal is not allowed");
     if (motion.reducedMotion !== "respect") throw new Error("motion.reducedMotion must respect user preference");
@@ -210,7 +211,7 @@ export function designSpecFromBookConfig(config: Partial<BookConfig>): BookDesig
     theme,
     typography: { fontFamily: settings.fontFamily, fontScale: settings.fontScale, lineHeight: settings.lineHeight },
     palette: { textColor: settings.textColor, accentColor: settings.accentColor },
-    page: { background: settings.background, marginScale: settings.marginScale, pageWidth: settings.pageWidth, bindingDirection: config.bindingDirection === "ltr" ? "ltr" : "rtl", writingMode: config.writingMode === "vertical-rl" ? "vertical-rl" : "horizontal-tb", readerMode: config.readerMode && READER_MODES.includes(config.readerMode) ? config.readerMode : "book", paragraphSpacing: settings.paragraphSpacing || "normal" },
+    page: { background: settings.background, marginScale: settings.marginScale, pageWidth: settings.pageWidth, bindingDirection: config.writingMode === "vertical-rl" ? "rtl" : config.bindingDirection === "ltr" ? "ltr" : "rtl", writingMode: config.writingMode === "vertical-rl" ? "vertical-rl" : "horizontal-tb", readerMode: config.readerMode && READER_MODES.includes(config.readerMode) ? config.readerMode : "book", paragraphSpacing: settings.paragraphSpacing || "normal" },
     cover: { coverStyle: settings.coverStyle, layout: cover.layout, titlePosition: cover.titlePosition, authorPosition: cover.authorPosition, imagePosition: cover.imagePosition, imageFit: cover.imageFit, titleVisible: cover.titleVisible !== false, authorVisible: cover.authorVisible !== false, titleScale: cover.titleScale, authorScale: cover.authorScale, imageScale: cover.imageScale, overlayOpacity: cover.overlayOpacity, ...(cover.titleTextOverride ? { titleTextOverride: cover.titleTextOverride } : {}) },
     image: { layout: settings.imageLayout },
   };

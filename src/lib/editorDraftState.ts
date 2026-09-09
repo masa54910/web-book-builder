@@ -248,8 +248,8 @@ export function seedFromDraftFields(input: {
       ? asString(fields.coverImageStoragePath)
       : undefined,
     coverFileName: asString(fields.coverFileName) || undefined,
-    bindingDirection: fields.bindingDirection === "ltr" ? "ltr" : "rtl",
     writingMode: fields.writingMode === "vertical-rl" ? "vertical-rl" : "horizontal-tb",
+    bindingDirection: fields.writingMode === "vertical-rl" ? "rtl" : fields.bindingDirection === "ltr" ? "ltr" : "rtl",
     theme: asString(fields.theme, input.initialState.theme) as ThemeId,
     language: asString(fields.language, input.initialState.language) as SupportedLocale,
     fontFamily: asString(fields.fontFamily, input.initialState.fontFamily) as BookThemeSettings["fontFamily"],

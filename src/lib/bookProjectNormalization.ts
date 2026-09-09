@@ -35,8 +35,8 @@ export function normalizeBookProject(value: unknown): BookProject | null {
         bookId: value.config.bookId || `normalized-${Date.now()}`,
         title: value.config.title || "無題のWeb書籍",
         author: value.config.author || "作者未設定",
-        bindingDirection: value.config.bindingDirection === "ltr" ? "ltr" : "rtl",
         writingMode: value.config.writingMode === "vertical-rl" ? "vertical-rl" : "horizontal-tb",
+        bindingDirection: value.config.writingMode === "vertical-rl" ? "rtl" : value.config.bindingDirection === "ltr" ? "ltr" : "rtl",
         theme: ["classic", "modern", "minimal", "magazine", "novel", "photo", "research", "portfolio"].includes(value.config.theme)
           ? value.config.theme
           : "classic",

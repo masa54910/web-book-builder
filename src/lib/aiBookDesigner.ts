@@ -33,7 +33,7 @@ export function applyDesignSpecToState<T extends DesignEditableState>(state: T, 
   return {
     ...state,
     theme: spec.theme,
-    bindingDirection: spec.page.bindingDirection,
+    bindingDirection: spec.page.writingMode === "vertical-rl" ? "rtl" : spec.page.bindingDirection,
     writingMode: spec.page.writingMode,
     fontFamily: spec.typography.fontFamily,
     fontScale: spec.typography.fontScale,
