@@ -44,15 +44,6 @@ export async function POST(request: Request) {
     if (!apiKey) return jsonError("AIデザイン機能は現在利用できません。", 503);
     const dailyLimit = Number.parseInt(process.env.AI_BOOK_DESIGNER_DAILY_LIMIT || "10", 10);
     const quotaLimit = Number.isFinite(dailyLimit) ? Math.min(100, Math.max(1, dailyLimit)) : 10;
-    const { data: allowed, error: quotaError } = await requireSupabaseAdminClient().rpc("consume_ai_book_designer_quota", {
-      p_user_id: user.id,
-      p_limit: quotaLimit,
-    });
-    if (quotaError) {
-      console.error("ai.book-designer quota failed", quotaError.message);
-      return jsonError("AIデザイン機能は現在利用できません。", 503);
-    }
-    if (allowed !== true) return jsonError("本日のAIデザイン生成回数の上限に達しました。", 429);
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -91,6 +82,19 @@ export async function POST(request: Request) {
     try { parsed = JSON.parse(raw); } catch { return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502); }
     const spec = parseBookDesignSpec(parsed);
     if (!spec.success) return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
+
+    // Count only a generation that reached a valid, renderer-safe DesignSpec.
+    // The RPC performs an atomic increment/rollback so concurrent successes
+    // cannot move the daily count past the configured limit.
+    const { data: allowed, error: quotaError } = await requireSupabaseAdminClient().rpc("consume_ai_book_designer_quota", {
+      p_user_id: user.id,
+      p_limit: quotaLimit,
+    });
+    if (quotaError) {
+      console.error("ai.book-designer quota failed", quotaError.message);
+      return jsonError("AIデザイン機能は現在利用できません。", 503);
+    }
+    if (allowed !== true) return jsonError("本日のAIデザイン生成回数の上限に達しました。", 429);
     return NextResponse.json({ spec: spec.data, model: process.env.OPENAI_BOOK_DESIGNER_MODEL?.trim() || "gpt-5.4" }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("ai.book-designer failed", error instanceof Error ? error.message : "unknown");
