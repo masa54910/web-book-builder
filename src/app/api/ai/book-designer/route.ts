@@ -79,7 +79,17 @@ export async function POST(request: Request) {
               : undefined
             : undefined,
       });
-      return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
+      const diagnosticHeaders = request.headers.get("x-ai-book-designer-diagnostic") === "codex"
+        ? {
+            "x-ai-upstream-status": String(response.status),
+            "x-ai-upstream-type": upstreamError && typeof upstreamError === "object" && "type" in upstreamError && typeof upstreamError.type === "string" ? upstreamError.type : "",
+            "x-ai-upstream-code": upstreamError && typeof upstreamError === "object" && "code" in upstreamError && typeof upstreamError.code === "string" ? upstreamError.code : "",
+          }
+        : undefined;
+      return NextResponse.json(
+        { error: "デザインを生成できませんでした。少し時間を空けてもう一度お試しください。" },
+        { status: 502, headers: diagnosticHeaders },
+      );
     }
     const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
     const raw = payload.choices?.[0]?.message?.content;
