@@ -4,6 +4,7 @@ export const DRAFT_STORAGE_KEY = "webBookMaker:draft:current";
 export const PREVIEW_POINTER_KEY = "webBookMaker:preview:current";
 export const PREVIEW_RETURN_KEY = "webBookMaker:preview:return";
 export const AUTOSAVE_STORAGE_PREFIX = "webbookmaker:autosave:";
+export const NEW_DRAFT_SESSION_PREFIX = "webbookmaker:new-draft-session:";
 export const AUTOSAVE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 
 export type MakerDraft = {
@@ -36,6 +37,59 @@ function getStorage() {
     return window.localStorage;
   } catch {
     return null;
+  }
+}
+
+function getSessionStorage() {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function newDraftSessionStorageKey(userId: string) {
+  return `${NEW_DRAFT_SESSION_PREFIX}${userId.trim()}`;
+}
+
+function createNewDraftId() {
+  const cryptoApi = typeof crypto !== "undefined" ? crypto : undefined;
+  const randomUuid = cryptoApi && typeof cryptoApi.randomUUID === "function"
+    ? cryptoApi.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `new-${randomUuid}`;
+}
+
+/**
+ * Return the temporary identity for the current user's in-progress new book.
+ * sessionStorage intentionally scopes this identity to the current browser
+ * tab/session, so a later `/books/new` gets a fresh namespace after a formal
+ * save while a reload can still restore the same unfinished draft.
+ */
+export function getOrCreateNewDraftId(userId: string) {
+  const normalizedUserId = userId.trim();
+  if (!normalizedUserId) return null;
+  const storage = getSessionStorage();
+  if (!storage) return createNewDraftId();
+  const key = newDraftSessionStorageKey(normalizedUserId);
+  try {
+    const existing = storage.getItem(key)?.trim();
+    if (existing) return existing;
+    const created = createNewDraftId();
+    storage.setItem(key, created);
+    return created;
+  } catch {
+    return createNewDraftId();
+  }
+}
+
+export function clearNewDraftSession(userId: string) {
+  const normalizedUserId = userId.trim();
+  if (!normalizedUserId) return;
+  try {
+    getSessionStorage()?.removeItem(newDraftSessionStorageKey(normalizedUserId));
+  } catch {
+    // Ignore cleanup failures in restricted storage environments.
   }
 }
 

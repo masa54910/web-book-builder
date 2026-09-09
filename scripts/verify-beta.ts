@@ -39,7 +39,9 @@ import { buildCanonicalBookPayload, canonicalPayloadToBookProjectInput } from ".
 import { normalizePageAdjustments, removePageAdjustment, upsertPageAdjustment } from "../src/lib/pageAdjustments";
 import {
   AUTOSAVE_MAX_AGE_MS,
+  clearNewDraftSession,
   deleteAutosaveDraft,
+  getOrCreateNewDraftId,
   loadAutosaveDraft,
   saveAutosaveDraft,
 } from "../src/lib/browserBookStorage";
@@ -1237,11 +1239,30 @@ const fakeLocalStorage = {
   },
 } as unknown as Storage;
 const globalWithWindow = globalThis as unknown as {
-  window?: { localStorage: Storage };
+  window?: { localStorage: Storage; sessionStorage?: Storage };
 };
 const previousWindow = globalWithWindow.window;
-globalWithWindow.window = { localStorage: fakeLocalStorage };
+const sessionStorage = new Map<string, string>();
+const fakeSessionStorage = {
+  getItem: (key: string) => sessionStorage.get(key) ?? null,
+  setItem: (key: string, value: string) => {
+    sessionStorage.set(key, value);
+  },
+  removeItem: (key: string) => {
+    sessionStorage.delete(key);
+  },
+} as unknown as Storage;
+globalWithWindow.window = { localStorage: fakeLocalStorage, sessionStorage: fakeSessionStorage };
 try {
+  const newDraftId = getOrCreateNewDraftId("user-1");
+  assert.ok(newDraftId?.startsWith("new-"), "New drafts need a temporary identity");
+  assert.equal(getOrCreateNewDraftId("user-1"), newDraftId, "A reload in the same session keeps the same new-draft identity");
+  assert.notEqual(getOrCreateNewDraftId("other-user"), newDraftId, "New-draft identities must be user-scoped");
+  assert.ok(saveAutosaveDraft({ bookId: newDraftId, userId: "user-1", fields: { title: "同一新規draft" } }));
+  assert.equal(loadAutosaveDraft(newDraftId, "user-1")?.fields.title, "同一新規draft");
+  clearNewDraftSession("user-1");
+  assert.notEqual(getOrCreateNewDraftId("user-1"), newDraftId, "A formal save must allow the next /books/new to start fresh");
+
   // A newer manual save must win over a stale autosave snapshot. This is the
   // deterministic persistence check for the editor's save/autosave race:
   // whichever snapshot is written last is the one restored, including the
@@ -1372,7 +1393,7 @@ try {
       throw new Error("storage unavailable");
     },
   } as unknown as Storage;
-  globalWithWindow.window = { localStorage: throwingStorage };
+  globalWithWindow.window = { localStorage: throwingStorage, sessionStorage: throwingStorage };
   assert.equal(saveHomeDraft("Storage errors must not crash the home"), null);
   assert.equal(loadHomeDraft(), null);
   deleteHomeDraft();
@@ -1389,6 +1410,8 @@ const globalsCss = fs.readFileSync(path.join(process.cwd(), "src", "app", "globa
 const bookReaderSource = fs.readFileSync(path.join(process.cwd(), "src", "components", "BookReader.tsx"), "utf8");
 const inlineEditorSource = fs.readFileSync(path.join(process.cwd(), "src", "components", "InlineManuscriptEditor.tsx"), "utf8");
 const dashboardEditorSource = fs.readFileSync(path.join(process.cwd(), "src", "components", "DashboardBookEditor.tsx"), "utf8");
+assert.doesNotMatch(dashboardEditorSource, /loadAutosaveDraft\(null/u, "New editors must not restore the legacy shared autosave namespace");
+assert.match(dashboardEditorSource, /getOrCreateNewDraftId\(user\.id\)/u, "New editors must use a temporary user-scoped draft identity");
 const termsPage = fs.readFileSync(path.join(process.cwd(), "src", "app", "terms", "page.tsx"), "utf8");
 const privacyPage = fs.readFileSync(path.join(process.cwd(), "src", "app", "privacy", "page.tsx"), "utf8");
 const commercePage = fs.readFileSync(path.join(process.cwd(), "src", "app", "commerce", "page.tsx"), "utf8");

@@ -40,9 +40,11 @@ import {
   type CloudBookRecord,
 } from "@/lib/bookRepository";
 import {
+  clearNewDraftSession,
   deleteAutosaveDraft,
   deleteDraft,
   deletePreviewReturnState,
+  getOrCreateNewDraftId,
   loadAutosaveDraft,
   loadDraft,
   loadPreviewReturnState,
@@ -601,6 +603,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const helpHighlightTimerRef = useRef<number | null>(null);
   const bookySuccessTimerRef = useRef<number | null>(null);
   const [bookId, setBookId] = useState<string | undefined>(params.id);
+  const [newDraftId, setNewDraftId] = useState<string | null>(null);
   const [state, setState] = useState<EditorState>(draftSeed.state);
   const [images, setImages] = useState<UploadedBookImage[]>(draftSeed.images);
   const [contentBlocks, setContentBlocks] = useState<BookContentBlock[]>(
@@ -913,14 +916,30 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       mode !== "new" ||
       !user ||
       previewDraftId ||
-      draftSeed.restored ||
-      didRestorePreviewDraft ||
-      restoredAutosaveKeyRef.current === "new"
+      didRestorePreviewDraft
     ) {
       return;
     }
-    restoredAutosaveKeyRef.current = "new";
-    const autosave = loadAutosaveDraft(null, user.id);
+    const draftId = getOrCreateNewDraftId(user.id);
+    if (!draftId) return;
+    const timerId = window.setTimeout(() => setNewDraftId(draftId), 0);
+    return () => window.clearTimeout(timerId);
+  }, [didRestorePreviewDraft, draftSeed.restored, mode, previewDraftId, user]);
+
+  useEffect(() => {
+    if (
+      mode !== "new" ||
+      !user ||
+      !newDraftId ||
+      previewDraftId ||
+      draftSeed.restored ||
+      didRestorePreviewDraft ||
+      restoredAutosaveKeyRef.current === newDraftId
+    ) {
+      return;
+    }
+    restoredAutosaveKeyRef.current = newDraftId;
+    const autosave = loadAutosaveDraft(newDraftId, user.id);
     if (!autosave) return;
     const restored = normalizeEditorDraftSeed(seedFromDraftFields({
       mode: "new",
@@ -948,7 +967,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       setEditorRevision((current) => current + 1);
     }, 0);
     return () => window.clearTimeout(restoreTimer);
-  }, [didRestorePreviewDraft, draftSeed.restored, mode, previewDraftId, resetEditorHistory, user]);
+  }, [didRestorePreviewDraft, draftSeed.restored, mode, newDraftId, previewDraftId, resetEditorHistory, user]);
 
   useEffect(() => {
     if (pendingScrollRestore === null) return;
@@ -1228,9 +1247,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         state,
         contentBlocks,
         images,
-        draftId: bookId || "new-draft",
+        draftId: bookId || newDraftId || "new-draft",
       }),
-    [bookId, contentBlocks, images, mode, state],
+    [bookId, contentBlocks, images, mode, newDraftId, state],
   );
 
   const autosaveLabel = useMemo(() => {
@@ -1248,7 +1267,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     if (!dirty) return;
     if (!isHydrated || !hasRestoredDraft) return;
     if (mode === "edit" && isLoading) return;
-    const targetBookId = mode === "edit" ? bookId || params.id || null : null;
+    const targetBookId = mode === "edit" ? bookId || params.id || null : newDraftId;
+    if (!targetBookId) return;
     const timeoutId = window.setTimeout(() => {
       const saved = saveAutosaveDraft({
         bookId: targetBookId,
@@ -1259,7 +1279,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       setAutosaveAt(saved.savedAt);
     }, 900);
     return () => window.clearTimeout(timeoutId);
-  }, [autosaveDraftFields, bookId, dirty, hasRestoredDraft, isHydrated, isLoading, mode, params.id, user]);
+  }, [autosaveDraftFields, bookId, dirty, hasRestoredDraft, isHydrated, isLoading, mode, newDraftId, params.id, user]);
 
   const validateRequiredBeforeAction = () => {
     const validation = validateRequiredBookFields({
@@ -1584,7 +1604,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
 
   const clearAutosaveAfterFormalPersistence = (persistedBookId?: string) => {
     if (mode === "new") {
-      deleteAutosaveDraft(null);
+      if (newDraftId) deleteAutosaveDraft(newDraftId);
+      if (user) clearNewDraftSession(user.id);
     } else {
       deleteAutosaveDraft(bookId || params.id || null);
     }
