@@ -582,7 +582,7 @@ export default function BookReader({
       : "右矢印キーで次へ、左矢印キーで前へ。ページの角をドラッグ、またはタップしても移動できます。";
 
   return (
-    <main className={`reader-shell ${themeClassNames(config.theme, config.themeSettings)}`} style={readerStyle}>
+    <main className={`reader-shell reader-binding-${config.bindingDirection} reader-writing-${config.writingMode || "horizontal-tb"} ${themeClassNames(config.theme, config.themeSettings)}`} style={readerStyle} dir={config.bindingDirection}>
       <header className="reader-masthead">
         <div>
           <p className="reader-kicker">Digital Book Builder · Static Preview</p>

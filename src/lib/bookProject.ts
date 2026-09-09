@@ -207,6 +207,7 @@ export type BookProjectInput = {
   rawText: string;
   coverImage?: string;
   bindingDirection: BookConfig["bindingDirection"];
+  writingMode?: BookConfig["writingMode"];
   theme: BookConfig["theme"];
   language?: SupportedLocale;
   themeSettings?: Partial<BookThemeSettings>;
@@ -886,6 +887,7 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
         language: normalizeLocale(input.language),
         coverImage: input.coverImage,
         bindingDirection: input.bindingDirection,
+        writingMode: input.writingMode === "vertical-rl" ? "vertical-rl" : "horizontal-tb",
         theme: input.theme,
         themeSettings: input.themeSettings,
         coverDesign: normalizeCoverDesign(input.coverDesign),

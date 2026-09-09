@@ -9,6 +9,7 @@ export const AI_BOOK_DESIGNER_MAX_HISTORY = 30;
 export type DesignEditableState = {
   theme: BookConfig["theme"];
   bindingDirection: BookConfig["bindingDirection"];
+  writingMode?: NonNullable<BookConfig["writingMode"]>;
   fontFamily: NonNullable<BookConfig["themeSettings"]>["fontFamily"];
   fontScale: NonNullable<BookConfig["themeSettings"]>["fontScale"];
   lineHeight: NonNullable<BookConfig["themeSettings"]>["lineHeight"];
@@ -33,6 +34,7 @@ export function applyDesignSpecToState<T extends DesignEditableState>(state: T, 
     ...state,
     theme: spec.theme,
     bindingDirection: spec.page.bindingDirection,
+    writingMode: spec.page.writingMode,
     fontFamily: spec.typography.fontFamily,
     fontScale: spec.typography.fontScale,
     lineHeight: spec.typography.lineHeight,
@@ -66,6 +68,7 @@ export function designSpecForState(state: DesignEditableState): BookDesignSpec {
   return designSpecFromBookConfig({
     theme: state.theme,
     bindingDirection: state.bindingDirection,
+    writingMode: state.writingMode || "horizontal-tb",
     themeSettings: {
       fontFamily: state.fontFamily,
       fontScale: state.fontScale,

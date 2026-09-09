@@ -9,6 +9,7 @@ export type ThemeId =
   | "portfolio";
 
 export type ReaderMode = "book" | "scroll" | "magazine" | "photo";
+export type WritingMode = "horizontal-tb" | "vertical-rl";
 
 export type AccessLevel = "free" | "external" | "password" | "access-code";
 

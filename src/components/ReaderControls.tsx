@@ -31,7 +31,9 @@ export default function ReaderControls({
   // Keep the handlers and binding direction untouched; only the visible arrows
   // follow the requested reading-order presentation.
   const nextLabel = bindingDirection === "rtl" ? `→ ${locale === "en" ? "Next" : "次へ"}` : `${locale === "en" ? "Next" : "次へ"} →`;
-  const previousLabel = locale === "en" ? "← Previous" : "← 前へ";
+  const previousLabel = bindingDirection === "rtl"
+    ? (locale === "en" ? "Previous →" : "前へ →")
+    : (locale === "en" ? "← Previous" : "← 前へ");
 
   const submitPageJump = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

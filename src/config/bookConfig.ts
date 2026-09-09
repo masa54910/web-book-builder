@@ -6,6 +6,7 @@ import type {
   ExternalLink,
   Monetization,
   ReaderMode,
+  WritingMode,
   ThemeId,
 } from "@/lib/productTypes";
 import type { SupportedLocale } from "@/lib/localization";
@@ -52,6 +53,7 @@ export type BookConfig = {
   publishedAt: string;
   copyrightText: string;
   readerMode?: ReaderMode;
+  writingMode?: WritingMode;
   authorProfile?: AuthorProfile;
   externalLinks?: ExternalLink[];
   monetization?: Monetization;
@@ -78,6 +80,7 @@ export const bookConfig: BookConfig = {
   publishedAt: "2026",
   copyrightText: "Sample text created for web book preview testing.",
   readerMode: "book",
+  writingMode: "horizontal-tb",
   externalLinks: [],
   branding: {
     showCreatedWithWebBookMaker: true,

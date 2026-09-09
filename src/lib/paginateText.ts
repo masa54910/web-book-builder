@@ -676,6 +676,8 @@ export function toBoundPageOrder(
   isMobile: boolean,
   bindingDirection: BindingDirection,
 ) {
+  // Binding changes presentation/navigation only; canonical page identities
+  // and their persisted order remain untouched.
   void bindingDirection;
   return isMobile ? pages : [...pages];
 }

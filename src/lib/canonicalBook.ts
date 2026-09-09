@@ -123,6 +123,7 @@ export type CanonicalBookPayload = {
   coverDesign: CoverDesign;
   pageAdjustments: PageAdjustment[];
   bindingDirection: BookConfig["bindingDirection"];
+  writingMode?: NonNullable<BookConfig["writingMode"]>;
   readerMode: "book";
   charactersPerPage: number;
   tableOfContentsItemsPerPage: number;
@@ -160,6 +161,7 @@ export type CanonicalEditorState = {
   coverImageStoragePath?: string;
   coverFileName?: string;
   bindingDirection: BookConfig["bindingDirection"];
+  writingMode?: NonNullable<BookConfig["writingMode"]>;
   theme: ThemeId;
   language: SupportedLocale;
   fontFamily: BookThemeSettings["fontFamily"];
@@ -391,6 +393,7 @@ export function buildCanonicalBookPayload(
     coverDesign: normalizeCoverDesign(state.coverDesign),
     pageAdjustments: normalizePageAdjustments(state.pageAdjustments),
     bindingDirection: state.bindingDirection,
+    writingMode: state.writingMode || "horizontal-tb",
     readerMode: "book",
     charactersPerPage: state.charactersPerPage,
     tableOfContentsItemsPerPage: state.tableOfContentsItemsPerPage,
@@ -510,6 +513,7 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
     rawText,
     coverImage: payload.coverAsset?.storagePath || payload.coverAsset?.localPreviewUrl,
     bindingDirection: payload.bindingDirection,
+    writingMode: payload.writingMode || "horizontal-tb",
     theme: payload.theme,
     language: payload.language,
     themeSettings: payload.themeSettings,

@@ -15,7 +15,7 @@ mood: { keywords: string[], density: compact | balanced | airy }
 theme: classic | modern | minimal | magazine | novel | photo | research | portfolio
 typography: { fontFamily: mincho | gothic | serif | sans, fontScale: small | medium | large, lineHeight: tight | normal | relaxed }
 palette: { textColor: #RRGGBB, accentColor: #RRGGBB }
-page: { background: paper | ivory | cafe | night | green | white, marginScale: compact | standard | wide, pageWidth: narrow | standard | wide, bindingDirection: rtl | ltr, readerMode: book | scroll | magazine | photo, paragraphSpacing: compact | normal | wide }
+page: { background: paper | ivory | cafe | night | green | white, marginScale: compact | standard | wide, pageWidth: narrow | standard | wide, bindingDirection: rtl | ltr, writingMode: horizontal-tb | vertical-rl, readerMode: book | scroll | magazine | photo, paragraphSpacing: compact | normal | wide }
 cover: { coverStyle: overlay | solid | band, layout: layout-01 through layout-10, titlePosition: top-left | top-center | top-right | center-left | center | center-right | bottom-left | bottom-center | bottom-right, authorPosition: same values, imagePosition: same values, imageFit: contain | cover, titleVisible: boolean, authorVisible: boolean, titleScale: 0.3-1, authorScale: 0.7-1.5, imageScale: 0.3-1, overlayOpacity: 0-0.6, titleTextOverride?: string }
 image: { layout: framed | full | contained }
 motion: { reveal: none | subtle | standard, reducedMotion: respect }
@@ -41,7 +41,7 @@ function safeValidationReason(value: unknown) {
 const SPEC_PATHS = [
   "genre", "theme", "mood.density", "typography.fontFamily", "typography.fontScale", "typography.lineHeight",
   "palette.textColor", "palette.accentColor", "page.background", "page.marginScale", "page.pageWidth",
-  "page.bindingDirection", "page.readerMode", "page.paragraphSpacing", "cover.coverStyle", "cover.layout",
+  "page.bindingDirection", "page.writingMode", "page.readerMode", "page.paragraphSpacing", "cover.coverStyle", "cover.layout",
   "cover.titlePosition", "cover.authorPosition", "cover.imagePosition", "cover.imageFit", "cover.titleVisible",
   "cover.authorVisible", "cover.titleScale", "cover.authorScale", "cover.imageScale", "cover.overlayOpacity",
   "image.layout", "motion.reveal",

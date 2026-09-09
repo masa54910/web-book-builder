@@ -65,7 +65,7 @@ import { trackEvent } from "@/lib/analytics";
 import { getPublicationEditAccess } from "@/lib/publicationEditAccessClient";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { PublicationEditDecision } from "@/lib/publicationEditWindow";
-import { safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
+import { safeExternalUrl, type ExternalLink, type ThemeId, type WritingMode } from "@/lib/productTypes";
 import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
 import { contrastRatio, type BookThemeSettings } from "@/lib/themeSystem";
 import type { BookDesignHistoryEntry } from "@/lib/designSpec";
@@ -135,6 +135,7 @@ type EditorState = {
   coverImageStoragePath?: string;
   coverFileName?: string;
   bindingDirection: "rtl" | "ltr";
+  writingMode: WritingMode;
   theme: ThemeId;
   language: SupportedLocale;
   fontFamily: BookThemeSettings["fontFamily"];
@@ -197,6 +198,7 @@ const INITIAL_EDITOR: EditorState = {
   copyrightText: "",
   rawText: "",
   bindingDirection: "rtl",
+  writingMode: "horizontal-tb",
   theme: "classic",
   language: "ja",
   fontFamily: "mincho",
@@ -362,6 +364,7 @@ function fromRecord(record: CloudBookRecord): EditorState {
     coverImageStoragePath: isStorageReference(coverStoragePath) ? coverStoragePath : undefined,
     coverFileName: record.coverPath ? "保存済み表紙" : undefined,
     bindingDirection: record.bindingDirection,
+    writingMode: record.bookProject.config.writingMode === "vertical-rl" ? "vertical-rl" : "horizontal-tb",
     theme: record.theme,
     language: record.bookProject.config.language,
     fontFamily: record.bookProject.config.themeSettings?.fontFamily || "mincho",
@@ -513,6 +516,7 @@ function stateFromPreviewProject(project: BookProject): EditorState {
       (isDisplayableImageUrl(coverStoragePath) ? coverStoragePath : undefined),
     coverImageStoragePath: isStorageReference(coverStoragePath) ? coverStoragePath : undefined,
     bindingDirection: project.config.bindingDirection,
+    writingMode: project.config.writingMode === "vertical-rl" ? "vertical-rl" : "horizontal-tb",
     theme: project.config.theme,
     language: project.config.language,
     fontFamily: project.config.themeSettings?.fontFamily || "mincho",
@@ -1629,6 +1633,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       coverImageStoragePath: payload.coverAsset?.storagePath,
       coverFileName: payload.coverAsset?.fileName,
       bindingDirection: payload.bindingDirection,
+      writingMode: payload.writingMode || state.writingMode,
       theme: payload.theme,
       language: payload.language,
       fontFamily: payload.themeSettings.fontFamily || state.fontFamily,
@@ -2297,6 +2302,17 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
               <select value={state.bindingDirection} onChange={(event) => update("bindingDirection", event.target.value as "rtl" | "ltr")}>
                 <option value="rtl">右綴じ</option>
                 <option value="ltr">左綴じ</option>
+              </select>
+            </label>
+            <label>
+              <span>文字方向</span>
+              <select value={state.writingMode} onChange={(event) => {
+                const next = event.target.value as WritingMode;
+                update("writingMode", next);
+                if (next === "vertical-rl" && state.bindingDirection !== "rtl") update("bindingDirection", "rtl");
+              }}>
+                <option value="horizontal-tb">横書き</option>
+                <option value="vertical-rl">縦書き</option>
               </select>
             </label>
             <label>

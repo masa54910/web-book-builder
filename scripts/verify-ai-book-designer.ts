@@ -17,12 +17,17 @@ for (const preset of BOOK_DESIGN_PRESETS) {
 
 const parsed = parseBookDesignSpec(DEFAULT_BOOK_DESIGN_SPEC);
 assert.equal(parsed.success, true);
+const verticalSpec = parseBookDesignSpec({ ...DEFAULT_BOOK_DESIGN_SPEC, page: { ...DEFAULT_BOOK_DESIGN_SPEC.page, writingMode: "vertical-rl", bindingDirection: "rtl" } });
+assert.equal(verticalSpec.success, true);
+const invalidWritingMode = parseBookDesignSpec({ ...DEFAULT_BOOK_DESIGN_SPEC, page: { ...DEFAULT_BOOK_DESIGN_SPEC.page, writingMode: "diagonal" } });
+assert.equal(invalidWritingMode.success, false);
 
 const original = {
   title: "Protected title",
   rawText: "本文は変更されない",
   theme: "classic" as const,
   bindingDirection: "rtl" as const,
+  writingMode: "horizontal-tb" as const,
   fontFamily: "mincho" as const,
   fontScale: "medium" as const,
   lineHeight: "normal" as const,
@@ -41,6 +46,7 @@ assert.equal(next.title, original.title);
 assert.equal(next.rawText, original.rawText);
 assert.equal(next.theme, "modern");
 assert.equal(next.fontFamily, "sans");
+assert.equal(next.writingMode, "horizontal-tb");
 const mergedPreset = mergeBookDesignPreset(getBookDesignPreset("MAG-01")!, { page: { paragraphSpacing: "wide" } });
 assert.equal(mergedPreset.success, true);
 if (mergedPreset.success) {
@@ -69,6 +75,7 @@ assert.match(route, /getBookDesignPresetCatalog/);
 assert.match(route, /unknown-preset/);
 assert.match(route, /theme: classic \| modern \| minimal \| magazine \| novel \| photo \| research \| portfolio/);
 assert.match(route, /readerMode: book \| scroll \| magazine \| photo/);
+assert.match(route, /writingMode: horizontal-tb \| vertical-rl/);
 assert.match(route, /cover: \{ coverStyle: overlay \| solid \| band/);
 const openAiRequestIndex = route.indexOf('fetch("https://api.openai.com/v1/chat/completions"');
 const specValidationIndex = route.indexOf("const spec = mergeBookDesignPreset(preset, envelope.overrides);");

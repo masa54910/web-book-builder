@@ -226,7 +226,7 @@ function EditorMiniPreview({
   } as CSSProperties : undefined;
   return (
     <section
-      className={`editor-mini-preview editor-mini-design-${design?.theme || "classic"} editor-mini-design-bg-${design?.page.background || "paper"} editor-mini-design-font-${design?.typography.fontFamily || "mincho"} editor-mini-design-width-${design?.page.pageWidth || "standard"} editor-mini-design-spacing-${design?.page.paragraphSpacing || "normal"}`}
+      className={`editor-mini-preview editor-mini-writing-${design?.page.writingMode || "horizontal-tb"} editor-mini-design-${design?.theme || "classic"} editor-mini-design-bg-${design?.page.background || "paper"} editor-mini-design-font-${design?.typography.fontFamily || "mincho"} editor-mini-design-width-${design?.page.pageWidth || "standard"} editor-mini-design-spacing-${design?.page.paragraphSpacing || "normal"}`}
       style={designStyle}
       aria-label="ページ一覧ミニプレビュー"
     >

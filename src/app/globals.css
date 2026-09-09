@@ -3652,6 +3652,47 @@ button.reader-edit-link:disabled {
   margin-bottom: 1.65em;
 }
 
+/* Gate36: Reader-only Japanese vertical writing. The DOM/content order and
+   canonical page identities stay unchanged; embedded media remains horizontal. */
+.reader-writing-vertical-rl .text-page,
+.reader-writing-vertical-rl .chapter-title-page {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.reader-writing-vertical-rl .text-page-header,
+.reader-writing-vertical-rl .text-page-header * {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+.reader-writing-vertical-rl .text-paragraph {
+  margin-block: 0;
+  margin-inline: 0 0.95em;
+}
+.reader-writing-vertical-rl .text-inline-image,
+.reader-writing-vertical-rl .text-inline-youtube,
+.reader-writing-vertical-rl .map-page,
+.reader-writing-vertical-rl .youtube-page,
+.reader-writing-vertical-rl .video-page,
+.reader-writing-vertical-rl .columns-page {
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+  transform: none;
+}
+.reader-binding-rtl .reader-controls {
+  direction: rtl;
+}
+.editor-mini-writing-vertical-rl .editor-mini-page-frame {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  overflow-x: hidden;
+}
+.editor-mini-writing-vertical-rl .editor-mini-page-frame .editor-mini-page-image,
+.editor-mini-writing-vertical-rl .editor-mini-page-frame .editor-mini-page-placeholder {
+  writing-mode: horizontal-tb;
+}
+
 /* Page width is a renderer token, not an arbitrary user CSS value. */
 .book-width-narrow .text-page,
 .book-width-narrow .chapter-title-page,

@@ -6,7 +6,7 @@ import {
   type UploadedBookImage,
 } from "@/lib/bookProject";
 import type { SupportedLocale } from "@/lib/localization";
-import type { ThemeId } from "@/lib/productTypes";
+import type { ThemeId, WritingMode } from "@/lib/productTypes";
 import type { BookThemeSettings } from "@/lib/themeSystem";
 import { DEFAULT_COVER_DESIGN, normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
@@ -25,6 +25,7 @@ export type EditorDraftState = {
   coverImageStoragePath?: string;
   coverFileName?: string;
   bindingDirection: "rtl" | "ltr";
+  writingMode?: WritingMode;
   theme: ThemeId;
   language: SupportedLocale;
   fontFamily: BookThemeSettings["fontFamily"];
@@ -248,6 +249,7 @@ export function seedFromDraftFields(input: {
       : undefined,
     coverFileName: asString(fields.coverFileName) || undefined,
     bindingDirection: fields.bindingDirection === "ltr" ? "ltr" : "rtl",
+    writingMode: fields.writingMode === "vertical-rl" ? "vertical-rl" : "horizontal-tb",
     theme: asString(fields.theme, input.initialState.theme) as ThemeId,
     language: asString(fields.language, input.initialState.language) as SupportedLocale,
     fontFamily: asString(fields.fontFamily, input.initialState.fontFamily) as BookThemeSettings["fontFamily"],

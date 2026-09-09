@@ -1,6 +1,6 @@
 import type { BookConfig } from "@/config/bookConfig";
 import { normalizeCoverDesign, type CoverDesign, type CoverImageFit, type CoverLayoutId, type CoverPosition } from "@/lib/coverDesign";
-import { DEFAULT_BRANDING, DEFAULT_MONETIZATION, type ReaderMode, type ThemeId } from "@/lib/productTypes";
+import { DEFAULT_BRANDING, DEFAULT_MONETIZATION, type ReaderMode, type ThemeId, type WritingMode } from "@/lib/productTypes";
 import { mergeThemeSettings, type BookThemeSettings } from "@/lib/themeSystem";
 
 export const DESIGN_SPEC_VERSION = 1 as const;
@@ -35,6 +35,7 @@ export type BookDesignSpec = {
     marginScale: DesignSpecMarginScale;
     pageWidth: DesignSpecPageWidth;
     bindingDirection: BookConfig["bindingDirection"];
+    writingMode: WritingMode;
     readerMode: ReaderMode;
     paragraphSpacing: "compact" | "normal" | "wide";
   };
@@ -92,6 +93,7 @@ const WIDTHS: DesignSpecPageWidth[] = ["narrow", "standard", "wide"];
 const IMAGE_LAYOUTS: DesignSpecImageLayout[] = ["framed", "full", "contained"];
 const READER_MODES: ReaderMode[] = ["book", "scroll", "magazine", "photo"];
 const DIRECTIONS: BookConfig["bindingDirection"][] = ["rtl", "ltr"];
+const WRITING_MODES: WritingMode[] = ["horizontal-tb", "vertical-rl"];
 const COVER_LAYOUTS: CoverLayoutId[] = Array.from({ length: 10 }, (_, index) => `layout-${String(index + 1).padStart(2, "0")}` as CoverLayoutId);
 const POSITIONS: CoverPosition[] = [
   "top-left", "top-center", "top-right", "center-left", "center", "center-right", "bottom-left", "bottom-center", "bottom-right",
@@ -171,12 +173,13 @@ export function parseBookDesignSpec(input: unknown): DesignSpecParseResult {
     if (!hasValue(FONT_FAMILIES, typography.fontFamily) || !hasValue(FONT_SCALES, typography.fontScale) || !hasValue(LINE_HEIGHTS, typography.lineHeight)) throw new Error("typography option is not allowed");
     if (!isHexColor(palette.textColor) || !isHexColor(palette.accentColor)) throw new Error("palette colors must be #RRGGBB");
     const paragraphSpacing = page.paragraphSpacing;
-    if (!hasValue(BACKGROUNDS, page.background) || !hasValue(MARGINS, page.marginScale) || !hasValue(WIDTHS, page.pageWidth) || !hasValue(DIRECTIONS, page.bindingDirection) || !hasValue(READER_MODES, page.readerMode) || !["compact", "normal", "wide"].includes(paragraphSpacing as string)) throw new Error("page option is not allowed");
+    const writingMode = page.writingMode === undefined ? "horizontal-tb" : page.writingMode;
+    if (!hasValue(BACKGROUNDS, page.background) || !hasValue(MARGINS, page.marginScale) || !hasValue(WIDTHS, page.pageWidth) || !hasValue(DIRECTIONS, page.bindingDirection) || !hasValue(WRITING_MODES, writingMode) || !hasValue(READER_MODES, page.readerMode) || !["compact", "normal", "wide"].includes(paragraphSpacing as string)) throw new Error("page option is not allowed");
     if (!hasValue(IMAGE_LAYOUTS, image.layout)) throw new Error("image.layout is not allowed");
     if (motion.reveal !== "none" && motion.reveal !== "subtle" && motion.reveal !== "standard") throw new Error("motion.reveal is not allowed");
     if (motion.reducedMotion !== "respect") throw new Error("motion.reducedMotion must respect user preference");
     const cover = parseCover(input.cover);
-    return { success: true, data: { version: DESIGN_SPEC_VERSION, genre, mood: { keywords: moodKeywords, density: moodDensity }, theme: input.theme, typography: { fontFamily: typography.fontFamily, fontScale: typography.fontScale, lineHeight: typography.lineHeight }, palette: { textColor: palette.textColor, accentColor: palette.accentColor }, page: { background: page.background, marginScale: page.marginScale, pageWidth: page.pageWidth, bindingDirection: page.bindingDirection, readerMode: page.readerMode, paragraphSpacing: paragraphSpacing as BookDesignSpec["page"]["paragraphSpacing"] }, cover, image: { layout: image.layout }, motion: { reveal: motion.reveal, reducedMotion: motion.reducedMotion } } };
+    return { success: true, data: { version: DESIGN_SPEC_VERSION, genre, mood: { keywords: moodKeywords, density: moodDensity }, theme: input.theme, typography: { fontFamily: typography.fontFamily, fontScale: typography.fontScale, lineHeight: typography.lineHeight }, palette: { textColor: palette.textColor, accentColor: palette.accentColor }, page: { background: page.background, marginScale: page.marginScale, pageWidth: page.pageWidth, bindingDirection: page.bindingDirection, writingMode, readerMode: page.readerMode, paragraphSpacing: paragraphSpacing as BookDesignSpec["page"]["paragraphSpacing"] }, cover, image: { layout: image.layout }, motion: { reveal: motion.reveal, reducedMotion: motion.reducedMotion } } };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "invalid design spec" };
   }
@@ -189,7 +192,7 @@ export const DEFAULT_BOOK_DESIGN_SPEC: BookDesignSpec = {
   theme: "classic",
   typography: { fontFamily: "mincho", fontScale: "medium", lineHeight: "normal" },
   palette: { textColor: "#2f251d", accentColor: "#6bb9ad" },
-  page: { background: "paper", marginScale: "standard", pageWidth: "standard", bindingDirection: "rtl", readerMode: "book", paragraphSpacing: "normal" },
+  page: { background: "paper", marginScale: "standard", pageWidth: "standard", bindingDirection: "rtl", writingMode: "horizontal-tb", readerMode: "book", paragraphSpacing: "normal" },
   cover: { coverStyle: "overlay", layout: "layout-01", titlePosition: "center-left", authorPosition: "bottom-left", imagePosition: "center", imageFit: "contain", titleVisible: true, authorVisible: true, titleScale: 1, authorScale: 1, imageScale: 1, overlayOpacity: 0 },
   image: { layout: "framed" },
   motion: { reveal: "standard", reducedMotion: "respect" },
@@ -207,7 +210,7 @@ export function designSpecFromBookConfig(config: Partial<BookConfig>): BookDesig
     theme,
     typography: { fontFamily: settings.fontFamily, fontScale: settings.fontScale, lineHeight: settings.lineHeight },
     palette: { textColor: settings.textColor, accentColor: settings.accentColor },
-    page: { background: settings.background, marginScale: settings.marginScale, pageWidth: settings.pageWidth, bindingDirection: config.bindingDirection === "ltr" ? "ltr" : "rtl", readerMode: config.readerMode && READER_MODES.includes(config.readerMode) ? config.readerMode : "book", paragraphSpacing: settings.paragraphSpacing || "normal" },
+    page: { background: settings.background, marginScale: settings.marginScale, pageWidth: settings.pageWidth, bindingDirection: config.bindingDirection === "ltr" ? "ltr" : "rtl", writingMode: config.writingMode === "vertical-rl" ? "vertical-rl" : "horizontal-tb", readerMode: config.readerMode && READER_MODES.includes(config.readerMode) ? config.readerMode : "book", paragraphSpacing: settings.paragraphSpacing || "normal" },
     cover: { coverStyle: settings.coverStyle, layout: cover.layout, titlePosition: cover.titlePosition, authorPosition: cover.authorPosition, imagePosition: cover.imagePosition, imageFit: cover.imageFit, titleVisible: cover.titleVisible !== false, authorVisible: cover.authorVisible !== false, titleScale: cover.titleScale, authorScale: cover.authorScale, imageScale: cover.imageScale, overlayOpacity: cover.overlayOpacity, ...(cover.titleTextOverride ? { titleTextOverride: cover.titleTextOverride } : {}) },
     image: { layout: settings.imageLayout },
   };
