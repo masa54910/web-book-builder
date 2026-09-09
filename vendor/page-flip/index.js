@@ -6,7 +6,6 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pageFlip = require("./dist/js/page-flip.browser.js");
 
-const FLIP_FORWARD = 0;
 const FLIP_BACK = 1;
 const STATE_READ = "read";
 const LEFT_BOUND = "left-bound";
@@ -49,10 +48,10 @@ function installRightBoundLayout(app) {
       render.setLeftPage(pages[spread[1]]);
       render.setRightPage(pages[spread[0]]);
     } else if (spread[0] === 0) {
-      // A right-bound book opens from a front cover on the viewer's right.
-      // Keep the opposite side empty instead of shifting the closed book.
-      render.setLeftPage(null);
-      render.setRightPage(pages[spread[0]]);
+      // A right-bound book is closed on the viewer's left. The cover's
+      // trailing edge becomes the spine at the centered root midpoint.
+      render.setLeftPage(pages[spread[0]]);
+      render.setRightPage(null);
     } else {
       // A trailing singleton is the back cover on the viewer's left.
       render.setLeftPage(pages[spread[0]]);
@@ -216,8 +215,39 @@ PageFlip.prototype.userMove = function (pos, isTouch) {
   return originalUserMove.call(this, pos, isTouch);
 };
 PageFlip.prototype.userStop = function (pos, isSwipe = false) {
-  if (this.__wbPhysicalBinding === RIGHT_BOUND) installRightBoundMethods(this);
-  return originalUserStop.call(this, pos, isSwipe);
+  if (this.__wbPhysicalBinding !== RIGHT_BOUND || isSwipe) {
+    if (this.__wbPhysicalBinding === RIGHT_BOUND) installRightBoundMethods(this);
+    return originalUserStop.call(this, pos, isSwipe);
+  }
+
+  // Keep the upstream drag/corner geometry when a fold calculation already
+  // exists. A plain canvas click, however, must enter the same right-bound
+  // logical mapping as the buttons and keyboard; upstream `flip(pos)` is
+  // LTR-oriented and rejects a right-side click on the initial cover.
+  if (!this.isUserTouch) return;
+  const controller = this.getFlipController();
+  const wasMoved = this.isUserMove;
+  this.isUserTouch = false;
+  if (wasMoved && controller.getCalculation?.()) {
+    this.isUserMove = false;
+    return controller.stopMove();
+  }
+
+  this.isUserMove = false;
+  const collection = this.getPageCollection();
+  const spreads = collection.getSpread();
+  const spreadIndex = collection.getCurrentSpreadIndex();
+  const lastSpreadIndex = Math.max(0, spreads.length - 1);
+  const rect = this.getBoundsRect();
+  const corner = pos.y < rect.height / 2 ? "top" : "bottom";
+  const logicalNext = spreadIndex === 0
+    ? true
+    : spreadIndex >= lastSpreadIndex
+      ? false
+      : pos.x <= rect.width / 2;
+  return logicalNext
+    ? this.flipRightBoundNext(corner)
+    : this.flipRightBoundPrevious(corner);
 };
 PageFlip.prototype.getFlipController = function () {
   return originalGetFlipController.call(this);

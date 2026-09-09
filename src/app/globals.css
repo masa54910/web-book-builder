@@ -2994,18 +2994,18 @@ button.reader-edit-link:disabled {
   box-shadow: inset -4px 0 5px rgba(96, 74, 48, 0.18), -5px 5px 9px rgba(27, 42, 56, 0.22);
 }
 .reader-binding-rtl .sample-book-viewport[data-book-edge="cover"] .flip-book::before {
-  right: calc(50% + 7px);
-  left: -5px;
+  right: -5px;
+  left: calc(50% + 7px);
   box-shadow:
-    -3px 4px 0 rgba(239, 231, 216, 0.92),
-    -5px 6px 0 rgba(205, 193, 174, 0.72),
-    -11px 16px 22px rgba(18, 39, 57, 0.28);
+    3px 4px 0 rgba(239, 231, 216, 0.92),
+    5px 6px 0 rgba(205, 193, 174, 0.72),
+    11px 16px 22px rgba(18, 39, 57, 0.28);
 }
 .reader-binding-rtl .sample-book-viewport[data-book-edge="cover"] .flip-book::after {
-  right: auto;
-  left: -5px;
+  right: calc(50% - 5px);
+  left: auto;
   border-radius: 4px 0 0 4px;
-  box-shadow: inset -2px 0 3px rgba(96, 74, 48, 0.14), -3px 3px 6px rgba(27, 42, 56, 0.18);
+  box-shadow: inset 2px 0 3px rgba(96, 74, 48, 0.14), 3px 3px 6px rgba(27, 42, 56, 0.18);
 }
 .reader-binding-rtl .sample-book-viewport[data-book-edge="back"] .flip-book::before {
   right: auto;
