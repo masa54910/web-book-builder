@@ -165,6 +165,14 @@ export default function BookReader({
   // Vertical Japanese writing is always a right-bound reading experience.
   // Keep this presentation rule separate from the DOM/text direction.
   const bindingDirection = config.writingMode === "vertical-rl" ? "rtl" : config.bindingDirection;
+  // Gate36 supports the dedicated right-bound physical model for vertical
+  // Japanese books. Horizontal books retain their existing portrait/LTR
+  // renderer even when legacy config carries an rtl binding value.
+  const isRightBound = config.writingMode === "vertical-rl";
+  const readerPageWidth = isRightBound && isMobile ? 170 : isMobile ? 340 : 430;
+  const readerPageHeight = isRightBound && isMobile ? 470 : isMobile ? 560 : 620;
+  const readerMinPageWidth = isRightBound && isMobile ? 170 : 280;
+  const readerMaxPageWidth = isRightBound && isMobile ? 220 : 470;
   const coverDesign = normalizeCoverDesign(config.coverDesign);
   const pageAdjustments = useMemo(
     () => normalizePageAdjustments(config.pageAdjustments),
@@ -310,10 +318,10 @@ export default function BookReader({
   const pageFlip = useCallback(() => flipBookRef.current?.pageFlip(), []);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      pageFlip()?.setPhysicalBinding?.(config.writingMode === "vertical-rl" ? "right-bound" : "left-bound");
+      pageFlip()?.setPhysicalBinding?.(isRightBound ? "right-bound" : "left-bound");
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [config.writingMode, pageFlip, pagesWithAdjustments.length]);
+  }, [isRightBound, pageFlip, pagesWithAdjustments.length]);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const suppressClickAfterSwipeRef = useRef(false);
   const flipReaderPage = useCallback(
@@ -321,17 +329,17 @@ export default function BookReader({
       const api = pageFlip();
       if (!api) return;
 
-      api.setPhysicalBinding?.(config.writingMode === "vertical-rl" ? "right-bound" : "left-bound");
-      if (config.writingMode === "vertical-rl") {
+      api.setPhysicalBinding?.(isRightBound ? "right-bound" : "left-bound");
+      if (isRightBound) {
         const physicalTurn = direction === "next" ? api.flipRightBoundNext : api.flipRightBoundPrevious;
         if (physicalTurn) {
-          physicalTurn("top");
+          physicalTurn.call(api, "top");
           return;
         }
       }
       api[physicalFlipMethod(config.writingMode, direction)]("top");
     },
-    [config.writingMode, pageFlip],
+    [config.writingMode, isRightBound, pageFlip],
   );
   const handleReaderTouchStart = useCallback(
     (event: React.TouchEvent<HTMLElement>) => {
@@ -735,13 +743,11 @@ export default function BookReader({
           onTouchEndCapture={handleReaderTouchEnd}
           onClickCapture={handleReaderClickCapture}
           data-book-edge={
-            sampleBookPresentation
-              ? activePageIndex === 0
-                ? "cover"
-                : activePageIndex >= pagesWithAdjustments.length - 1
-                  ? "back"
-                  : "spread"
-              : undefined
+            activePageIndex === 0
+              ? "cover"
+              : activePageIndex >= pagesWithAdjustments.length - 1
+                ? "back"
+                : "spread"
           }
         >
           {sampleBookPresentation ? (
@@ -762,18 +768,18 @@ export default function BookReader({
             style={{}}
             startPage={0}
             {...({
-              bookBindingMode: config.writingMode === "vertical-rl" ? "right-bound" : "left-bound",
+              bookBindingMode: isRightBound ? "right-bound" : "left-bound",
             } as { bookBindingMode: "left-bound" | "right-bound" })}
             size="stretch"
-            width={isMobile ? 340 : 430}
-            height={isMobile ? 560 : 620}
-            minWidth={280}
-            maxWidth={470}
+            width={readerPageWidth}
+            height={readerPageHeight}
+            minWidth={readerMinPageWidth}
+            maxWidth={readerMaxPageWidth}
             minHeight={470}
             maxHeight={660}
             drawShadow
             flippingTime={780}
-            usePortrait
+            usePortrait={!isRightBound}
             startZIndex={10}
             autoSize
             maxShadowOpacity={0.48}
@@ -781,7 +787,7 @@ export default function BookReader({
             mobileScrollSupport
             clickEventForward
             useMouseEvents
-            swipeDistance={config.writingMode === "vertical-rl" ? 9999 : 24}
+            swipeDistance={isRightBound ? 9999 : 24}
             showPageCorners
             disableFlipByClick={false}
             onFlip={(event: { data: number }) => {
