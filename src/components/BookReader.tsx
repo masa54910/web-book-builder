@@ -15,6 +15,7 @@ import {
 import { buildReaderPages, toBoundPageOrder } from "@/lib/paginateText";
 import { recordReaderPageReached, recordReaderProgress } from "@/lib/readerAnalytics";
 import { buildReaderFolioById } from "@/lib/readerFolio";
+import { physicalFlipMethod, verticalSwipeDirection } from "@/lib/readerNavigation";
 import { buildDocumentTocEntries, documentStructureFromChapters } from "@/lib/documentStructure";
 import { themeClassNames } from "@/lib/themeSystem";
 import type { BookContentBlock } from "@/lib/bookProject";
@@ -57,6 +58,9 @@ type PageFlipApi = {
   flipPrev: (corner?: "top" | "bottom") => void;
   turnToPage: (page: number) => void;
   update: () => void;
+  /** page-flip's public methods, used by the right-bound physical adapter. */
+  turnToNextPage?: () => void;
+  turnToPrevPage?: () => void;
 };
 
 type FlipBookHandle = {
@@ -304,6 +308,110 @@ export default function BookReader({
   );
 
   const pageFlip = useCallback(() => flipBookRef.current?.pageFlip(), []);
+  const physicalFlipRestoreRef = useRef<(() => void) | null>(null);
+  const physicalFlipRestoreTimerRef = useRef<number | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const suppressClickAfterSwipeRef = useRef(false);
+  const restorePhysicalFlip = useCallback(() => {
+    if (physicalFlipRestoreTimerRef.current !== null) {
+      window.clearTimeout(physicalFlipRestoreTimerRef.current);
+      physicalFlipRestoreTimerRef.current = null;
+    }
+    const restore = physicalFlipRestoreRef.current;
+    physicalFlipRestoreRef.current = null;
+    restore?.();
+  }, []);
+  const flipReaderPage = useCallback(
+    (direction: "next" | "previous") => {
+      const api = pageFlip();
+      if (!api) return;
+
+      restorePhysicalFlip();
+
+      // page-flip's default forward animation starts at the right edge and
+      // moves right-to-left. For a vertical Japanese book, the logical next
+      // page must still be +1, but the physical sheet must travel left-to-right.
+      // We use the engine's opposite edge and temporarily remap only the
+      // completion callback; canonical page order and page IDs never change.
+      const rightBound = config.writingMode === "vertical-rl";
+      const physicalMethod = physicalFlipMethod(config.writingMode, direction);
+      if (!rightBound || activePageIndex === 0) {
+        api[physicalMethod]("top");
+        return;
+      }
+
+      const originalNext = api.turnToNextPage;
+      const originalPrevious = api.turnToPrevPage;
+      if (!originalNext || !originalPrevious) {
+        api[physicalMethod]("top");
+        return;
+      }
+
+      const restore = () => {
+        api.turnToNextPage = originalNext;
+        api.turnToPrevPage = originalPrevious;
+      };
+      physicalFlipRestoreRef.current = restore;
+      physicalFlipRestoreTimerRef.current = window.setTimeout(restorePhysicalFlip, 1100);
+
+      if (physicalMethod === "flipPrev") {
+        api.turnToPrevPage = originalNext;
+        api.flipPrev("top");
+      } else {
+        api.turnToNextPage = originalPrevious;
+        api.flipNext("top");
+      }
+    },
+    [activePageIndex, config.writingMode, pageFlip, restorePhysicalFlip],
+  );
+  const handleReaderTouchStart = useCallback(
+    (event: React.TouchEvent<HTMLElement>) => {
+      if (config.writingMode !== "vertical-rl") return;
+      const touch = event.touches[0];
+      if (touch) touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    },
+    [config.writingMode],
+  );
+  const handleReaderTouchMove = useCallback(
+    (event: React.TouchEvent<HTMLElement>) => {
+      if (config.writingMode !== "vertical-rl" || !touchStartRef.current) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+      const dx = touch.clientX - touchStartRef.current.x;
+      const dy = touch.clientY - touchStartRef.current.y;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 12) event.preventDefault();
+    },
+    [config.writingMode],
+  );
+  const handleReaderTouchEnd = useCallback(
+    (event: React.TouchEvent<HTMLElement>) => {
+      if (config.writingMode !== "vertical-rl" || !touchStartRef.current) return;
+      const touch = event.changedTouches[0];
+      const start = touchStartRef.current;
+      touchStartRef.current = null;
+      if (!touch) return;
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      if (Math.abs(dx) <= 24 || Math.abs(dx) <= Math.abs(dy)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      suppressClickAfterSwipeRef.current = true;
+      window.setTimeout(() => {
+        suppressClickAfterSwipeRef.current = false;
+      }, 500);
+      // Right-bound vertical reading: drag left-to-right for next, and
+      // right-to-left for previous. The logical page index remains unchanged.
+      flipReaderPage(verticalSwipeDirection(dx));
+    },
+    [config.writingMode, flipReaderPage],
+  );
+  const handleReaderClickCapture = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    if (!suppressClickAfterSwipeRef.current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    suppressClickAfterSwipeRef.current = false;
+  }, []);
+  useEffect(() => () => restorePhysicalFlip(), [restorePhysicalFlip]);
   const goToPage = useCallback(
     (pageIndex: number) => {
       if (pageIndex < 0 || pageIndex >= pagesWithAdjustments.length) return;
@@ -435,10 +543,10 @@ export default function BookReader({
         }
         return;
       }
-      pageFlip()?.flipNext("top");
+      flipReaderPage("next");
     }, Math.max(2, autoFlipSeconds) * 1000);
     return () => window.clearInterval(timer);
-  }, [activePageIndex, autoFlipEnabled, autoFlipLoop, autoFlipSeconds, goToPage, pageFlip, pagesWithAdjustments.length]);
+  }, [activePageIndex, autoFlipEnabled, autoFlipLoop, autoFlipSeconds, flipReaderPage, goToPage, pagesWithAdjustments.length]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -451,15 +559,15 @@ export default function BookReader({
       const previousKey = bindingDirection === "rtl" ? "ArrowRight" : "ArrowLeft";
       if (event.key === nextKey) {
         event.preventDefault();
-        pageFlip()?.flipNext("top");
+        flipReaderPage("next");
       } else if (event.key === previousKey) {
         event.preventDefault();
-        pageFlip()?.flipPrev("top");
+        flipReaderPage("previous");
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [bindingDirection, displayMode, isCoverDesignOpen, pageFlip]);
+  }, [bindingDirection, displayMode, flipReaderPage, isCoverDesignOpen]);
 
   useEffect(() => {
     if (displayMode !== "preview" || !isCoverDesignOpen) return;
@@ -578,7 +686,11 @@ export default function BookReader({
   };
 
   const directionLabel =
-    bindingDirection === "rtl" ? "RIGHT-BOUND · 次へは左方向 ←" : "LEFT-BOUND · 次へは右方向 →";
+    config.writingMode === "vertical-rl"
+      ? "右綴じ・縦書き"
+      : bindingDirection === "rtl"
+        ? "RIGHT-BOUND"
+        : "LEFT-BOUND";
   const helpText =
     bindingDirection === "rtl"
       ? "左矢印キーで次へ、右矢印キーで前へ。ページの角をドラッグ、またはタップしても移動できます。"
@@ -650,6 +762,10 @@ export default function BookReader({
         <section
           className={`book-viewport${sampleBookPresentation ? " sample-book-viewport" : ""}`}
           aria-label="デジタル書籍リーダー"
+          onTouchStartCapture={handleReaderTouchStart}
+          onTouchMoveCapture={handleReaderTouchMove}
+          onTouchEndCapture={handleReaderTouchEnd}
+          onClickCapture={handleReaderClickCapture}
           data-book-edge={
             sampleBookPresentation
               ? activePageIndex === 0
@@ -666,7 +782,7 @@ export default function BookReader({
               className="sample-book-chevron sample-book-chevron-previous"
               aria-label="前のページへ"
               disabled={activePageIndex === 0}
-              onClick={() => pageFlip()?.flipPrev("top")}
+              onClick={() => flipReaderPage("previous")}
             >
               <span aria-hidden="true">&#8249;</span>
             </button>
@@ -694,10 +810,11 @@ export default function BookReader({
             mobileScrollSupport
             clickEventForward
             useMouseEvents
-            swipeDistance={24}
+            swipeDistance={config.writingMode === "vertical-rl" ? 9999 : 24}
             showPageCorners
             disableFlipByClick={false}
             onFlip={(event: { data: number }) => {
+              restorePhysicalFlip();
               setCurrentPage(event.data);
               const activePage = pagesWithAdjustments[event.data];
               activePageIdRef.current = activePage?.id || null;
@@ -728,7 +845,7 @@ export default function BookReader({
               className="sample-book-chevron sample-book-chevron-next"
               aria-label="次のページへ"
               disabled={activePageIndex >= pagesWithAdjustments.length - 1}
-              onClick={() => pageFlip()?.flipNext("top")}
+              onClick={() => flipReaderPage("next")}
             >
               <span aria-hidden="true">&#8250;</span>
             </button>
@@ -752,8 +869,8 @@ export default function BookReader({
         total={pagesWithAdjustments.length}
         onFirst={() => pageFlip()?.turnToPage(0)}
         onContents={() => jumpToId("contents-1")}
-        onPrevious={() => pageFlip()?.flipPrev("top")}
-        onNext={() => pageFlip()?.flipNext("top")}
+        onPrevious={() => flipReaderPage("previous")}
+        onNext={() => flipReaderPage("next")}
         onJumpToPage={jumpToPrintedPage}
       />
       <ReadingTools
