@@ -23,19 +23,17 @@ function installRightBoundLayout(app) {
   const render = app.getRender();
   collection.__wbRightBoundLayoutInstalled = true;
   const pageCount = collection.getPageCount();
-  const rightBoundSpreads = pageCount
-    ? [[0], ...Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => {
-        const first = index + 1;
-        return first + 1 < pageCount ? [first, first + 1] : [first];
-      })]
-    : [];
+  const rightBoundSpreads = pageCount ? [[0]] : [];
+  for (let first = 1; first < pageCount; first += 2) {
+    rightBoundSpreads.push(first + 1 < pageCount ? [first, first + 1] : [first]);
+  }
   collection.__wbRightBoundSpreads = rightBoundSpreads;
   collection.getSpread = function getRightBoundSpreads() {
     return this.__wbRightBoundSpreads;
   };
   collection.getSpreadIndexByPage = function getRightBoundSpreadIndex(pageIndex) {
     if (!Number.isInteger(pageIndex) || pageIndex < 0 || pageIndex >= pageCount) return null;
-    return pageIndex;
+    return this.__wbRightBoundSpreads.findIndex((spread) => spread.includes(pageIndex));
   };
 
   // The upstream portrait renderer always places the current page on the
@@ -50,9 +48,13 @@ function installRightBoundLayout(app) {
     if (spread.length === 2) {
       render.setLeftPage(pages[spread[1]]);
       render.setRightPage(pages[spread[0]]);
+    } else if (spread[0] === 0) {
+      // A right-bound book opens from a front cover on the viewer's right.
+      // Keep the opposite side empty instead of shifting the closed book.
+      render.setLeftPage(null);
+      render.setRightPage(pages[spread[0]]);
     } else {
-      // The closed front cover is a physical left page for right-bound
-      // books. A trailing singleton uses the same safe single-page layout.
+      // A trailing singleton is the back cover on the viewer's left.
       render.setLeftPage(pages[spread[0]]);
       render.setRightPage(null);
     }
@@ -64,124 +66,68 @@ function installRightBoundLayout(app) {
 function installRightBoundMethods(app) {
   installRightBoundLayout(app);
   const controller = app.getFlipController();
-  if (controller.flipRightBoundNext) return controller;
+  if (controller.__wbRightBoundAdapterInstalled) return controller;
 
-  const originalReset = controller.reset;
+  const collection = app.getPageCollection();
   const originalFlipNext = controller.flipNext;
   const originalFlipPrev = controller.flipPrev;
+  const originalTurnNext = app.turnToNextPage;
+  const originalTurnPrev = app.turnToPrevPage;
+  const getActiveCollection = () => app.getPageCollection();
 
-  const withPhysicalPages = (direction, physicalFlip, corner, flippingPage, bottomPage) => {
+  // Keep page-flip's pointer normalization, corner selection, clipping and
+  // animation intact. Only its binding-specific page mapping is replaced.
+  collection.getFlippingPage = function getRightBoundFlippingPage(direction) {
+    const spread = this.getSpread()[this.getCurrentSpreadIndex()];
+    if (!spread) return null;
+    const pageIndex = direction === FLIP_BACK
+      ? (spread[1] ?? spread[0])
+      : spread[0];
+    const page = this.getPage(pageIndex);
+    page?.setOrientation(direction === FLIP_BACK ? 0 : 1);
+    return page;
+  };
+  collection.getBottomPage = function getRightBoundBottomPage(direction) {
+    const spreadIndex = this.getCurrentSpreadIndex();
+    const targetIndex = direction === FLIP_BACK ? spreadIndex + 1 : spreadIndex - 1;
+    const target = this.getSpread()[targetIndex];
+    if (!target) return null;
+    const pageIndex = direction === FLIP_BACK
+      ? (targetIndex === 1 ? target[0] : (target[1] ?? target[0]))
+      : target[0];
+    const page = this.getPage(pageIndex);
+    page?.setOrientation(direction === FLIP_BACK && targetIndex === 1 ? 1 : 0);
+    return page;
+  };
+  controller.checkDirection = function checkRightBoundDirection(direction) {
+    const activeCollection = getActiveCollection();
+    const spreadIndex = activeCollection.getCurrentSpreadIndex();
+    const lastSpreadIndex = activeCollection.getSpread().length - 1;
+    return direction === FLIP_BACK
+      ? spreadIndex < lastSpreadIndex
+      : spreadIndex > 0;
+  };
+
+  // Upstream direction 1 is the physical left-to-right turn used for Right-
+  // bound Next. Its completion callback calls turnToPrevPage, so swap only
+  // the logical completion methods; page order and IDs remain canonical.
+  app.turnToPrevPage = function rightBoundPhysicalNextCompletion() {
+    return originalTurnNext.call(app);
+  };
+  app.turnToNextPage = function rightBoundPhysicalPreviousCompletion() {
+    return originalTurnPrev.call(app);
+  };
+
+  controller.flipRightBoundNext = function flipRightBoundNext(corner = "top") {
     if (controller.getState() !== STATE_READ) return;
-
-    const collection = app.getPageCollection();
-    const originalGetFlippingPage = collection.getFlippingPage;
-    const originalGetBottomPage = collection.getBottomPage;
-    const originalGetCurrentPageIndex = app.getCurrentPageIndex;
-    const originalTurnNext = app.turnToNextPage;
-    const originalTurnPrev = app.turnToPrevPage;
-
-    // Keep the upstream clipping/rotation calculation, but provide the
-    // physical sheet pair for a right-bound spread. The page that is visibly
-    // on the left flips to the right for Next; the visible right page flips
-    // back to the left for Previous.
-    collection.getFlippingPage = () => flippingPage(collection);
-    collection.getBottomPage = () => bottomPage(collection);
-    if (direction === FLIP_BACK) {
-      // Upstream rejects BACK at page zero. Physical right-bound Next is valid
-      // there, so only relax this guard during the start calculation.
-      app.getCurrentPageIndex = () => Math.max(1, originalGetCurrentPageIndex.call(app));
-    }
-
-    let restored = false;
-    const restore = () => {
-      if (restored) return;
-      restored = true;
-      collection.getFlippingPage = originalGetFlippingPage;
-      collection.getBottomPage = originalGetBottomPage;
-      app.getCurrentPageIndex = originalGetCurrentPageIndex;
-      app.turnToNextPage = originalTurnNext;
-      app.turnToPrevPage = originalTurnPrev;
-    };
-
-    try {
-      // Reuse page-flip's tested corner/geometry primitive. Only map its
-      // completion callback back to canonical page progression; never invent
-      // a second coordinate system for the cover turn. Restore immediately
-      // after the completion callback, not on a fixed short timer.
-      if (direction === FLIP_BACK) {
-        app.turnToPrevPage = function rightBoundNextCompletion() {
-          const result = originalTurnNext.call(app);
-          restore();
-          return result;
-        };
-      } else {
-        app.turnToNextPage = function rightBoundPreviousCompletion() {
-          const result = originalTurnPrev.call(app);
-          restore();
-          return result;
-        };
-      }
-      physicalFlip.call(controller, corner);
-
-      // If an upstream animation is cancelled before its completion callback,
-      // release the temporary hooks after the configured animation window.
-      const flippingTime = Number(app.getSettings?.().flippingTime) || 1000;
-      setTimeout(restore, flippingTime + 350);
-    } catch {
-      restore();
-      originalReset.call(controller);
-    }
+    originalFlipPrev.call(controller, corner);
+  };
+  controller.flipRightBoundPrevious = function flipRightBoundPrevious(corner = "top") {
+    if (controller.getState() !== STATE_READ) return;
+    originalFlipNext.call(controller, corner);
   };
 
-  controller.flipRightBoundNext = function (corner = "top") {
-    withPhysicalPages(
-      FLIP_BACK,
-      originalFlipPrev,
-      corner,
-      (collection) => {
-        const spread = collection.getSpread()[collection.getCurrentSpreadIndex()];
-        const page = spread ? collection.getPage(spread.length === 2 ? spread[1] : spread[0]) : null;
-        page?.setOrientation(0);
-        return page;
-      },
-      (collection) => {
-        const nextIndex = collection.getCurrentSpreadIndex() + 1;
-        const next = collection.getSpread()[nextIndex];
-        const pageIndex = next
-          ? nextIndex === 1
-            ? next[0]
-            : (next[1] ?? next[0])
-          : null;
-        const page = pageIndex === null ? null : collection.getPage(pageIndex);
-        page?.setOrientation(nextIndex === 1 ? 1 : 0);
-        return page;
-      },
-    );
-  };
-
-  controller.flipRightBoundPrevious = function (corner = "top") {
-    withPhysicalPages(
-      FLIP_FORWARD,
-      originalFlipNext,
-      corner,
-      (collection) => {
-        const spread = collection.getSpread()[collection.getCurrentSpreadIndex()];
-        const page = spread && spread.length === 2 ? collection.getPage(spread[0]) : null;
-        page?.setOrientation(1);
-        return page;
-      },
-      (collection) => {
-        const previous = collection.getSpread()[collection.getCurrentSpreadIndex() - 1];
-        const page = previous ? collection.getPage(previous[0]) : null;
-        page?.setOrientation(collection.getCurrentSpreadIndex() - 1 === 0 ? 0 : 1);
-        return page;
-      },
-    );
-  };
-
-  // Keep references explicit so a future upstream update can be audited.
-  void originalFlipNext;
-  void originalFlipPrev;
+  controller.__wbRightBoundAdapterInstalled = true;
   return controller;
 }
 
@@ -207,6 +153,7 @@ PageFlip.prototype.loadFromHTML = function (items) {
   const result = originalLoadFromHTML.call(this, items);
   if (this.__wbPhysicalBinding === RIGHT_BOUND) {
     installRightBoundLayout(this);
+    installRightBoundMethods(this);
     this.getPageCollection().show(this.getCurrentPageIndex());
   }
   return result;
@@ -216,6 +163,7 @@ PageFlip.prototype.loadFromImages = function (images) {
   const result = originalLoadFromImages.call(this, images);
   if (this.__wbPhysicalBinding === RIGHT_BOUND) {
     installRightBoundLayout(this);
+    installRightBoundMethods(this);
     this.getPageCollection().show(this.getCurrentPageIndex());
   }
   return result;
@@ -225,6 +173,7 @@ PageFlip.prototype.updateFromHtml = function (items) {
   const result = originalUpdateFromHTML.call(this, items);
   if (this.__wbPhysicalBinding === RIGHT_BOUND) {
     installRightBoundLayout(this);
+    installRightBoundMethods(this);
     this.getPageCollection().show(currentPageIndex);
   }
   return result;
@@ -234,6 +183,7 @@ PageFlip.prototype.updateFromImages = function (images) {
   const result = originalUpdateFromImages.call(this, images);
   if (this.__wbPhysicalBinding === RIGHT_BOUND) {
     installRightBoundLayout(this);
+    installRightBoundMethods(this);
     this.getPageCollection().show(currentPageIndex);
   }
   return result;
@@ -262,30 +212,11 @@ PageFlip.prototype.flipPrev = function (corner = "top") {
   return originalFlipPrev.call(this, corner);
 };
 PageFlip.prototype.userMove = function (pos, isTouch) {
-  if (this.__wbPhysicalBinding === "right-bound" && this.isUserTouch) {
-    if (this.mousePosition && Math.hypot(this.mousePosition.x - pos.x, this.mousePosition.y - pos.y) > 5) {
-      this.isUserMove = true;
-    }
-    return;
-  }
+  if (this.__wbPhysicalBinding === RIGHT_BOUND) installRightBoundMethods(this);
   return originalUserMove.call(this, pos, isTouch);
 };
 PageFlip.prototype.userStop = function (pos, isSwipe = false) {
-  if (this.__wbPhysicalBinding === "right-bound" && this.isUserTouch) {
-    const dx = this.mousePosition ? pos.x - this.mousePosition.x : 0;
-    this.isUserTouch = false;
-    this.isUserMove = false;
-    // Native UI.onTouchEnd already called the overridden flipPrev/flipNext
-    // for a detected swipe, so do not issue a second turn here.
-    if (isSwipe) return;
-    if (Math.abs(dx) > 5) {
-      return dx >= 0 ? this.flipRightBoundNext("top") : this.flipRightBoundPrevious("top");
-    }
-    const rect = this.getBoundsRect();
-    return pos.x <= rect.width / 2
-      ? this.flipRightBoundNext("top")
-      : this.flipRightBoundPrevious("top");
-  }
+  if (this.__wbPhysicalBinding === RIGHT_BOUND) installRightBoundMethods(this);
   return originalUserStop.call(this, pos, isSwipe);
 };
 PageFlip.prototype.getFlipController = function () {

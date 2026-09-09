@@ -9,6 +9,7 @@ export default function ReaderControls({
   bindingDirection,
   current,
   total,
+  atEnd,
   onFirst,
   onContents,
   onPrevious,
@@ -18,6 +19,7 @@ export default function ReaderControls({
   bindingDirection: BindingDirection;
   current: number;
   total: number;
+  atEnd?: boolean;
   onFirst: () => void;
   onContents: () => void;
   onPrevious: () => void;
@@ -76,7 +78,7 @@ export default function ReaderControls({
         <button className="reader-button" type="button" onClick={onPrevious} disabled={current === 0}>
           {previousLabel}
         </button>
-        <button className="reader-button primary" type="button" onClick={onNext} disabled={current >= total - 1}>
+        <button className="reader-button primary" type="button" onClick={onNext} disabled={atEnd ?? current >= total - 1}>
           {nextLabel}
         </button>
       </div>

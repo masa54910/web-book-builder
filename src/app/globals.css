@@ -2977,15 +2977,8 @@ button.reader-edit-link:disabled {
   right: calc(50% + 2px);
 }
 
-/* Gate36: a right-bound book is closed on the viewer's left and opens into
-   the centered spread. The translation is derived from the two-page book
-   width (one page), rather than a viewport-specific pixel offset. */
-.reader-binding-rtl .book-viewport[data-book-edge="cover"] {
-  justify-items: start;
-}
-.reader-binding-rtl .book-viewport[data-book-edge="cover"] .flip-book {
-  transform: translateX(-25%);
-}
+/* Gate36: right-bound closed and open states share the page-flip root's
+   centered geometry, so the spine remains continuous across opening. */
 .reader-binding-rtl .book-viewport[data-book-edge="spread"] .flip-book,
 .reader-binding-rtl .book-viewport[data-book-edge="back"] .flip-book {
   transform: none;

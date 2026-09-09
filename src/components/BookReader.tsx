@@ -333,7 +333,7 @@ export default function BookReader({
       if (isRightBound) {
         const physicalTurn = direction === "next" ? api.flipRightBoundNext : api.flipRightBoundPrevious;
         if (physicalTurn) {
-          physicalTurn.call(api, "top");
+          physicalTurn.call(api);
           return;
         }
       }
@@ -671,6 +671,9 @@ export default function BookReader({
     bindingDirection === "rtl"
       ? "左矢印キーで次へ、右矢印キーで前へ。ページの角をドラッグ、またはタップしても移動できます。"
       : "右矢印キーで次へ、左矢印キーで前へ。ページの角をドラッグ、またはタップしても移動できます。";
+  const backCoverVisible =
+    pagesWithAdjustments[activePageIndex]?.kind === "backCover" ||
+    pagesWithAdjustments[activePageIndex + 1]?.kind === "backCover";
 
   return (
     <main className={`reader-shell reader-binding-${bindingDirection} reader-writing-${config.writingMode || "horizontal-tb"} ${themeClassNames(config.theme, config.themeSettings)}`} style={readerStyle}>
@@ -745,7 +748,7 @@ export default function BookReader({
           data-book-edge={
             activePageIndex === 0
               ? "cover"
-              : activePageIndex >= pagesWithAdjustments.length - 1
+              : backCoverVisible || activePageIndex >= pagesWithAdjustments.length - 1
                 ? "back"
                 : "spread"
           }
@@ -820,7 +823,7 @@ export default function BookReader({
               type="button"
               className="sample-book-chevron sample-book-chevron-next"
               aria-label="次のページへ"
-              disabled={activePageIndex >= pagesWithAdjustments.length - 1}
+              disabled={backCoverVisible || activePageIndex >= pagesWithAdjustments.length - 1}
               onClick={() => flipReaderPage("next")}
             >
               <span aria-hidden="true">&#8250;</span>
@@ -843,6 +846,7 @@ export default function BookReader({
         bindingDirection={bindingDirection}
         current={activePageIndex}
         total={pagesWithAdjustments.length}
+        atEnd={backCoverVisible || activePageIndex >= pagesWithAdjustments.length - 1}
         onFirst={() => pageFlip()?.turnToPage(0)}
         onContents={() => jumpToId("contents-1")}
         onPrevious={() => flipReaderPage("previous")}
