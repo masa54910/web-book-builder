@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import Button from "@/components/ui/Button";
 
 import Ver2Footer from "@/components/ver2/lp/Ver2Footer";
 import Ver2Header from "@/components/ver2/lp/Ver2Header";
@@ -71,7 +72,7 @@ function PointText({ text }: { text: string }) {
 }
 
 const scenes: Array<{
-  sampleId: "teacher" | "recipe" | "blog" | "research" | "writer" | "photographer";
+  sampleId: "teacher" | "recipe" | "blog" | "research" | "writer" | "photographer" | "magazine" | "picture-book" | "photo-book";
   label: string;
   title: string;
   body: string;
@@ -119,6 +120,9 @@ const scenes: Array<{
     body: "作品集やポートフォリオをページをめくるフォトブックとして公開。URLやQRで簡単にシェアできます。",
     image: "/use-cases/photographer-portfolio.webp",
   },
+  { sampleId: "magazine", label: "雑誌を作りたい方に", title: "特集を一冊の世界に", body: "記事とビジュアルを組み合わせて、自分だけの特集マガジンへ。", image: "/sample-books/magazine/cover.webp" },
+  { sampleId: "picture-book", label: "絵本を作りたい方に", title: "絵と言葉で物語を届ける", body: "一枚の絵と短い文章から、ページをめくって楽しむ物語へ。", image: "/sample-books/picture-book/cover.webp" },
+  { sampleId: "photo-book", label: "フォトブックを作りたい方に", title: "大切な景色を一冊に", body: "写真を大きく見せて、思い出や旅の記録を手軽に共有。", image: "/sample-books/photo-book/cover.webp" },
 ];
 
 function PointIcon({ kind }: { kind: PointIconKind }) {
@@ -191,14 +195,7 @@ export default function UseCasesPage() {
                 </div>
                 <h3>{scene.title}</h3>
                 <p>{scene.body}</p>
-                <button
-                  type="button"
-                  className={styles.sceneCta}
-                  aria-disabled="true"
-                  data-sample-id={scene.sampleId}
-                >
-                  サンプルを見る
-                </button>
+                <Button href={`/sample/${scene.sampleId}`} variant="secondary" size="sm">サンプルを見る</Button>
               </article>
             ))}
           </div>

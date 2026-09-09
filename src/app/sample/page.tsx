@@ -1,4 +1,5 @@
 import Link from "next/link";
+import TemplateCatalog from "@/components/TemplateCatalog";
 
 import HomeBackLink from "@/components/HomeBackLink";
 import Ver2Header from "@/components/ver2/lp/Ver2Header";
@@ -23,6 +24,7 @@ export default function SamplePage() {
           <p className={styles.lead}>実際の公開Readerと同じ体験で、ページめくり・目次・共有導線を確認できます。</p>
         </section>
 
+        <TemplateCatalog />
         <section className={styles.section}>
           {displayTitleLines?.length ? (
             <h2 className="fixed-title-lines fixed-title-lines-inner" aria-label={sample.config.title}>
