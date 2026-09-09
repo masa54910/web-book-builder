@@ -761,6 +761,9 @@ export default function BookReader({
             className="flip-book"
             style={{}}
             startPage={0}
+            {...({
+              bookBindingMode: config.writingMode === "vertical-rl" ? "right-bound" : "left-bound",
+            } as { bookBindingMode: "left-bound" | "right-bound" })}
             size="stretch"
             width={isMobile ? 340 : 430}
             height={isMobile ? 560 : 620}

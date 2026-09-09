@@ -23,7 +23,14 @@ assert.equal(verticalSwipeDirection(80), "next");
 assert.equal(verticalSwipeDirection(-80), "previous");
 
 const pageFlipFork = fs.readFileSync(new URL("../vendor/page-flip/index.js", import.meta.url), "utf8");
+const readerSource = fs.readFileSync(new URL("../src/components/BookReader.tsx", import.meta.url), "utf8");
+assert.match(readerSource, /bookBindingMode: config\.writingMode === "vertical-rl" \? "right-bound" : "left-bound"/);
+assert.doesNotMatch(readerSource, /pages\.reverse\(\)/);
 assert.match(pageFlipFork, /setPhysicalBinding/);
+assert.match(pageFlipFork, /bookBindingMode/);
+assert.match(pageFlipFork, /initializeBindingMode/);
+assert.match(pageFlipFork, /PageFlip\.prototype\.loadFromHTML/);
+assert.match(pageFlipFork, /PageFlip\.prototype\.getBookBindingMode/);
 assert.match(pageFlipFork, /flipRightBoundNext/);
 assert.match(pageFlipFork, /flipRightBoundPrevious/);
 assert.match(pageFlipFork, /x: -rect\.pageWidth \+ margin/);

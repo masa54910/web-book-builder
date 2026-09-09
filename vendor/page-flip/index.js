@@ -10,6 +10,12 @@ const FLIP_FORWARD = 0;
 const FLIP_BACK = 1;
 const STATE_FLIPPING = "flipping";
 const STATE_READ = "read";
+const LEFT_BOUND = "left-bound";
+const RIGHT_BOUND = "right-bound";
+
+function normalizeBindingMode(settings) {
+  return settings && settings.bookBindingMode === RIGHT_BOUND ? RIGHT_BOUND : LEFT_BOUND;
+}
 
 function installRightBoundMethods(app) {
   const controller = app.getFlipController();
@@ -112,14 +118,34 @@ function installRightBoundMethods(app) {
 }
 
 const PageFlip = pageFlip.PageFlip;
+const originalLoadFromHTML = PageFlip.prototype.loadFromHTML;
+const originalLoadFromImages = PageFlip.prototype.loadFromImages;
 const originalGetFlipController = PageFlip.prototype.getFlipController;
 const originalFlipNext = PageFlip.prototype.flipNext;
 const originalFlipPrev = PageFlip.prototype.flipPrev;
 const originalUserMove = PageFlip.prototype.userMove;
 const originalUserStop = PageFlip.prototype.userStop;
 
+function initializeBindingMode(instance) {
+  // This runs before upstream loadFrom* calls pages.show(startPage), so the
+  // first cover state and the first turn share the same explicit mode.
+  instance.__wbPhysicalBinding = normalizeBindingMode(instance.getSettings?.());
+}
+
+PageFlip.prototype.loadFromHTML = function (items) {
+  initializeBindingMode(this);
+  return originalLoadFromHTML.call(this, items);
+};
+PageFlip.prototype.loadFromImages = function (images) {
+  initializeBindingMode(this);
+  return originalLoadFromImages.call(this, images);
+};
+PageFlip.prototype.getBookBindingMode = function () {
+  return this.__wbPhysicalBinding || LEFT_BOUND;
+};
+
 PageFlip.prototype.setPhysicalBinding = function (binding) {
-  this.__wbPhysicalBinding = binding;
+  this.__wbPhysicalBinding = binding === RIGHT_BOUND ? RIGHT_BOUND : LEFT_BOUND;
 };
 PageFlip.prototype.flipRightBoundNext = function (corner = "top") {
   installRightBoundMethods(this);
