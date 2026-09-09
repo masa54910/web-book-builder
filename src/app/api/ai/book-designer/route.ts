@@ -10,6 +10,14 @@ function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
+function safeUpstreamField(value: unknown, maxLength = 240) {
+  if (typeof value !== "string") return undefined;
+  return value
+    .replace(/[\r\n]+/g, " ")
+    .replace(/sk-[A-Za-z0-9_-]+/g, "[redacted]")
+    .slice(0, maxLength);
+}
+
 function safeContext(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const candidate = value as Record<string, unknown>;
@@ -64,20 +72,15 @@ export async function POST(request: Request) {
         upstreamPayload && typeof upstreamPayload === "object" && "error" in upstreamPayload
           ? upstreamPayload.error
           : null;
+      const upstreamErrorRecord = upstreamError && typeof upstreamError === "object"
+        ? upstreamError as Record<string, unknown>
+        : {};
       console.error("[ai-book-designer] OpenAI request failed", {
         status: response.status,
-        type:
-          upstreamError && typeof upstreamError === "object" && "type" in upstreamError
-            ? typeof upstreamError.type === "string"
-              ? upstreamError.type
-              : undefined
-            : undefined,
-        code:
-          upstreamError && typeof upstreamError === "object" && "code" in upstreamError
-            ? typeof upstreamError.code === "string"
-              ? upstreamError.code
-              : undefined
-            : undefined,
+        type: safeUpstreamField(upstreamErrorRecord.type, 80),
+        code: safeUpstreamField(upstreamErrorRecord.code, 120),
+        param: safeUpstreamField(upstreamErrorRecord.param, 120),
+        messageSummary: safeUpstreamField(upstreamErrorRecord.message),
       });
       return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
     }
