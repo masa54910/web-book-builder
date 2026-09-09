@@ -1,0 +1,49 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { appendDesignHistory, applyDesignSpecToState, buildDesignContext } from "../src/lib/aiBookDesigner";
+import { DEFAULT_BOOK_DESIGN_SPEC, parseBookDesignSpec } from "../src/lib/designSpec";
+
+const parsed = parseBookDesignSpec(DEFAULT_BOOK_DESIGN_SPEC);
+assert.equal(parsed.success, true);
+
+const original = {
+  title: "Protected title",
+  rawText: "本文は変更されない",
+  theme: "classic" as const,
+  bindingDirection: "rtl" as const,
+  fontFamily: "mincho" as const,
+  fontScale: "medium" as const,
+  lineHeight: "normal" as const,
+  marginScale: "standard" as const,
+  pageWidth: "standard" as const,
+  background: "paper" as const,
+  textColor: "#2f251d",
+  accentColor: "#6bb9ad",
+  coverStyle: "overlay" as const,
+  imageLayout: "framed" as const,
+  coverDesign: { ...DEFAULT_BOOK_DESIGN_SPEC.cover },
+};
+const next = applyDesignSpecToState(original, { ...DEFAULT_BOOK_DESIGN_SPEC, theme: "modern", typography: { ...DEFAULT_BOOK_DESIGN_SPEC.typography, fontFamily: "sans" } });
+assert.equal(next.title, original.title);
+assert.equal(next.rawText, original.rawText);
+assert.equal(next.theme, "modern");
+assert.equal(next.fontFamily, "sans");
+
+const history = appendDesignHistory([], { id: "ai-1", bookId: "book-1", spec: DEFAULT_BOOK_DESIGN_SPEC, prompt: "simple", createdAt: new Date().toISOString(), active: true });
+assert.equal(history.length, 1);
+assert.equal(history[0].active, true);
+
+const context = buildDesignContext({ title: original.title, description: "説明", rawText: original.rawText, contentBlocks: [{ id: "text-1", type: "text", content: "章", structureRole: "chapter" }], current: original });
+assert.deepEqual(context.chapterTitles, ["章"]);
+assert.equal("paymentData" in context, false);
+const migration = readFileSync(resolve(process.cwd(), "supabase/migrations/020_ai_book_designer_usage.sql"), "utf8");
+assert.match(migration, /create table if not exists public\.ai_book_designer_usage/);
+assert.match(migration, /enable row level security/);
+assert.match(migration, /consume_ai_book_designer_quota/);
+const route = readFileSync(resolve(process.cwd(), "src/app/api/ai/book-designer/route.ts"), "utf8");
+assert.match(route, /OPENAI_API_KEY/);
+assert.match(route, /AI_BOOK_DESIGNER_ENABLED/);
+assert.match(route, /OPENAI_BOOK_DESIGNER_MODEL/);
+assert.doesNotMatch(route, /NEXT_PUBLIC_OPENAI/);
+console.log("AI Book Designer safety verification passed.");

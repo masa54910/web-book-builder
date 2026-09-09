@@ -20,6 +20,7 @@ import { normalizeCoverDesign, type CoverDesign } from "@/lib/coverDesign";
 import { normalizePageAdjustments, type PageAdjustment } from "@/lib/pageAdjustments";
 import type { TextMark } from "@/lib/textStyles";
 import { validateSlug } from "@/lib/slug";
+import type { BookDesignHistoryEntry } from "@/lib/designSpec";
 
 export type CanonicalPublicationStatus = "draft" | "published" | "archived";
 export type CanonicalPublicationVisibility = "private" | "unlisted" | "public";
@@ -140,6 +141,8 @@ export type CanonicalBookPayload = {
     status: CanonicalPublicationStatus;
     visibility: CanonicalPublicationVisibility;
   };
+  designHistory?: BookDesignHistoryEntry[];
+  activeDesignVersionId?: string;
 };
 
 /** Short alias used when the payload is passed between editor commands. */
@@ -186,6 +189,8 @@ export type CanonicalEditorState = {
   externalSalesUrl: string;
   externalSalesLabel: string;
   publicationRevision?: number;
+  designHistory?: BookDesignHistoryEntry[];
+  activeDesignVersionId?: string;
 };
 
 export type BuildCanonicalBookPayloadInput = {
@@ -402,6 +407,8 @@ export function buildCanonicalBookPayload(
       status: state.status,
       visibility: state.visibility,
     },
+    designHistory: state.designHistory,
+    activeDesignVersionId: state.activeDesignVersionId,
   };
 
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true, payload };
@@ -521,6 +528,8 @@ export function canonicalPayloadToBookProjectInput(payload: CanonicalBookPayload
     existingBookId: payload.bookId && looksLikeUuid(payload.bookId) ? payload.bookId : undefined,
     existingCreatedAt: payload.createdAt,
     publicationRevision: payload.publicationRevision,
+    designHistory: payload.designHistory,
+    activeDesignVersionId: payload.activeDesignVersionId,
   };
 }
 

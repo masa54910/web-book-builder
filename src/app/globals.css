@@ -4633,6 +4633,64 @@ button.reader-edit-link:disabled {
 .editor-side-column > .editor-design-settings { order: 2; }
 .editor-side-column > .editor-mini-preview { order: 3; }
 
+.ai-book-designer {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-book-designer .maker-actions {
+  flex-wrap: wrap;
+}
+
+.ai-design-preview {
+  display: grid;
+  gap: 4px;
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 12px;
+}
+
+.ai-design-preview span {
+  overflow-wrap: anywhere;
+}
+
+.ai-book-designer-history {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--wb-border-soft, rgba(22, 141, 204, .18));
+}
+
+.ai-book-designer-history h3 {
+  margin: 0;
+  color: var(--wb-navy, #12365b);
+  font-size: 14px;
+}
+
+.ai-book-designer-history ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-book-designer-history li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ai-book-designer-history li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--wb-text-muted, #64748b);
+  font-size: 12px;
+}
+
 .editor-status-card .maker-note { margin: 0; }
 
 .editor-guidance-card.editor-guidance-mobile { display: none; }

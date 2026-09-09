@@ -63,10 +63,15 @@ import {
 import { normalizeSlugInput, validateSlug } from "@/lib/slug";
 import { trackEvent } from "@/lib/analytics";
 import { getPublicationEditAccess } from "@/lib/publicationEditAccessClient";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import type { PublicationEditDecision } from "@/lib/publicationEditWindow";
 import { safeExternalUrl, type ExternalLink, type ThemeId } from "@/lib/productTypes";
 import { localeLabels, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/localization";
 import { contrastRatio, type BookThemeSettings } from "@/lib/themeSystem";
+import type { BookDesignHistoryEntry } from "@/lib/designSpec";
+import { appendDesignHistory, applyDesignSpecToState, buildDesignContext, normalizeDesignHistory, sanitizeDesignPrompt } from "@/lib/aiBookDesigner";
+import { designSpecForState } from "@/lib/aiBookDesigner";
+import type { BookDesignSpec } from "@/lib/designSpec";
 import { buildEditorDraftFields, seedFromDraftFields } from "@/lib/editorDraftState";
 import {
   DEFAULT_COVER_DESIGN,
@@ -159,6 +164,8 @@ type EditorState = {
   externalSalesUrl: string;
   externalSalesLabel: string;
   publicationRevision?: number;
+  designHistory?: BookDesignHistoryEntry[];
+  activeDesignVersionId?: string;
 };
 
 type DraftSeed = {
@@ -218,6 +225,8 @@ const INITIAL_EDITOR: EditorState = {
   externalSalesUrl: "",
   externalSalesLabel: "",
   publicationRevision: 1,
+  designHistory: [],
+  activeDesignVersionId: undefined,
 };
 
 function normalizeEditorDraftSeed(seed: ReturnType<typeof seedFromDraftFields>): DraftSeed {
@@ -379,6 +388,8 @@ function fromRecord(record: CloudBookRecord): EditorState {
     externalLinkUrl: record.bookProject.config.externalLinks?.[0]?.url || "",
     externalSalesUrl: record.bookProject.config.monetization?.externalSalesUrl || "",
     externalSalesLabel: record.bookProject.config.monetization?.externalSalesLabel || "",
+    designHistory: normalizeDesignHistory(record.bookProject.config.designHistory, record.id),
+    activeDesignVersionId: record.bookProject.config.activeDesignVersionId,
   };
 }
 
@@ -531,6 +542,8 @@ function stateFromPreviewProject(project: BookProject): EditorState {
     externalLinkUrl: project.config.externalLinks?.[0]?.url || "",
     externalSalesUrl: project.config.monetization?.externalSalesUrl || "",
     externalSalesLabel: project.config.monetization?.externalSalesLabel || "",
+    designHistory: normalizeDesignHistory(project.config.designHistory, project.config.bookId),
+    activeDesignVersionId: project.config.activeDesignVersionId,
     publicationRevision: project.config.publicationRevision || 1,
   };
 }
@@ -620,6 +633,10 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [pasteUndoBlocks, setPasteUndoBlocks] = useState<BookContentBlock[] | null>(null);
   const [smartFormatUndoBlocks, setSmartFormatUndoBlocks] = useState<BookContentBlock[] | null>(null);
   const [smartFormatSummary, setSmartFormatSummary] = useState<string | null>(null);
+  const [designPrompt, setDesignPrompt] = useState("");
+  const [designPreviewSpec, setDesignPreviewSpec] = useState<BookDesignSpec | null>(null);
+  const [designBusy, setDesignBusy] = useState(false);
+  const [designError, setDesignError] = useState("");
   const [cursorPosition, setCursorPosition] = useState(0);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [editorScrollRequest, setEditorScrollRequest] = useState<{ blockId: string; nonce: number; highlight?: boolean } | null>(null);
@@ -1362,6 +1379,84 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     setDirty(true);
   };
 
+  const generateDesign = async () => {
+    if (isEditLocked || designBusy) return;
+    const prompt = sanitizeDesignPrompt(designPrompt);
+    if (!prompt) {
+      setDesignError("どんな雰囲気にしたいか入力してください。");
+      return;
+    }
+    const client = getSupabaseClient();
+    const session = client ? await client.auth.getSession() : null;
+    const token = session?.data.session?.access_token;
+    if (!token) {
+      setDesignError("ログイン状態を確認できません。再度ログインしてください。");
+      return;
+    }
+    setDesignBusy(true);
+    setDesignError("");
+    try {
+      const response = await fetch("/api/ai/book-designer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          prompt,
+          context: buildDesignContext({ title: state.title, description: state.description, rawText: state.rawText, contentBlocks, current: state }),
+        }),
+      });
+      const payload = await response.json() as { spec?: BookDesignSpec; error?: string };
+      if (!response.ok || !payload.spec) throw new Error(payload.error || "生成できませんでした。");
+      setDesignPreviewSpec(payload.spec);
+      setStatusMessage("AIデザイン案をプレビューしています。適用するまで保存内容は変わりません。");
+    } catch (error) {
+      setDesignError(error instanceof Error ? error.message : "デザインを生成できませんでした。少し時間を空けてもう一度お試しください。");
+    } finally {
+      setDesignBusy(false);
+    }
+  };
+
+  const applyGeneratedDesign = () => {
+    if (!designPreviewSpec || isEditLocked) return;
+    const versionId = `ai-${Date.now().toString(36)}`;
+    const nextState = applyDesignSpecToState(state, designPreviewSpec);
+    const existingHistory = state.designHistory || [];
+    const baseHistory = existingHistory.length ? existingHistory : [{
+      id: "original",
+      bookId: bookId || "draft",
+      ownerId: user?.id,
+      spec: designSpecForState(state),
+      prompt: "",
+      createdAt: new Date().toISOString(),
+      name: "Original",
+      active: false,
+    } satisfies BookDesignHistoryEntry];
+    const entry: BookDesignHistoryEntry = {
+      id: versionId,
+      bookId: bookId || "draft",
+      ownerId: user?.id,
+      spec: designPreviewSpec,
+      prompt: sanitizeDesignPrompt(designPrompt),
+      createdAt: new Date().toISOString(),
+      name: designPrompt.trim().slice(0, 80) || "AIデザイン案",
+      active: true,
+    };
+    setState({ ...nextState, designHistory: appendDesignHistory(baseHistory, entry), activeDesignVersionId: versionId });
+    setDesignPreviewSpec(null);
+    setDirty(true);
+    setStatusMessage("AIデザインを適用しました。保存するまで公開内容は変わりません。");
+  };
+
+  const restoreDesignVersion = (entry: BookDesignHistoryEntry) => {
+    if (isEditLocked) return;
+    setState((current) => ({
+      ...applyDesignSpecToState(current, entry.spec),
+      designHistory: (current.designHistory || []).map((item) => ({ ...item, active: item.id === entry.id })),
+      activeDesignVersionId: entry.id,
+    }));
+    setDirty(true);
+    setStatusMessage("保存済みのデザイン案をプレビューしています。保存すると反映されます。");
+  };
+
   const showTemporaryStatusMessage = (message: string, durationMs = 2000) => {
     if (statusMessageTimeoutRef.current !== null) {
       window.clearTimeout(statusMessageTimeoutRef.current);
@@ -1554,6 +1649,11 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       externalSalesUrl: payload.externalSalesUrl,
       externalSalesLabel: payload.externalSalesLabel,
       publicationRevision: payload.publicationRevision || state.publicationRevision || 1,
+      designHistory: normalizeDesignHistory((payload.designHistory || []).map((entry) => ({
+        ...entry,
+        bookId: payload.bookId || entry.bookId,
+      })), payload.bookId || "draft"),
+      activeDesignVersionId: payload.activeDesignVersionId,
     } satisfies EditorState;
     setState(nextState);
     setImages(nextImages);
@@ -2300,6 +2400,54 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
           </div>
           <p className="maker-note">WebBookMakerは決済に関与しません。販売や応援は外部URLへの導線として扱います。</p>
         </div>
+        <section className="maker-card ai-book-designer" aria-labelledby="ai-book-designer-heading">
+          <h2 id="ai-book-designer-heading">AI Book Designer</h2>
+          <p className="maker-note">本文・章・画像・地図・販売設定は変更せず、見た目のデザイン案だけを作成します。</p>
+          <label>
+            <span>どんな雰囲気の本にしますか？</span>
+            <textarea
+              value={designPrompt}
+              onChange={(event) => setDesignPrompt(event.target.value.slice(0, 800))}
+              placeholder="例：雑誌みたいに、都会的でスタイリッシュに"
+              maxLength={800}
+              rows={3}
+              disabled={isEditLocked || designBusy}
+            />
+          </label>
+          <p className="maker-note">例：文庫本らしく / 写真を大きく見せたい / シンプルで読みやすく</p>
+          <div className="maker-actions">
+            <button className="maker-secondary-button" type="button" onClick={() => void generateDesign()} disabled={isEditLocked || designBusy}>
+              {designBusy ? "生成中…" : "AIでデザインする"}
+            </button>
+            {designPreviewSpec ? (
+              <>
+                <button className="maker-primary-button" type="button" onClick={applyGeneratedDesign} disabled={isEditLocked}>このデザインを使う</button>
+                <button className="maker-secondary-button" type="button" onClick={() => setDesignPreviewSpec(null)} disabled={designBusy}>元に戻す</button>
+              </>
+            ) : null}
+          </div>
+          {designPreviewSpec ? (
+            <div className="ai-design-preview" style={{ backgroundColor: designPreviewSpec.palette.textColor === "#f2efe8" ? "#1f2528" : "#fffaf0", color: designPreviewSpec.palette.textColor, borderColor: designPreviewSpec.palette.accentColor }}>
+              <strong style={{ color: designPreviewSpec.palette.accentColor }}>AIデザイン案 · {designPreviewSpec.genre}</strong>
+              <span>見出し・本文・表紙の既存レンダラーへ適用できる安全なトークンのみを仮表示しています。</span>
+            </div>
+          ) : null}
+          {designPreviewSpec ? <p className="maker-status" role="status">AI案を仮適用中です。保存するまで正式なEditor stateは変更されません。</p> : null}
+          {designError ? <p className="maker-status maker-status-error" role="alert">{designError}</p> : null}
+          {state.designHistory?.length ? (
+            <div className="ai-book-designer-history">
+              <h3>Design History</h3>
+              <ul>
+                {state.designHistory.slice().reverse().map((entry) => (
+                  <li key={entry.id}>
+                    <span>{entry.name || "AIデザイン案"} · {new Date(entry.createdAt).toLocaleString("ja-JP")}</span>
+                    <button className="maker-small-button" type="button" onClick={() => restoreDesignVersion(entry)} disabled={isEditLocked}>このデザインに戻す</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
         </aside>
       </section>
       </fieldset>

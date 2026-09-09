@@ -21,6 +21,7 @@ import { parseGoogleMapsUrl } from "@/lib/googleMaps";
 import { normalizeMapAlignment, type MapAlignment } from "@/lib/mapLayout";
 import { normalizeTextMarks, type TextMark } from "@/lib/textStyles";
 import { findDocumentHeadings, parseDocumentHeading, parseDocumentStructure } from "@/lib/documentStructure";
+import type { BookDesignHistoryEntry } from "@/lib/designSpec";
 
 export const BOOK_PROJECT_VERSION = 1;
 
@@ -226,6 +227,8 @@ export type BookProjectInput = {
   existingBookId?: string;
   existingCreatedAt?: string;
   publicationRevision?: number;
+  designHistory?: BookDesignHistoryEntry[];
+  activeDesignVersionId?: string;
 };
 
 export type ProjectBuildResult =
@@ -925,6 +928,8 @@ export function buildBookProject(input: BookProjectInput): ProjectBuildResult {
           },
         ],
         branding: DEFAULT_BRANDING,
+        designHistory: input.designHistory,
+        activeDesignVersionId: input.activeDesignVersionId,
       },
       chapters,
       rawText,

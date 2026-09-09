@@ -18,6 +18,8 @@ export type HexColor = string;
 
 export type BookDesignSpec = {
   version: typeof DESIGN_SPEC_VERSION;
+  genre: "magazine" | "novel" | "photo_book" | "guide" | "catalog" | "simple";
+  mood: { keywords: string[]; density: "compact" | "balanced" | "airy" };
   theme: ThemeId;
   typography: {
     fontFamily: DesignSpecFontFamily;
@@ -60,11 +62,24 @@ export type BookDesignSpec = {
   };
 };
 
+/** Long-lived AI design history metadata. It never contains book content. */
+export type BookDesignHistoryEntry = {
+  id: string;
+  bookId: string;
+  ownerId?: string;
+  spec: BookDesignSpec;
+  prompt: string;
+  createdAt: string;
+  name?: string;
+  active?: boolean;
+};
+
 export type DesignSpecParseResult =
   | { success: true; data: BookDesignSpec }
   | { success: false; error: string };
 
 const THEMES: ThemeId[] = ["classic", "modern", "minimal", "magazine", "novel", "photo", "research", "portfolio"];
+const GENRES = ["magazine", "novel", "photo_book", "guide", "catalog", "simple"] as const;
 const BACKGROUNDS: DesignSpecBackground[] = ["paper", "ivory", "cafe", "night", "green", "white"];
 const FONT_FAMILIES: DesignSpecFontFamily[] = ["mincho", "gothic", "serif", "sans"];
 const FONT_SCALES: DesignSpecFontScale[] = ["small", "medium", "large"];
@@ -136,6 +151,13 @@ export function parseBookDesignSpec(input: unknown): DesignSpecParseResult {
   try {
     if (!isRecord(input)) throw new Error("design spec must be an object");
     if (input.version !== DESIGN_SPEC_VERSION) throw new Error("unsupported design spec version");
+    if (input.genre !== undefined && !hasValue(GENRES, input.genre)) throw new Error("genre is not allowed");
+    const genre = input.genre === undefined ? "simple" : input.genre;
+    const moodSource = isRecord(input.mood) ? input.mood : {};
+    const moodDensity = moodSource.density === "compact" || moodSource.density === "airy" ? moodSource.density : "balanced";
+    const moodKeywords = Array.isArray(moodSource.keywords)
+      ? moodSource.keywords.filter((item): item is string => typeof item === "string").slice(0, 12).map((item) => item.slice(0, 40))
+      : [];
     if (!hasValue(THEMES, input.theme)) throw new Error("theme is not allowed");
     const typography = isRecord(input.typography) ? input.typography : null;
     const palette = isRecord(input.palette) ? input.palette : null;
@@ -151,7 +173,7 @@ export function parseBookDesignSpec(input: unknown): DesignSpecParseResult {
     if (motion.reveal !== "none" && motion.reveal !== "subtle" && motion.reveal !== "standard") throw new Error("motion.reveal is not allowed");
     if (motion.reducedMotion !== "respect") throw new Error("motion.reducedMotion must respect user preference");
     const cover = parseCover(input.cover);
-    return { success: true, data: { version: DESIGN_SPEC_VERSION, theme: input.theme, typography: { fontFamily: typography.fontFamily, fontScale: typography.fontScale, lineHeight: typography.lineHeight }, palette: { textColor: palette.textColor, accentColor: palette.accentColor }, page: { background: page.background, marginScale: page.marginScale, pageWidth: page.pageWidth, bindingDirection: page.bindingDirection, readerMode: page.readerMode, paragraphSpacing: paragraphSpacing as BookDesignSpec["page"]["paragraphSpacing"] }, cover, image: { layout: image.layout }, motion: { reveal: motion.reveal, reducedMotion: motion.reducedMotion } } };
+    return { success: true, data: { version: DESIGN_SPEC_VERSION, genre, mood: { keywords: moodKeywords, density: moodDensity }, theme: input.theme, typography: { fontFamily: typography.fontFamily, fontScale: typography.fontScale, lineHeight: typography.lineHeight }, palette: { textColor: palette.textColor, accentColor: palette.accentColor }, page: { background: page.background, marginScale: page.marginScale, pageWidth: page.pageWidth, bindingDirection: page.bindingDirection, readerMode: page.readerMode, paragraphSpacing: paragraphSpacing as BookDesignSpec["page"]["paragraphSpacing"] }, cover, image: { layout: image.layout }, motion: { reveal: motion.reveal, reducedMotion: motion.reducedMotion } } };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "invalid design spec" };
   }
@@ -159,6 +181,8 @@ export function parseBookDesignSpec(input: unknown): DesignSpecParseResult {
 
 export const DEFAULT_BOOK_DESIGN_SPEC: BookDesignSpec = {
   version: DESIGN_SPEC_VERSION,
+  genre: "simple",
+  mood: { keywords: [], density: "balanced" },
   theme: "classic",
   typography: { fontFamily: "mincho", fontScale: "medium", lineHeight: "normal" },
   palette: { textColor: "#2f251d", accentColor: "#6bb9ad" },

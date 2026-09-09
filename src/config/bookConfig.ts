@@ -11,6 +11,7 @@ import type {
 import type { SupportedLocale } from "@/lib/localization";
 import type { BookThemeSettings } from "@/lib/themeSystem";
 import type { CoverDesign } from "@/lib/coverDesign";
+import type { BookDesignHistoryEntry } from "@/lib/designSpec";
 import type { PageAdjustment } from "@/lib/pageAdjustments";
 
 export type BindingDirection = "rtl" | "ltr";
@@ -56,6 +57,9 @@ export type BookConfig = {
   monetization?: Monetization;
   analyticsSummary?: BookAnalyticsSummary;
   versions?: BookVersion[];
+  /** AI design proposals/adoptions. Content blocks are intentionally absent. */
+  designHistory?: BookDesignHistoryEntry[];
+  activeDesignVersionId?: string;
   branding?: BrandingSettings;
 };
 
