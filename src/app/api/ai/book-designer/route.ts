@@ -75,13 +75,13 @@ export async function POST(request: Request) {
       const upstreamErrorRecord = upstreamError && typeof upstreamError === "object"
         ? upstreamError as Record<string, unknown>
         : {};
-      console.error("[ai-book-designer] OpenAI request failed", {
-        status: response.status,
-        type: safeUpstreamField(upstreamErrorRecord.type, 80),
-        code: safeUpstreamField(upstreamErrorRecord.code, 120),
-        param: safeUpstreamField(upstreamErrorRecord.param, 120),
-        messageSummary: safeUpstreamField(upstreamErrorRecord.message),
-      });
+      const safeType = safeUpstreamField(upstreamErrorRecord.type, 80) ?? "unknown";
+      const safeCode = safeUpstreamField(upstreamErrorRecord.code, 120) ?? "unknown";
+      const safeParam = safeUpstreamField(upstreamErrorRecord.param, 120) ?? "none";
+      const safeMessage = safeUpstreamField(upstreamErrorRecord.message) ?? "unknown";
+      console.error(
+        `[ai-book-designer] OpenAI request failed status=${response.status} type=${safeType} code=${safeCode} param=${safeParam} message=${safeMessage}`,
+      );
       return jsonError("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
     }
     const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
