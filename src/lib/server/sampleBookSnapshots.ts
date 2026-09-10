@@ -5,7 +5,8 @@ const ALLOWED_SAMPLE = "teacher";
 
 export function sanitizeSampleProject(project: Record<string, unknown>) {
   const config = (project.config && typeof project.config === "object" ? project.config : {}) as Record<string, unknown>;
-  const { bookId: _bookId, ownerId: _ownerId, externalSalesUrl: _sales, priceAmount: _price, ...safeConfig } = config;
+  const safeConfig = { ...config };
+  delete safeConfig.bookId; delete safeConfig.ownerId; delete safeConfig.externalSalesUrl; delete safeConfig.priceAmount;
   return { ...project, config: safeConfig, publication: undefined, ownerId: undefined, billing: undefined, analytics: undefined, entitlement: undefined };
 }
 
