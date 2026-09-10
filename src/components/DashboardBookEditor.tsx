@@ -677,6 +677,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const handledFocusBlockRef = useRef<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [warnings, setWarnings] = useState<string[]>([]);
+  const unsafePatternBlockIds = useMemo(() => safePagePatterns(contentBlocks, assignPagePatterns(contentBlocks)).filter((item) => item.fallback).map((item) => item.blockId), [contentBlocks]);
   const [statusMessage, setStatusMessage] = useState(
     draftSeed.restored ? "LPで入力した下書きを復元しました。続きから編集できます。" : "",
   );
@@ -2279,6 +2280,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             activePageId={activeMiniPageId}
             onPageClick={handleMiniPageClick}
             design={designPreviewSpec || designSpecForState(state)}
+            unsafePatternBlockIds={unsafePatternBlockIds}
           />
 
           <ConnectSalesPanel
