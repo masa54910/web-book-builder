@@ -4,5 +4,5 @@ const blocks = [{ id: "a", type: "columns", ratio: "50-50", left: { blocks: [] }
 const result = runRuleBasedLayoutCritic(blocks);
 assert.equal(result.passed, false);
 assert.equal(result.repairedPatterns[0].fallback, "standard-text");
-assert.deepEqual(blocks[0].left.blocks, []);
+assert.deepEqual((blocks as Array<{ left: { blocks: unknown[] } }>)[0].left.blocks, []);
 console.log("Rule-based Layout Critic verification passed.");
