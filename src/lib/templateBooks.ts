@@ -78,7 +78,14 @@ export function loadCatalogSample(templateId: string) {
     case "magazine": addColumns("feature-columns-magazine", "編集部の視点で、街の細部を拾います。", "インタビューの声から、特集の輪郭を立ち上げます。", "40-60"); addYouTube("feature-video-magazine"); addMap("feature-map-magazine"); break;
     case "photo-book": addMap("feature-map-photo-book"); break;
   }
-  payload.contentBlocks.splice(Math.max(2, payload.contentBlocks.length - 1), 0, ...featureBlocks);
+  const featureInsertIndex = templateId === "teacher"
+    ? (() => {
+        let chapterCount = 0;
+        const index = payload.contentBlocks.findIndex((block) => block.type === "text" && block.structureRole === "chapter" && ++chapterCount === 3);
+        return index >= 0 ? index : Math.max(2, payload.contentBlocks.length - 1);
+      })()
+    : Math.max(2, payload.contentBlocks.length - 1);
+  payload.contentBlocks.splice(featureInsertIndex, 0, ...featureBlocks);
   const build = buildBookProjectFromCanonicalPayload(payload);
   if (!build.ok) throw new Error(`Invalid catalog sample: ${Object.keys(build.errors).join(",")}`);
   return { ...build.project, config: { ...build.project.config, bookId: `app-sample-${templateId}`, bindingDirection: "ltr" as const, writingMode: "horizontal-tb" as const } };
