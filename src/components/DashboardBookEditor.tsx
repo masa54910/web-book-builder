@@ -72,6 +72,8 @@ import type { BookDesignHistoryEntry } from "@/lib/designSpec";
 import { appendDesignHistory, applyDesignSpecToState, buildDesignContext, normalizeDesignHistory, sanitizeDesignPrompt } from "@/lib/aiBookDesigner";
 import { designSpecForState } from "@/lib/aiBookDesigner";
 import type { BookDesignSpec } from "@/lib/designSpec";
+import { assignPagePatterns } from "@/lib/pagePatternLibrary";
+import { safePagePatterns } from "@/lib/layoutSafety";
 import { ShioriDesignInterview } from "@/components/ShioriDesignInterview";
 import type { ShioriDesignBrief } from "@/lib/shioriDesignBrief";
 import { buildEditorDraftFields, seedFromDraftFields } from "@/lib/editorDraftState";
@@ -1600,6 +1602,11 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   };
 
   const buildCanonicalPayload = (): CanonicalBookPayload | null => {
+    // Safety analysis is deliberately read-only: canonical content and IDs are
+    // never rewritten. Renderer consumers can use the safe pattern result.
+    const safePatterns = safePagePatterns(contentBlocks, assignPagePatterns(contentBlocks));
+    const safetyWarnings = safePatterns.flatMap((item) => item.issues.map((issue) => issue.message));
+    if (safetyWarnings.length) setWarnings((current) => Array.from(new Set([...current, ...safetyWarnings])));
     const externalUrl = safeExternalUrl(state.externalLinkUrl);
     const externalLinks = externalUrl
       ? ([
