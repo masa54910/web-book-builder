@@ -61,6 +61,10 @@ export default function ColumnsPage({
   right: ReaderColumnChild[];
   columnsBlockId: string;
 }) {
+  const leftWeight = left.reduce((sum, child) => sum + (child.kind === "text" ? child.paragraphs.join("").length : 1), 0);
+  const rightWeight = right.reduce((sum, child) => sum + (child.kind === "text" ? child.paragraphs.join("").length : 1), 0);
+  const safetyFallback = leftWeight === 0 || rightWeight === 0 || Math.max(leftWeight, rightWeight) > Math.min(leftWeight, rightWeight) * 4;
+  const safeChildren = safetyFallback ? [...left, ...right] : [];
   const leftRef = useRef<HTMLDivElement | null>(null);
   const rightRef = useRef<HTMLDivElement | null>(null);
   const [overflow, setOverflow] = useState(false);
@@ -90,13 +94,10 @@ export default function ColumnsPage({
       data-columns-ratio={ratio}
       style={{ "--columns-grid": ratioColumns(ratio) } as CSSProperties}
     >
-      <div className="columns-reader-pane" ref={leftRef} data-columns-side="left">
-        {left.map((child) => <ColumnChild key={child.id} child={child} />)}
+      <div className={`columns-reader-pane${safetyFallback ? " is-safety-fallback" : ""}`} ref={leftRef} data-columns-side={safetyFallback ? "fallback" : "left"}>
+        {(safetyFallback ? safeChildren : left).map((child) => <ColumnChild key={child.id} child={child} />)}
       </div>
-      <div className="columns-reader-divider" aria-hidden="true" />
-      <div className="columns-reader-pane" ref={rightRef} data-columns-side="right">
-        {right.map((child) => <ColumnChild key={child.id} child={child} />)}
-      </div>
+      {safetyFallback ? null : <><div className="columns-reader-divider" aria-hidden="true" /><div className="columns-reader-pane" ref={rightRef} data-columns-side="right">{right.map((child) => <ColumnChild key={child.id} child={child} />)}</div></>}
       {overflow ? <p className="columns-reader-overflow-warning">2カラムの内容が1ページに収まっていません。内容を減らすか、2カラムを分けてください。</p> : null}
     </article>
   );
