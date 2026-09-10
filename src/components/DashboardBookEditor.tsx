@@ -72,6 +72,8 @@ import type { BookDesignHistoryEntry } from "@/lib/designSpec";
 import { appendDesignHistory, applyDesignSpecToState, buildDesignContext, normalizeDesignHistory, sanitizeDesignPrompt } from "@/lib/aiBookDesigner";
 import { designSpecForState } from "@/lib/aiBookDesigner";
 import type { BookDesignSpec } from "@/lib/designSpec";
+import { ShioriDesignInterview } from "@/components/ShioriDesignInterview";
+import type { ShioriDesignBrief } from "@/lib/shioriDesignBrief";
 import { buildEditorDraftFields, seedFromDraftFields } from "@/lib/editorDraftState";
 import {
   DEFAULT_COVER_DESIGN,
@@ -646,6 +648,24 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [designPreviewPreset, setDesignPreviewPreset] = useState<{ id: string; name: string } | null>(null);
   const [designBusy, setDesignBusy] = useState(false);
   const [designError, setDesignError] = useState("");
+  const [shioriOpen, setShioriOpen] = useState(false);
+  const [shioriBrief, setShioriBrief] = useState<ShioriDesignBrief | null>(null);
+  const shioriStorageKey = `webbookmaker:shiori-brief:${bookId || "new"}`;
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(shioriStorageKey);
+      if (stored) setShioriBrief(JSON.parse(stored) as ShioriDesignBrief);
+    } catch {
+      // Browser storage is optional and must never interrupt editing.
+    }
+  }, [shioriStorageKey]);
+  useEffect(() => {
+    try {
+      if (shioriBrief) window.localStorage.setItem(shioriStorageKey, JSON.stringify(shioriBrief));
+    } catch {
+      // Ignore privacy mode and quota errors.
+    }
+  }, [shioriBrief, shioriStorageKey]);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [editorScrollRequest, setEditorScrollRequest] = useState<{ blockId: string; nonce: number; highlight?: boolean } | null>(null);
@@ -2432,6 +2452,25 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             />
           </label>
           <p className="maker-note">例：文庫本らしく / 写真を大きく見せたい / シンプルで読みやすく</p>
+          <div className="shiori-launch-row">
+            <button className="maker-secondary-button" type="button" onClick={() => setShioriOpen(true)} disabled={isEditLocked || designBusy}>
+              しおりちゃんと本のデザインを決める
+            </button>
+            <span className="maker-note">質問に答えながら、デザイン方針を整理できます。</span>
+          </div>
+          {shioriOpen ? (
+            <ShioriDesignInterview
+              onCancel={() => setShioriOpen(false)}
+              onConfirm={(brief) => { setShioriBrief(brief); setShioriOpen(false); }}
+            />
+          ) : null}
+          {shioriBrief ? (
+            <div className="shiori-brief-saved" role="status">
+              <strong>しおりちゃんのデザイン方針</strong>
+              <span>方針を保存しました。次工程でこのBriefをAIデザイン生成へ接続できます。</span>
+              <button className="maker-small-button" type="button" onClick={() => setShioriOpen(true)} disabled={isEditLocked}>回答を見直す</button>
+            </div>
+          ) : null}
           <div className="maker-actions">
             <button className="maker-secondary-button" type="button" onClick={() => void generateDesign()} disabled={isEditLocked || designBusy}>
               {designBusy ? "生成中…" : "AIでデザインする"}

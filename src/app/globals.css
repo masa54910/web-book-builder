@@ -4808,6 +4808,20 @@ button.reader-edit-link:disabled {
   border-top: 1px solid var(--wb-border-soft, rgba(22, 141, 204, .18));
 }
 
+.shiori-launch-row { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; margin-top: .75rem; }
+.shiori-interview { margin-top: 1rem; padding: 1rem; border: 1px solid #e7d8c4; border-radius: 14px; background: linear-gradient(135deg, #fffaf2, #fff); }
+.shiori-avatar { display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: #f2c36b; color: #5b3b1c; font-weight: 700; margin-bottom: .5rem; }
+.shiori-heading { display: flex; align-items: center; gap: .55rem; }
+.shiori-avatar-image { width: 3.5rem; height: 3.5rem; object-fit: cover; object-position: 50% 10%; border-radius: 50%; border: 2px solid #f2c36b; }
+.shiori-progress { color: #756a5d; font-size: .85rem; margin-bottom: .35rem; }
+.shiori-interview h3 { margin: 0 0 .8rem; }
+.shiori-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .55rem; }
+.shiori-option { border: 1px solid #d8c8b3; border-radius: 10px; background: #fff; padding: .7rem .8rem; text-align: left; cursor: pointer; color: inherit; }
+.shiori-option:hover, .shiori-option:focus-visible { border-color: #a87538; background: #fff6e8; }
+.shiori-summary { line-height: 1.8; background: #fff; border-radius: 10px; padding: .8rem; }
+.shiori-brief-saved { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .9rem; margin-top: .8rem; padding: .7rem .8rem; border-left: 3px solid #d99a43; background: #fffaf2; }
+.shiori-brief-saved span { flex: 1 1 100%; color: #665b4f; font-size: .9rem; }
+
 .ai-book-designer-history h3 {
   margin: 0;
   color: var(--wb-navy, #12365b);
