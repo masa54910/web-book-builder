@@ -3,6 +3,7 @@ import { getBookDesignPreset } from "@/lib/designPresets";
 import { normalizeCoverDesign } from "@/lib/coverDesign";
 import { parseBookDesignSpec } from "@/lib/designSpec";
 import { getBookTemplate } from "@/lib/templateCatalog";
+import { parseGoogleMapsUrl } from "@/lib/googleMaps";
 
 /** Construct from a closed catalog, never spread a source user's BookProject. */
 export function createTemplatePayload(templateId: unknown, identity = () => crypto.randomUUID()): CanonicalBookPayload {
@@ -55,6 +56,27 @@ export function loadCatalogSample(templateId: string) {
     if (block.type === "text" && block.structureRole === "chapter") sectionIndex += 1;
     return block.type === "text" && !block.structureRole ? { ...block, content: template.sections[sectionIndex].text } : block;
   });
+  // Showcase features only in completed, app-owned samples. Starters remain
+  // intentionally simple so users can replace their own content safely.
+  const featureBlocks: CanonicalContentBlock[] = [];
+  const addColumns = (id: string, left: string, right: string, ratio: "50-50" | "40-60" | "60-40" = "50-50") => {
+    featureBlocks.push({ id, type: "columns", ratio, left: { blocks: [{ id: `${id}-left`, type: "text", content: left }] }, right: { blocks: [{ id: `${id}-right`, type: "text", content: right }] } });
+  };
+  const addYouTube = (id: string) => featureBlocks.push({ id, type: "youtube", videoId: "aqz-KE-bpKQ", originalUrl: "https://www.youtube.com/watch?v=aqz-KE-bpKQ", displayMode: "full-page", displaySize: "medium" });
+  const addMap = (id: string) => {
+    const map = parseGoogleMapsUrl("https://www.google.com/maps/@35.681236,139.767125,14z");
+    if (map) featureBlocks.push({ id, type: "map", ...map, displayMode: "full-page", displaySize: "medium", alignment: "center" });
+  };
+  switch (templateId) {
+    case "teacher": addColumns("feature-columns-teacher", "考え方を一つに絞ると、説明の順番が見えてきます。", "具体例を一つ添えると、学習者は自分の場面へ置き換えられます。", "40-60"); addYouTube("feature-video-teacher"); break;
+    case "recipe": addColumns("feature-columns-recipe", "材料を先に計量し、火にかける前に並べておきます。", "香り・色・食感を確かめながら、最後の塩を少しずつ加えます。", "40-60"); addYouTube("feature-video-recipe"); addMap("feature-map-recipe"); break;
+    case "blog": addColumns("feature-columns-blog", "記事の中で残したい一文を選びます。", "読者が次に試せる小さな行動へつなげます。"); addYouTube("feature-video-blog"); break;
+    case "research": addColumns("feature-columns-research", "観察項目をそろえると、記録を比べられます。", "例外や迷いもメモに残すと、考察の手がかりになります。", "60-40"); addMap("feature-map-research"); break;
+    case "photographer": addYouTube("feature-video-photographer"); addMap("feature-map-photographer"); break;
+    case "magazine": addColumns("feature-columns-magazine", "編集部の視点で、街の細部を拾います。", "インタビューの声から、特集の輪郭を立ち上げます。", "40-60"); addYouTube("feature-video-magazine"); addMap("feature-map-magazine"); break;
+    case "photo-book": addMap("feature-map-photo-book"); break;
+  }
+  payload.contentBlocks.splice(Math.max(2, payload.contentBlocks.length - 1), 0, ...featureBlocks);
   const build = buildBookProjectFromCanonicalPayload(payload);
   if (!build.ok) throw new Error(`Invalid catalog sample: ${Object.keys(build.errors).join(",")}`);
   return { ...build.project, config: { ...build.project.config, bookId: `app-sample-${templateId}`, bindingDirection: "ltr" as const, writingMode: "horizontal-tb" as const } };
