@@ -34,7 +34,7 @@ export function createTemplatePayload(templateId: unknown, identity = () => cryp
     theme: spec.theme, bindingDirection: "ltr", writingMode: "horizontal-tb", readerMode: "book",
     themeSettings: { ...spec.typography, ...spec.palette, background: spec.page.background, marginScale: spec.page.marginScale, pageWidth: spec.page.pageWidth, paragraphSpacing: spec.page.paragraphSpacing, coverStyle: spec.cover.coverStyle, imageLayout: spec.image.layout },
     coverDesign: normalizeCoverDesign({ ...spec.cover, titleTextOverride: undefined }),
-    pageAdjustments: [], charactersPerPage: template.id === "picture-book" ? 220 : 380, tableOfContentsItemsPerPage: 6,
+    pageAdjustments: [], charactersPerPage: template.id === "picture-book" ? 220 : template.id === "teacher" ? 760 : 380, tableOfContentsItemsPerPage: 6,
     contentBlocks, assets, coverAsset: { id: `cover-${identity()}`, storagePath: template.coverImage, fileName: "cover.webp", mimeType: "image/webp", width: 900, height: 1200 },
     externalLinks: [], authorHandle: "", authorBio: "", authorWebsiteUrl: "", authorXUrl: "", authorNoteUrl: "",
     externalSalesUrl: "", externalSalesLabel: "", publication: { status: "draft", visibility: "private" }, designHistory: [],
@@ -49,7 +49,8 @@ export function loadCatalogSample(templateId: string) {
   const identity = () => `sample-${templateId}-${++sequence}`;
   const payload = createTemplatePayload(templateId, identity);
   payload.title = template.name;
-  payload.authorName = "WebBookMaker";
+  if (templateId === "teacher") payload.subtitle = "「株って何？」から始める、やさしい投資の教科書";
+  payload.authorName = templateId === "teacher" ? "WebBookMaker 教材編集部" : "WebBookMaker";
   payload.slug = `sample-${template.id}`;
   payload.copyrightText = "Original sample text and artwork by WebBookMaker.";
   let sectionIndex = -1;
@@ -57,15 +58,6 @@ export function loadCatalogSample(templateId: string) {
     if (block.type === "text" && block.structureRole === "chapter") sectionIndex += 1;
     return block.type === "text" && !block.structureRole ? { ...block, content: template.sections[sectionIndex].text } : block;
   });
-  if (templateId === "teacher") {
-    const lessonBlocks: CanonicalContentBlock[] = [
-      { id: `chapter-teacher-practice-${identity()}`, type: "text", structureRole: "chapter", content: "授業で試す、十五分の観察" },
-      { id: `text-teacher-practice-${identity()}`, type: "text", content: "二人組で同じ葉を観察し、見えたことを付せんに一つずつ書きます。まずは色や形など、目で確かめられる事実だけを集めましょう。次に付せんを似ているものどうしで並べ、どんな視点で分けたのかを話し合います。\n\n先生は答えを先に示さず、「そのことはどこで確かめた？」と問い返します。観察と言葉が少しずつ結びつく時間をつくることが、この活動のねらいです." },
-      { id: `chapter-teacher-reflection-${identity()}`, type: "text", structureRole: "chapter", content: "学びを次の問いへ" },
-      { id: `text-teacher-reflection-${identity()}`, type: "text", content: "最後に、今日気づいたことと、まだ確かめられていないことを一つずつ記録します。短い振り返りでも、次の授業で試したい方法が見えてきます。\n\nこの教材を使う人の年齢や時間に合わせて、問いの数や記録の形式を調整してください。小さな発見を持ち帰れることが、観察を続ける力になります." },
-    ];
-    payload.contentBlocks.splice(Math.max(2, payload.contentBlocks.length - 1), 0, ...lessonBlocks);
-  }
   // Showcase features only in completed, app-owned samples. Starters remain
   // intentionally simple so users can replace their own content safely.
   const featureBlocks: CanonicalContentBlock[] = [];
@@ -78,7 +70,7 @@ export function loadCatalogSample(templateId: string) {
     if (map) featureBlocks.push({ id, type: "map", ...map, displayMode: "full-page", displaySize: "medium", alignment: "center" });
   };
   switch (templateId) {
-    case "teacher": addColumns("feature-columns-teacher", "考え方を一つに絞ると、説明の順番が見えてきます。", "具体例を一つ添えると、学習者は自分の場面へ置き換えられます。", "40-60"); addYouTube("feature-video-teacher"); break;
+    case "teacher": addColumns("feature-columns-teacher", "株価が上がりやすい要因：業績改善・期待・需要の増加", "株価が下がりやすい要因：業績悪化・不安・売りの増加", "50-50"); break;
     case "recipe": addColumns("feature-columns-recipe", "材料を先に計量し、火にかける前に並べておきます。", "香り・色・食感を確かめながら、最後の塩を少しずつ加えます。", "40-60"); addYouTube("feature-video-recipe"); addMap("feature-map-recipe"); break;
     case "blog": addColumns("feature-columns-blog", "記事の中で残したい一文を選びます。", "読者が次に試せる小さな行動へつなげます。"); addYouTube("feature-video-blog"); break;
     case "research": addColumns("feature-columns-research", "観察項目をそろえると、記録を比べられます。", "例外や迷いもメモに残すと、考察の手がかりになります。", "60-40"); addMap("feature-map-research"); break;
