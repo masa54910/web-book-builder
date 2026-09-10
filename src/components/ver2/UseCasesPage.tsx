@@ -73,6 +73,7 @@ function PointText({ text }: { text: string }) {
 
 const scenes: Array<{
   sampleId: "teacher" | "recipe" | "blog" | "research" | "writer" | "photographer" | "magazine" | "picture-book" | "photo-book";
+  sampleBookUrl?: string;
   label: string;
   title: string;
   body: string;
@@ -195,7 +196,7 @@ export default function UseCasesPage() {
                 </div>
                 <h3>{scene.title}</h3>
                 <p>{scene.body}</p>
-                <Button href={`/sample/${scene.sampleId}`} variant="secondary" size="sm">サンプルを見る</Button>
+                <Button href={scene.sampleBookUrl ?? `/sample/${scene.sampleId}`} variant="secondary" size="sm">サンプルを見る</Button>
               </article>
             ))}
           </div>
