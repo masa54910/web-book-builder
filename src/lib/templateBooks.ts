@@ -46,7 +46,8 @@ export function loadCatalogSample(templateId: string) {
   const template = getBookTemplate(templateId);
   if (!template) throw new Error("Unknown sample ID");
   let sequence = 0;
-  const payload = createTemplatePayload(templateId, () => `sample-${templateId}-${++sequence}`);
+  const identity = () => `sample-${templateId}-${++sequence}`;
+  const payload = createTemplatePayload(templateId, identity);
   payload.title = template.name;
   payload.authorName = "WebBookMaker";
   payload.slug = `sample-${template.id}`;
@@ -56,6 +57,15 @@ export function loadCatalogSample(templateId: string) {
     if (block.type === "text" && block.structureRole === "chapter") sectionIndex += 1;
     return block.type === "text" && !block.structureRole ? { ...block, content: template.sections[sectionIndex].text } : block;
   });
+  if (templateId === "teacher") {
+    const lessonBlocks: CanonicalContentBlock[] = [
+      { id: `chapter-teacher-practice-${identity()}`, type: "text", structureRole: "chapter", content: "授業で試す、十五分の観察" },
+      { id: `text-teacher-practice-${identity()}`, type: "text", content: "二人組で同じ葉を観察し、見えたことを付せんに一つずつ書きます。まずは色や形など、目で確かめられる事実だけを集めましょう。次に付せんを似ているものどうしで並べ、どんな視点で分けたのかを話し合います。\n\n先生は答えを先に示さず、「そのことはどこで確かめた？」と問い返します。観察と言葉が少しずつ結びつく時間をつくることが、この活動のねらいです." },
+      { id: `chapter-teacher-reflection-${identity()}`, type: "text", structureRole: "chapter", content: "学びを次の問いへ" },
+      { id: `text-teacher-reflection-${identity()}`, type: "text", content: "最後に、今日気づいたことと、まだ確かめられていないことを一つずつ記録します。短い振り返りでも、次の授業で試したい方法が見えてきます。\n\nこの教材を使う人の年齢や時間に合わせて、問いの数や記録の形式を調整してください。小さな発見を持ち帰れることが、観察を続ける力になります." },
+    ];
+    payload.contentBlocks.splice(Math.max(2, payload.contentBlocks.length - 1), 0, ...lessonBlocks);
+  }
   // Showcase features only in completed, app-owned samples. Starters remain
   // intentionally simple so users can replace their own content safely.
   const featureBlocks: CanonicalContentBlock[] = [];

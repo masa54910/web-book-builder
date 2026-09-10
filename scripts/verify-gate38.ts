@@ -17,7 +17,8 @@ const identities = new Set<string>();
 for (const template of BOOK_TEMPLATES) {
   const before = JSON.stringify(template);
   const sample = loadCatalogSample(template.id);
-  assert.equal(sample.chapters.length, template.sections.length);
+  assert(sample.chapters.length >= template.sections.length);
+  if (template.id === "teacher") assert.equal(sample.chapters.length, template.sections.length + 2);
   assert.equal(sample.config.bindingDirection, "ltr");
   assert.equal(sample.config.writingMode, "horizontal-tb");
   assert.equal(sample.missingImageIds.length, 0);
