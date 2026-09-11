@@ -17,6 +17,12 @@ export type FullDesignSelectionInput = {
 };
 export type FullDesignSelector = (input: FullDesignSelectionInput) => Promise<{ output: unknown; usage: DesignTokenUsage; model: string }>;
 export const FULL_DESIGN_CRITIC_CODES = ["density", "contrast", "image-emphasis", "rhythm"] as const;
+export const FULL_DESIGN_CRITIC_LABELS: Record<string, string> = {
+  density: "文字量と読みやすさをPreviewで確認してください。",
+  contrast: "文字と背景のコントラストを確認してください。",
+  "image-emphasis": "画像と文章のバランスを確認してください。",
+  rhythm: "章ごとの変化と余白のリズムを確認してください。",
+};
 export type FullDesignCritic = (input: { spec: BookDesignSpec; statistics: Pick<FullDesignProfile, "imageCount" | "pageCount" | "characterCount" | "contentBlockCount">; deterministic: string[] }) => Promise<{ output: unknown; usage: DesignTokenUsage; model: string }>;
 
 /** API-free overrides represent answers, never add or rewrite manuscript text. */

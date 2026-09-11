@@ -5,7 +5,7 @@ import { ShioriDesignInterview } from "@/components/ShioriDesignInterview";
 import { fullDesignRequest } from "@/lib/fullDesignClient";
 import { buildFullDesignProfile, parseFullDesignBrief } from "@/lib/fullDesignContract";
 import { myDesignFromResult, type MyDesign } from "@/lib/myDesigns";
-import type { FullDesignResult } from "@/lib/fullDesignPipeline";
+import { FULL_DESIGN_CRITIC_LABELS, type FullDesignResult } from "@/lib/fullDesignPipeline";
 import type { ShioriDesignBrief } from "@/lib/shioriDesignBrief";
 import { runRuleBasedLayoutCritic } from "@/lib/layoutCritic";
 import type { BookContentBlock } from "@/lib/bookProject";
@@ -82,6 +82,10 @@ export default function FullDesignPanel({ identity, bookId, locked, profile, blo
       <strong>{result.mode === "api-on" ? "AIフルデザイン" : result.mode === "my-design" ? "マイデザイン" : "しおりちゃん自動デザイン"} · {result.selectedDesignSystemName}</strong>
       <p>安全判定を通した表示で確認してください。まだ原稿の保存状態には適用していません。</p>
       {critic.issues.length ? <ul>{critic.issues.map((issue, index) => <li key={`${issue.blockId}-${index}`}>{issue.message}</li>)}</ul> : null}
+      {result.critic ? <div aria-label="デザインレビュー">
+        <p className="maker-note">{result.critic.ai === null ? "ルールベースでデザインを確認しました。" : "AIレビュー済み。実際の配置・収まりはPreviewの安全判定を優先します。"}</p>
+        <ul>{[...new Set([...result.critic.deterministic, ...(result.critic.ai || [])])].filter((code) => Object.hasOwn(FULL_DESIGN_CRITIC_LABELS, code)).map((code) => <li key={code}>{FULL_DESIGN_CRITIC_LABELS[code]}</li>)}</ul>
+      </div> : null}
       <div className="maker-actions">
         <Button type="button" disabled={locked || busy} onClick={() => onFullPreview(result)}>Full Preview</Button>
         <Button type="button" disabled={locked || busy} onClick={() => { onApply(result, brief); setResult(null); setMessage("デザインを適用しました。履歴から以前のデザインへ戻せます。"); }}>このデザインを使う</Button>
