@@ -7,6 +7,7 @@ import { fullDesignSelector, fullDesignCritic } from "@/lib/server/fullDesignPro
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
 import { parseMyDesignGrammar } from "@/lib/myDesigns";
 import { DESIGN_SYSTEM_LIBRARY } from "@/lib/designSystemLibrary";
+import { getQATestEntitlement } from "@/lib/server/qaEntitlement";
 
 export const maxDuration = 120;
 const fail = (message: string, status: number) => NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
     catch { return fail("デザインの入力内容またはサイズを確認してください。", 400); }
     if (!isPlainRecord(body) || Object.keys(body).some((key) => !["brief", "bookProfile", "bookId", "myDesignId"].includes(key))) return fail("入力内容が正しくありません。", 400);
     const scope = await requireFullDesignEditAccess(user.id, body.bookId);
+    const qaEntitlement = await getQATestEntitlement(user.id);
     if (body.myDesignId !== undefined) {
       if (typeof body.myDesignId !== "string" || body.myDesignId.length > 50) return fail("デザインIDが正しくありません。", 400);
       const { data, error } = await requireSupabaseAdminClient().from("my_designs").select("grammar").eq("id", body.myDesignId).eq("owner_id", user.id).maybeSingle();
@@ -62,7 +64,7 @@ export async function POST(request: Request) {
     const result = await generateFullDesign({
       brief, profile: body.bookProfile, apiEnabled,
       select: fullDesignSelector(recordUsage),
-      critique: process.env.AI_FULL_DESIGN_CRITIC_ENABLED === "true" ? fullDesignCritic(recordUsage) : undefined,
+      critique: process.env.AI_FULL_DESIGN_CRITIC_ENABLED === "true" && (!qaEntitlement || qaEntitlement.allowAICritic) ? fullDesignCritic(recordUsage) : undefined,
     });
     if (runId) {
       await finishFullDesign({ runId, userId: user.id, success: true, usage, model, latency: Date.now() - start });

@@ -3,6 +3,7 @@ import "server-only";
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
 import { bookCreationLimitForPlans, isOperationPlan, publicationSlotsForPlan, type PlanCode } from "@/lib/planBilling";
 import { BETA_LIMITS } from "@/lib/limits";
+import { getQATestEntitlement } from "@/lib/server/qaEntitlement";
 
 export type PlanTransaction = {
   id: string;
@@ -75,6 +76,8 @@ export async function hasOperationSalesEntitlement(userId: string, livemode: boo
 }
 
 export async function getBookCreationLimitForUser(userId: string, livemode: boolean) {
+  const qa = await getQATestEntitlement(userId);
+  if (qa?.publicationLimit) return qa.publicationLimit;
   const { data, error } = await requireSupabaseAdminClient()
     .from("plan_entitlements")
     .select("plan_code")
@@ -90,6 +93,12 @@ export async function getBookCreationLimitForUser(userId: string, livemode: bool
 }
 
 export async function canPublishNewBook(userId: string, bookId: string, livemode: boolean) {
+  const qa = await getQATestEntitlement(userId);
+  if (qa?.allowPublish) {
+    const { count, error } = await requireSupabaseAdminClient().from("books").select("id", { count: "exact", head: true }).eq("owner_id", userId).eq("status", "published").in("visibility", ["public", "unlisted"]).is("deleted_at", null);
+    if (error) throw error;
+    return qa.publicationLimit == null || (count ?? 0) < qa.publicationLimit;
+  }
   if (await hasPublicationEntitlement(userId, bookId, livemode)) return true;
   const planCode = await activeOperationPlanForUser(userId, livemode);
   if (!planCode) return false;

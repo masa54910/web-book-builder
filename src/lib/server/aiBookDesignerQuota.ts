@@ -2,8 +2,9 @@ import "server-only";
 
 import { expectedStripeLivemode } from "@/lib/server/stripeEnvironment";
 import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
+import { getQATestEntitlement } from "@/lib/server/qaEntitlement";
 
-export const AI_BOOK_DESIGNER_PLAN_CODES = ["free", "publication", "operation_standard", "operation"] as const;
+export const AI_BOOK_DESIGNER_PLAN_CODES = ["free", "publication", "operation_standard", "operation", "qa"] as const;
 export type AIBookDesignerPlanCode = (typeof AI_BOOK_DESIGNER_PLAN_CODES)[number];
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -19,12 +20,15 @@ export type AIBookDesignerQuotaScope = {
  * intentionally cannot create a new lifetime bucket; subscription/free quota
  * remains available while the formal book identity does not yet exist.
  */
-export async function resolveAIBookDesignerQuotaScope(userId: string, requestedBookId: unknown): Promise<AIBookDesignerQuotaScope> {
+export async function resolveAIBookDesignerQuotaScope(userId: string, requestedBookId: unknown, capability: "quick" | "full" = "quick"): Promise<AIBookDesignerQuotaScope> {
   const candidateBookId = typeof requestedBookId === "string" && UUID_PATTERN.test(requestedBookId.trim())
     ? requestedBookId.trim()
     : null;
   const admin = requireSupabaseAdminClient();
   const livemode = expectedStripeLivemode();
+
+  const qa = await getQATestEntitlement(userId);
+  if (capability === "full" && qa?.allowFullDesign && qa.fullDailyLimit) return { planCode: "qa", bookId: null };
 
   let ownedBookId: string | null = null;
   if (candidateBookId) {
@@ -57,4 +61,3 @@ export async function resolveAIBookDesignerQuotaScope(userId: string, requestedB
   if (publication && ownedBookId) return { planCode: "publication", bookId: ownedBookId };
   return { planCode: "free", bookId: null };
 }
-

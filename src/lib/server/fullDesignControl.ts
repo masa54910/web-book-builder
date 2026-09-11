@@ -34,7 +34,7 @@ export async function requireFullDesignEditAccess(userId: string, bookId: unknow
     });
     if (!decision.allowed) throw new FullDesignAccessError(403, "この作品の編集可能期間は終了しています。");
   }
-  return resolveAIBookDesignerQuotaScope(userId, bookId);
+  return resolveAIBookDesignerQuotaScope(userId, bookId, "full");
 }
 
 export async function reserveFullDesign(userId: string, plan: string) {
