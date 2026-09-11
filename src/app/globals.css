@@ -4857,9 +4857,9 @@ button.reader-edit-link:disabled {
 
 .shiori-launch-row { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; margin-top: .75rem; }
 .shiori-interview { margin-top: 1rem; padding: 1rem; border: 1px solid #e7d8c4; border-radius: 14px; background: linear-gradient(135deg, #fffaf2, #fff); }
-.shiori-avatar { display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: #f2c36b; color: #5b3b1c; font-weight: 700; margin-bottom: .5rem; }
-.shiori-heading { display: flex; align-items: center; gap: .55rem; }
-.shiori-avatar-image { width: 3.5rem; height: 3.5rem; object-fit: cover; object-position: 50% 10%; border-radius: 50%; border: 2px solid #f2c36b; }
+.shiori-heading { display: flex; align-items: center; flex-wrap: nowrap; gap: .65rem; min-width: 0; }
+.shiori-avatar-image { flex: 0 0 auto; width: 3.5rem; height: 3.5rem; object-fit: cover; object-position: center; border-radius: 50%; border: 2px solid #f2c36b; background: #fff1d9; }
+.shiori-avatar-name { min-width: 0; color: #173b63; font-size: clamp(.86rem, 3.8vw, 1.1rem); font-weight: 700; line-height: 1.2; white-space: nowrap; writing-mode: horizontal-tb; text-orientation: mixed; overflow: hidden; text-overflow: ellipsis; }
 .shiori-progress { color: #756a5d; font-size: .85rem; margin-bottom: .35rem; }
 .shiori-interview h3 { margin: 0 0 .8rem; }
 .shiori-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .55rem; }
