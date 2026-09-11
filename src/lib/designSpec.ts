@@ -76,6 +76,8 @@ export type BookDesignHistoryEntry = {
   createdAt: string;
   name?: string;
   active?: boolean;
+  fullDesign?: import("@/lib/myDesigns").MyDesignGrammar;
+  designMode?: "api-on" | "api-off" | "my-design";
 };
 
 export type DesignSpecParseResult =

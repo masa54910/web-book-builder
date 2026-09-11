@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { buildShioriDesignBrief, createInitialShioriAnswers, SHIORI_CATEGORY_LABELS, summarizeShioriBrief, type ShioriAnswers, type ShioriCategory, type ShioriDesignBrief } from "@/lib/shioriDesignBrief";
 
-type Props = { onCancel: () => void; onConfirm: (brief: ShioriDesignBrief) => void };
+type Props = { onCancel: () => void; onConfirm: (brief: ShioriDesignBrief) => void; initialBrief?: ShioriDesignBrief | null };
 type Question = { key: keyof ShioriAnswers; label: string; options: string[] };
 
 const common: Question[] = [
@@ -28,10 +28,10 @@ const genreOptions: Partial<Record<ShioriCategory, Question[]>> = {
   photo_book: [{ key: "genreDetails", label: "写真の見せ方は？", options: ["大きく全面に", "余白を活かして", "文章と組み合わせて"] }],
 };
 
-export function ShioriDesignInterview({ onCancel, onConfirm }: Props) {
-  const [answers, setAnswers] = useState<ShioriAnswers>(createInitialShioriAnswers);
+export function ShioriDesignInterview({ onCancel, onConfirm, initialBrief }: Props) {
+  const [answers, setAnswers] = useState<ShioriAnswers>(() => initialBrief ? { ...initialBrief, genreDetails: { ...initialBrief.genreDetails } } : createInitialShioriAnswers());
   const [step, setStep] = useState(0);
-  const [confirmed, setConfirmed] = useState(false);
+  const [confirmed, setConfirmed] = useState(Boolean(initialBrief));
   const questions = useMemo(() => [...common, ...(answers.category ? (genreOptions[answers.category] || []) : [])], [answers.category]);
   const brief = buildShioriDesignBrief(answers);
   const current = questions[step];
@@ -43,7 +43,7 @@ export function ShioriDesignInterview({ onCancel, onConfirm }: Props) {
         : { ...prev, [current.key]: value });
     if (step < questions.length - 1) setStep(step + 1); else setTimeout(() => setConfirmed(true), 0);
   };
-  if (confirmed && brief) return <div className="shiori-interview" role="dialog" aria-modal="true" aria-labelledby="shiori-summary-title"><div className="shiori-heading"><img className="shiori-avatar-image" src="/shiori/character-sheet.png" alt="" /><div className="shiori-avatar" aria-hidden="true">しおり</div></div><h3 id="shiori-summary-title">この内容でデザイン方針を作ります</h3><p className="shiori-summary">{summarizeShioriBrief(brief)}</p><div className="maker-actions"><button className="maker-primary-button" type="button" onClick={() => onConfirm(brief)}>この内容でAIデザインする</button><button className="maker-secondary-button" type="button" onClick={() => { setConfirmed(false); setStep(Math.max(0, questions.length - 1)); }}>回答を修正する</button><button className="maker-secondary-button" type="button" onClick={onCancel}>キャンセル</button></div><p className="maker-note">本文・章・画像・販売設定は変更されません。縦書きは現在のProduction仕様では対象外です。</p></div>;
+  if (confirmed && brief) return <div className="shiori-interview" role="dialog" aria-modal="true" aria-labelledby="shiori-summary-title"><div className="shiori-heading"><img className="shiori-avatar-image" src="/shiori/character-sheet.png" alt="" /><div className="shiori-avatar" aria-hidden="true">しおり</div></div><h3 id="shiori-summary-title">この内容でデザイン方針を作ります</h3><p className="shiori-summary">{summarizeShioriBrief(brief)}</p><div className="maker-actions"><button className="maker-primary-button" type="button" onClick={() => onConfirm(brief)}>この方針でデザインする</button><button className="maker-secondary-button" type="button" onClick={() => { setConfirmed(false); setStep(Math.max(0, questions.length - 1)); }}>回答を修正する</button><button className="maker-secondary-button" type="button" onClick={onCancel}>キャンセル</button></div><p className="maker-note">本文・章・画像・販売設定は変更されません。縦書きは現在のProduction仕様では対象外です。</p></div>;
   if (!current) return null;
   return <div className="shiori-interview" role="dialog" aria-modal="true" aria-labelledby="shiori-question-title"><div className="shiori-heading"><img className="shiori-avatar-image" src="/shiori/character-sheet.png" alt="" /><div className="shiori-avatar" aria-hidden="true">しおり</div></div><div className="shiori-progress">質問 {step + 1} / {questions.length}</div><h3 id="shiori-question-title">{current.label}</h3><div className="shiori-options">{current.options.map((option) => <button className="shiori-option" key={option} type="button" onClick={() => choose(option)}>{current.key === "category" ? SHIORI_CATEGORY_LABELS[option as ShioriCategory] : option}</button>)}</div><div className="maker-actions"><button className="maker-secondary-button" type="button" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}>戻る</button><button className="maker-secondary-button" type="button" onClick={() => { setAnswers(createInitialShioriAnswers()); setStep(0); setConfirmed(false); }}>最初からやり直す</button><button className="maker-secondary-button" type="button" onClick={onCancel}>キャンセル</button></div></div>;
 }

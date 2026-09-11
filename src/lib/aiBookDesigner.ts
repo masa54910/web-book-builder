@@ -1,6 +1,7 @@
 import type { BookConfig } from "@/config/bookConfig";
 import { DEFAULT_BOOK_DESIGN_SPEC, designSpecFromBookConfig, parseBookDesignSpec, type BookDesignHistoryEntry, type BookDesignSpec } from "@/lib/designSpec";
 import type { BookContentBlock } from "@/lib/bookProject";
+import { parseMyDesignGrammar } from "@/lib/myDesigns";
 
 export const AI_BOOK_DESIGNER_MAX_PROMPT_LENGTH = 800;
 export const AI_BOOK_DESIGNER_MAX_CONTEXT_SAMPLE = 1800;
@@ -131,6 +132,8 @@ export function normalizeDesignHistory(value: unknown, fallbackBookId = "draft")
       createdAt: item.createdAt,
       name: typeof item.name === "string" ? item.name.slice(0, 80) : undefined,
       active: item.active === true,
+      ...(item.fullDesign && parseMyDesignGrammar(item.fullDesign) ? { fullDesign: parseMyDesignGrammar(item.fullDesign)! } : {}),
+      ...(item.designMode === "api-on" || item.designMode === "api-off" || item.designMode === "my-design" ? { designMode: item.designMode } : {}),
     };
   }).filter((entry): entry is BookDesignHistoryEntry => Boolean(entry)).slice(-AI_BOOK_DESIGNER_MAX_HISTORY);
 }

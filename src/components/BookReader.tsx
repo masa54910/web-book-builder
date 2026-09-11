@@ -44,6 +44,7 @@ import MapPage from "./MapPage";
 import HomeBackLink from "./HomeBackLink";
 import PaywallPage from "./PaywallPage";
 import ColumnsPage from "./ColumnsPage";
+import { activeFullDesignGrammar, fullDesignPresentationPlan, fullPatternForPage } from "@/lib/fullDesignPresentation";
 
 function getSafeLocalStorage() {
   try {
@@ -144,6 +145,7 @@ export default function BookReader({
   accessSlug?: string;
 }) {
   const flipBookRef = useRef<FlipBookHandle | null>(null);
+  const fullPatternPlan = useMemo(() => fullDesignPresentationPlan(contentBlocks || [], activeFullDesignGrammar(config)), [contentBlocks, config]);
   const activePageIdRef = useRef<string | null>(null);
   const activePageSourceIdRef = useRef<string | null>(null);
   const storage = useMemo(() => getSafeLocalStorage(), []);
@@ -196,6 +198,7 @@ export default function BookReader({
         images,
         contentBlocks,
         pageAdjustments,
+        layoutSafetyEnabled: fullPatternPlan !== null,
         charactersPerPage: isMobile
           ? Math.max(220, Math.floor(config.charactersPerPage * 0.82))
           : config.charactersPerPage,
@@ -206,7 +209,7 @@ export default function BookReader({
         includePaywallPage: access?.state === "locked",
         showPaywallPage: displayMode === "preview",
       }),
-    [access, chapters, config.charactersPerPage, config.tableOfContentsItemsPerPage, contentBlocks, displayMode, images, isMobile, pageAdjustments],
+    [access, chapters, config.charactersPerPage, config.tableOfContentsItemsPerPage, contentBlocks, displayMode, images, isMobile, pageAdjustments, fullPatternPlan],
   );
   const pages = useMemo(
     () => toBoundPageOrder(logicalPages, isMobile, bindingDirection),
@@ -655,6 +658,7 @@ export default function BookReader({
         folio={hard || page.kind === "paywall" ? undefined : logicalFolio}
         hard={hard}
         bookmarked={bookmarkedPageIds.has(page.id)}
+        fullPattern={fullPatternForPage(page, fullPatternPlan)}
       >
         {content}
       </BookPage>

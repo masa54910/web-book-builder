@@ -26,7 +26,7 @@ const withSpec = (changes: DesignSpecOverrides): BookDesignSpec => ({
   ...DEFAULT_BOOK_DESIGN_SPEC, ...changes,
   typography: { ...DEFAULT_BOOK_DESIGN_SPEC.typography, ...changes.typography },
   palette: { ...DEFAULT_BOOK_DESIGN_SPEC.palette, ...changes.palette },
-  page: { ...DEFAULT_BOOK_DESIGN_SPEC.page, ...changes.page },
+  page: { ...DEFAULT_BOOK_DESIGN_SPEC.page, ...changes.page, writingMode: "horizontal-tb", bindingDirection: "ltr" },
   image: { ...DEFAULT_BOOK_DESIGN_SPEC.image, ...changes.image },
   cover: { ...DEFAULT_BOOK_DESIGN_SPEC.cover, ...(changes.cover || {}) },
   motion: { ...DEFAULT_BOOK_DESIGN_SPEC.motion, ...(changes.motion || {}) },
@@ -43,11 +43,22 @@ export const DESIGN_SYSTEM_LIBRARY: readonly BookDesignSystem[] = [
 
 export function matchDesignSystems(brief: ShioriDesignBrief, limit = 3) {
   return DESIGN_SYSTEM_LIBRARY.map((system) => {
-    const categoryScore = system.categories.includes(brief.category) ? 4 : 0;
+    const categoryScore = system.categories.includes(brief.category) ? 8 : 0;
     const audienceScore = system.audienceTags.includes(brief.audience) ? 2 : 0;
-    const toneScore = system.toneTags.includes(brief.tone) ? 2 : 0;
-    return { system, score: categoryScore + audienceScore + toneScore };
-  }).sort((a, b) => b.score - a.score).slice(0, limit);
+    const toneScore = system.toneTags.includes(brief.tone) ? 4 : 0;
+    const desiredMargin = brief.density === "余白を広くゆったり" ? "wide" : brief.density === "情報をコンパクトに" ? "compact" : "standard";
+    const densityScore = system.spec.page.marginScale === desiredMargin ? 2 : 0;
+    const imageScore = brief.contentBalance === "画像を主役に"
+      ? system.spec.genre === "photo_book" || system.spec.genre === "catalog" ? 3 : 0
+      : brief.contentBalance === "文章を主役に"
+        ? system.spec.genre === "novel" || system.spec.genre === "guide" ? 3 : 0
+        : system.spec.genre === "magazine" ? 3 : 0;
+    const brightnessScore = brief.brightness === "明るく軽やか" && system.spec.page.background === "white" ? 1 : 0;
+    return { system, categoryScore, audienceScore, toneScore, densityScore, imageScore,
+      score: categoryScore + audienceScore + toneScore + densityScore + imageScore + brightnessScore };
+  }).sort((a, b) => b.score - a.score || b.categoryScore - a.categoryScore || b.toneScore - a.toneScore
+    || b.densityScore - a.densityScore || b.imageScore - a.imageScore
+    || a.system.id.localeCompare(b.system.id, "en")).slice(0, Math.max(1, Math.min(5, limit)));
 }
 
 export function validateDesignSystemLibrary() {

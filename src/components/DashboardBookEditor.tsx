@@ -21,6 +21,7 @@ import {
 } from "@/lib/bookProject";
 import {
   buildCanonicalBookPayload,
+  buildBookProjectFromCanonicalPayload,
   canonicalAssetsToUploadedImages,
   canonicalContentBlocksToEditorBlocks,
   type CanonicalBookPayload,
@@ -74,8 +75,12 @@ import { designSpecForState } from "@/lib/aiBookDesigner";
 import type { BookDesignSpec } from "@/lib/designSpec";
 import { assignPagePatterns } from "@/lib/pagePatternLibrary";
 import { safePagePatterns } from "@/lib/layoutSafety";
-import { ShioriDesignInterview } from "@/components/ShioriDesignInterview";
 import type { ShioriDesignBrief } from "@/lib/shioriDesignBrief";
+import FullDesignPanel from "@/components/FullDesignPanel";
+import FullDesignReaderPreview from "@/components/FullDesignReaderPreview";
+import { myDesignFromResult } from "@/lib/myDesigns";
+import type { FullDesignResult } from "@/lib/fullDesignPipeline";
+import { activeFullDesignGrammar, fullDesignPresentationPlan } from "@/lib/fullDesignPresentation";
 import { buildEditorDraftFields, seedFromDraftFields } from "@/lib/editorDraftState";
 import {
   DEFAULT_COVER_DESIGN,
@@ -650,24 +655,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [designPreviewPreset, setDesignPreviewPreset] = useState<{ id: string; name: string } | null>(null);
   const [designBusy, setDesignBusy] = useState(false);
   const [designError, setDesignError] = useState("");
-  const [shioriOpen, setShioriOpen] = useState(false);
-  const [shioriBrief, setShioriBrief] = useState<ShioriDesignBrief | null>(null);
-  const shioriStorageKey = `webbookmaker:shiori-brief:${bookId || "new"}`;
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(shioriStorageKey);
-      if (stored) setShioriBrief(JSON.parse(stored) as ShioriDesignBrief);
-    } catch {
-      // Browser storage is optional and must never interrupt editing.
-    }
-  }, [shioriStorageKey]);
-  useEffect(() => {
-    try {
-      if (shioriBrief) window.localStorage.setItem(shioriStorageKey, JSON.stringify(shioriBrief));
-    } catch {
-      // Ignore privacy mode and quota errors.
-    }
-  }, [shioriBrief, shioriStorageKey]);
+  const [fullPreviewProject, setFullPreviewProject] = useState<BookProject | null>(null);
+  const [fullDesignPreview, setFullDesignPreview] = useState<FullDesignResult | null>(null);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [editorScrollRequest, setEditorScrollRequest] = useState<{ blockId: string; nonce: number; highlight?: boolean } | null>(null);
@@ -678,6 +667,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [warnings, setWarnings] = useState<string[]>([]);
   const unsafePatternBlockIds = useMemo(() => safePagePatterns(contentBlocks, assignPagePatterns(contentBlocks)).filter((item) => item.fallback).map((item) => item.blockId), [contentBlocks]);
+  const fullPatternPlan = useMemo(() => fullDesignPresentationPlan(contentBlocks,
+    fullDesignPreview ? myDesignFromResult(fullDesignPreview.brief, fullDesignPreview) : activeFullDesignGrammar(state)),
+    [contentBlocks, fullDesignPreview, state]);
   const [statusMessage, setStatusMessage] = useState(
     draftSeed.restored ? "LPで入力した下書きを復元しました。続きから編集できます。" : "",
   );
@@ -1077,6 +1069,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       images: imageRows,
       contentBlocks: deferredContentBlocks,
       pageAdjustments: state.pageAdjustments,
+      layoutSafetyEnabled: fullPatternPlan !== null,
       charactersPerPage: Math.max(180, Number(state.charactersPerPage) || 380),
       tableOfContentsItemsPerPage: state.tableOfContentsItemsPerPage,
       showPaywallPage: true,
@@ -1091,7 +1084,7 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
       pages: uniquePages,
       documentStructure: documentStructureFromChapters(chapters),
     };
-  }, [deferredContentBlocks, state.charactersPerPage, state.pageAdjustments, state.tableOfContentsItemsPerPage, state.title]);
+  }, [deferredContentBlocks, state.charactersPerPage, state.pageAdjustments, state.tableOfContentsItemsPerPage, state.title, fullPatternPlan]);
   const miniPreviewPages = miniPreviewModel.pages;
   const miniPreviewLogicalPages = miniPreviewModel.logicalPages;
 
@@ -1482,13 +1475,56 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
     setStatusMessage("AIデザインを適用しました。保存するまで公開内容は変わりません。");
   };
 
+  const fullDesignState = (result: FullDesignResult) => {
+    // Full Design cannot change a creator's explicit cover title text.
+    const next = applyDesignSpecToState(state, result.spec);
+    return { ...next, coverDesign: { ...next.coverDesign, titleTextOverride: state.coverDesign.titleTextOverride } };
+  };
+  const applyFullDesign = (result: FullDesignResult, brief: ShioriDesignBrief) => {
+    if (isEditLocked) return;
+    const grammar = myDesignFromResult(brief, result);
+    if (!grammar) return;
+    const id = `full-${crypto.randomUUID()}`;
+    const original: BookDesignHistoryEntry = {
+      id: "original", bookId: bookId || newDraftId || "draft", ownerId: user?.id,
+      spec: designSpecForState(state), prompt: "", createdAt: new Date().toISOString(), name: "Original", active: false,
+    };
+    const entry: BookDesignHistoryEntry = {
+      id, bookId: bookId || newDraftId || "draft", ownerId: user?.id, spec: result.spec,
+      prompt: "", createdAt: new Date().toISOString(), name: result.selectedDesignSystemName,
+      active: true, fullDesign: grammar, designMode: result.mode,
+    };
+    const next = fullDesignState(result);
+    setState({ ...next, designHistory: appendDesignHistory(state.designHistory?.length ? state.designHistory : [original], entry), activeDesignVersionId: id });
+    setDesignPreviewSpec(null); setDesignPreviewPreset(null); setFullDesignPreview(null); setDirty(true);
+    setStatusMessage("フルデザインを適用しました。保存・公開するまで公開内容は変わりません。");
+  };
+  const previewFullDesign = (result: FullDesignResult) => {
+    if (isEditLocked) return;
+    const externalUrl = safeExternalUrl(state.externalLinkUrl);
+    const externalLinks: ExternalLink[] = externalUrl ? [{ id: "creator-link-1", type: "other", label: state.externalLinkLabel || "外部リンク", url: externalUrl }] : [];
+    const built = buildCanonicalBookPayload({ state: fullDesignState(result), contentBlocks, images, bookId, externalLinks });
+    if (!built.ok) { setErrors(built.errors); return; }
+    const project = buildBookProjectFromCanonicalPayload(built.payload);
+    if (!project.ok) { setErrors(project.errors); return; }
+    const grammar = myDesignFromResult(result.brief, result);
+    if (!grammar) return;
+    setFullPreviewProject({ ...project.project, config: { ...project.project.config,
+      activeDesignVersionId: "full-preview",
+      designHistory: [{ id: "full-preview", bookId: project.project.config.bookId, spec: result.spec, prompt: "", createdAt: new Date().toISOString(), active: true, fullDesign: grammar, designMode: result.mode }],
+    } });
+  };
+
   const restoreDesignVersion = (entry: BookDesignHistoryEntry) => {
     if (isEditLocked) return;
-    setState((current) => ({
-      ...applyDesignSpecToState(current, entry.spec),
+    setState((current) => {
+      const restored = applyDesignSpecToState(current, entry.spec);
+      if (entry.fullDesign) restored.coverDesign = { ...restored.coverDesign, titleTextOverride: current.coverDesign.titleTextOverride };
+      return ({
+      ...restored,
       designHistory: (current.designHistory || []).map((item) => ({ ...item, active: item.id === entry.id })),
       activeDesignVersionId: entry.id,
-    }));
+    }); });
     setDirty(true);
     setStatusMessage("保存済みのデザイン案をプレビューしています。保存すると反映されます。");
   };
@@ -2279,8 +2315,9 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             logicalPages={miniPreviewLogicalPages}
             activePageId={activeMiniPageId}
             onPageClick={handleMiniPageClick}
-            design={designPreviewSpec || designSpecForState(state)}
+            design={fullDesignPreview?.spec || designPreviewSpec || designSpecForState(state)}
             unsafePatternBlockIds={unsafePatternBlockIds}
+            fullPatternPlan={fullPatternPlan}
           />
 
           <ConnectSalesPanel
@@ -2461,25 +2498,17 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
             />
           </label>
           <p className="maker-note">例：文庫本らしく / 写真を大きく見せたい / シンプルで読みやすく</p>
-          <div className="shiori-launch-row">
-            <button className="maker-secondary-button" type="button" onClick={() => setShioriOpen(true)} disabled={isEditLocked || designBusy}>
-              しおりちゃんと本のデザインを決める
-            </button>
-            <span className="maker-note">質問に答えながら、デザイン方針を整理できます。</span>
-          </div>
-          {shioriOpen ? (
-            <ShioriDesignInterview
-              onCancel={() => setShioriOpen(false)}
-              onConfirm={(brief) => { setShioriBrief(brief); setShioriOpen(false); }}
-            />
-          ) : null}
-          {shioriBrief ? (
-            <div className="shiori-brief-saved" role="status">
-              <strong>しおりちゃんのデザイン方針</strong>
-              <span>方針を保存しました。次工程でこのBriefをAIデザイン生成へ接続できます。</span>
-              <button className="maker-small-button" type="button" onClick={() => setShioriOpen(true)} disabled={isEditLocked}>回答を見直す</button>
-            </div>
-          ) : null}
+          {user && (bookId || newDraftId) ? <FullDesignPanel
+            key={`${user.id}:${bookId || newDraftId}`}
+            identity={`${user.id}:${bookId || newDraftId}`}
+            bookId={bookId}
+            locked={isEditLocked || designBusy || isLoading}
+            blocks={contentBlocks}
+            profile={{ ...buildDesignContext({ title: state.title, description: state.description, rawText: state.rawText, contentBlocks, current: state }), characterCount: state.rawText.length, pageCount: miniPreviewPages.length }}
+            onPreview={setFullDesignPreview}
+            onApply={applyFullDesign}
+            onFullPreview={previewFullDesign}
+          /> : null}
           <div className="maker-actions">
             <button className="maker-secondary-button" type="button" onClick={() => void generateDesign()} disabled={isEditLocked || designBusy}>
               {designBusy ? "生成中…" : "AIでデザインする"}
@@ -2516,6 +2545,8 @@ export default function DashboardBookEditor({ mode }: { mode: "new" | "edit" }) 
         </aside>
       </section>
       </fieldset>
+
+      {fullPreviewProject ? <FullDesignReaderPreview project={fullPreviewProject} onClose={() => setFullPreviewProject(null)} /> : null}
 
       {warnings.length ? <div className="maker-warning">{warnings.map((warning) => <p key={warning}>{warning}</p>)}</div> : null}
       {requiredErrorMessage ? (

@@ -2,6 +2,9 @@
 
 import type { ReaderPage } from "@/lib/types";
 import type { BookDesignSpec } from "@/lib/designSpec";
+import { assessColumns } from "@/lib/columnsSafety";
+import { fullPatternForPage } from "@/lib/fullDesignPresentation";
+import type { SafePatternAssignment } from "@/lib/layoutSafety";
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { INLINE_IMAGE_TOKEN_PREFIX, INLINE_YOUTUBE_TOKEN_PREFIX } from "@/lib/paginateText";
 import { normalizeMapAlignment, parseInlineMapToken } from "@/lib/mapLayout";
@@ -71,7 +74,7 @@ function MiniImageMarker({ inline = false }: { inline?: boolean }) {
   );
 }
 
-function MiniPageContent({ page, unsafePatternBlockIds = [] }: { page: ReaderPage; unsafePatternBlockIds?: string[] }) {
+function MiniPageContent({ page }: { page: ReaderPage; unsafePatternBlockIds?: string[] }) {
   if (page.kind === "image") {
     return <div className="editor-mini-page-image"><MiniImageMarker /></div>;
   }
@@ -82,7 +85,7 @@ function MiniPageContent({ page, unsafePatternBlockIds = [] }: { page: ReaderPag
     return <div className={`editor-mini-page-map media-display-size-${page.displaySize || "medium"} map-align-${normalizeMapAlignment(page.alignment)}`}><span aria-hidden="true">📍</span><strong>Googleマップ</strong></div>;
   }
   if (page.kind === "columns") {
-    const unsafe = (page.sourceBlockIds || []).some((id) => unsafePatternBlockIds.includes(id));
+    const unsafe = assessColumns(page.left, page.right).fallback;
     const columnsGrid = page.ratio === "40-60" ? "2fr 3fr" : page.ratio === "60-40" ? "3fr 2fr" : "1fr 1fr";
     const renderPane = (children: typeof page.left) => (
       <div className="editor-mini-columns-pane" style={{ display: "grid", minWidth: 0, overflow: "hidden" }}>
@@ -152,6 +155,7 @@ function EditorMiniPreview({
   onPageClick,
   design,
   unsafePatternBlockIds = [],
+  fullPatternPlan = null,
 }: {
   pages: ReaderPage[];
   logicalPages?: ReaderPage[];
@@ -159,6 +163,7 @@ function EditorMiniPreview({
   onPageClick?: (page: ReaderPage) => void;
   design?: BookDesignSpec;
   unsafePatternBlockIds?: string[];
+  fullPatternPlan?: SafePatternAssignment[] | null;
 }) {
   const listRef = useRef<HTMLDivElement | null>(null);
   const [materializedIndices, setMaterializedIndices] = useState<Set<number>>(() => new Set());
@@ -262,6 +267,7 @@ function EditorMiniPreview({
               className={`editor-mini-page ${activePageId === page.id ? "is-active" : ""} ${clickable ? "is-clickable" : ""}`}
               key={page.id}
               data-page-id={page.id}
+              data-full-pattern={fullPatternForPage(page, fullPatternPlan)}
               data-mini-page-index={index}
               role={clickable ? "button" : undefined}
               tabIndex={clickable ? 0 : undefined}

@@ -180,7 +180,10 @@ export default function AdminInquiriesPage() {
           <h1>お問い合わせ管理</h1>
           <p>問い合わせ内容を確認し、WebBookMaker名義で返信できます。</p>
         </div>
-        <Button variant="secondary" href="/dashboard">作品一覧へ戻る</Button>
+        <div className="maker-actions">
+          <Button variant="secondary" href="/admin/full-design">フルデザイン運用設定</Button>
+          <Button variant="secondary" href="/dashboard">作品一覧へ戻る</Button>
+        </div>
       </div>
 
       {message ? <StatusMessage message={message} className="maker-status maker-status-success" /> : null}

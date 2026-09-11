@@ -1,38 +1,82 @@
 import { NextResponse } from "next/server";
-import { matchDesignSystems } from "@/lib/designSystemLibrary";
-import { parseBookDesignSpec } from "@/lib/designSpec";
 import { requireAuthenticatedUser } from "@/lib/server/requestAuth";
+import { generateFullDesign, ZERO_DESIGN_USAGE } from "@/lib/fullDesignPipeline";
+import { isPlainRecord, parseFullDesignBrief, readFullDesignRequest } from "@/lib/fullDesignContract";
+import { finishFullDesign, FullDesignAccessError, fullDesignAPIEnabled, recordZeroAPIDesign, requireFullDesignEditAccess, reserveFullDesign } from "@/lib/server/fullDesignControl";
+import { fullDesignSelector, fullDesignCritic } from "@/lib/server/fullDesignProvider";
+import { requireSupabaseAdminClient } from "@/lib/server/supabaseAdmin";
+import { parseMyDesignGrammar } from "@/lib/myDesigns";
+import { DESIGN_SYSTEM_LIBRARY } from "@/lib/designSystemLibrary";
 
-const MODEL = process.env.OPENAI_BOOK_DESIGNER_MODEL?.trim() || "gpt-5.4";
-const SAFE_KEYS = new Set(["theme", "genre", "mood", "typography", "palette", "page", "cover", "image", "motion"]);
+export const maxDuration = 120;
+const fail = (message: string, status: number) => NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
 
-function error(message: string, status: number) { return NextResponse.json({ error: message }, { status }); }
-function safeBrief(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const input = value as Record<string, unknown>;
-  return { category: input.category, audience: input.audience, tone: input.tone, contentBalance: input.contentBalance, density: input.density, cover: input.cover, brightness: input.brightness, decoration: input.decoration, emphasis: input.emphasis, avoid: input.avoid };
+export async function GET(request: Request) {
+  try {
+    if (!await requireAuthenticatedUser(request)) return fail("認証が必要です。", 401);
+    return NextResponse.json({ apiEnabled: await fullDesignAPIEnabled() }, { headers: { "Cache-Control": "no-store" } });
+  } catch { return fail("設定を確認できませんでした。", 503); }
 }
 
 export async function POST(request: Request) {
+  const start = Date.now();
+  let runId: string | null = null;
+  let userId: string | null = null;
+  let usage = { ...ZERO_DESIGN_USAGE };
+  let model: string | null = null;
   try {
-    if (process.env.AI_BOOK_DESIGNER_ENABLED !== "true") return error("AIデザイン機能は現在利用できません。", 503);
-    if (!await requireAuthenticatedUser(request)) return error("認証が必要です。", 401);
-    const body = await request.json() as { brief?: unknown; bookProfile?: unknown };
-    const brief = safeBrief(body.brief);
-    if (!brief) return error("デザイン方針が必要です。", 400);
-    const candidates = matchDesignSystems(brief as never, 5);
-    const apiKey = process.env.OPENAI_API_KEY?.trim();
-    if (!apiKey) return error("AIデザイン機能は現在利用できません。", 503);
-    const response = await fetch("https://api.openai.com/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }, body: JSON.stringify({ model: MODEL, temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: "Choose exactly one candidate system and return JSON {selectedDesignSystemId:string, overrides:object}. Overrides must be minimal and use only existing design tokens. Never return HTML, CSS, content, IDs, pricing, or publication data." }, { role: "user", content: JSON.stringify({ brief, candidates: candidates.map(({ system, score }) => ({ id: system.id, name: system.name, description: system.description, score })), bookProfile: body.bookProfile }) }] }) });
-    if (!response.ok) return error("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
-    const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-    const parsed = JSON.parse(payload.choices?.[0]?.message?.content || "{}");
-    const selected = candidates.find(({ system }) => system.id === parsed.selectedDesignSystemId)?.system;
-    if (!selected || !parsed.overrides || typeof parsed.overrides !== "object") return error("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
-    const overrides = Object.fromEntries(Object.entries(parsed.overrides).filter(([key]) => SAFE_KEYS.has(key)));
-    const merged = { ...selected.spec, ...overrides, typography: { ...selected.spec.typography, ...(overrides.typography || {}) }, palette: { ...selected.spec.palette, ...(overrides.palette || {}) }, page: { ...selected.spec.page, ...(overrides.page || {}) }, cover: { ...selected.spec.cover, ...(overrides.cover || {}) }, image: { ...selected.spec.image, ...(overrides.image || {}) }, motion: { ...selected.spec.motion, ...(overrides.motion || {}) } };
-    const validated = parseBookDesignSpec(merged);
-    if (!validated.success) return error("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
-    return NextResponse.json({ selectedDesignSystemId: selected.id, selectedDesignSystemName: selected.name, spec: validated.data, overrides }, { headers: { "Cache-Control": "no-store" } });
-  } catch { return error("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502); }
+    const user = await requireAuthenticatedUser(request);
+    if (!user) return fail("認証が必要です。", 401);
+    userId = user.id;
+    let body: unknown;
+    try { body = await readFullDesignRequest(request); }
+    catch { return fail("デザインの入力内容またはサイズを確認してください。", 400); }
+    if (!isPlainRecord(body) || Object.keys(body).some((key) => !["brief", "bookProfile", "bookId", "myDesignId"].includes(key))) return fail("入力内容が正しくありません。", 400);
+    const scope = await requireFullDesignEditAccess(user.id, body.bookId);
+    if (body.myDesignId !== undefined) {
+      if (typeof body.myDesignId !== "string" || body.myDesignId.length > 50) return fail("デザインIDが正しくありません。", 400);
+      const { data, error } = await requireSupabaseAdminClient().from("my_designs").select("grammar").eq("id", body.myDesignId).eq("owner_id", user.id).maybeSingle();
+      if (error || !data) return fail("デザインが見つかりません。", 404);
+      const grammar = parseMyDesignGrammar(data.grammar);
+      if (!grammar) return fail("このデザインは利用できません。", 400);
+      await recordZeroAPIDesign(user.id, scope.planCode, "my-design", Date.now() - start);
+      return NextResponse.json({
+        version: 1, mode: "my-design", spec: grammar.spec, selectedDesignSystemId: grammar.baseSystemId,
+        selectedDesignSystemName: DESIGN_SYSTEM_LIBRARY.find((system) => system.id === grammar.baseSystemId)?.name,
+        usage: { ...ZERO_DESIGN_USAGE }, model: null, brief: grammar.brief,
+      }, { headers: { "Cache-Control": "no-store" } });
+    }
+    const brief = parseFullDesignBrief(body.brief);
+    if (!brief) return fail("デザイン方針を確認してください。", 400);
+    // The persisted admin setting is authoritative. Browser flags are not accepted.
+    let apiEnabled = await fullDesignAPIEnabled();
+    if (apiEnabled) {
+      if (process.env.AI_BOOK_DESIGNER_ENABLED !== "true") return fail("AIデザイン機能は現在利用できません。", 503);
+      runId = await reserveFullDesign(user.id, scope.planCode);
+      apiEnabled = runId !== null; // Admin may have switched OFF during validation.
+    }
+    const recordUsage = (measured: typeof usage, measuredModel: string) => {
+      usage = { inputTokens: usage.inputTokens + measured.inputTokens, outputTokens: usage.outputTokens + measured.outputTokens, cachedTokens: usage.cachedTokens + measured.cachedTokens };
+      model = measuredModel;
+    };
+    const result = await generateFullDesign({
+      brief, profile: body.bookProfile, apiEnabled,
+      select: fullDesignSelector(recordUsage),
+      critique: process.env.AI_FULL_DESIGN_CRITIC_ENABLED === "true" ? fullDesignCritic(recordUsage) : undefined,
+    });
+    if (runId) {
+      await finishFullDesign({ runId, userId: user.id, success: true, usage, model, latency: Date.now() - start });
+      runId = null;
+    } else await recordZeroAPIDesign(user.id, scope.planCode, "api-off", Date.now() - start);
+    return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    if (runId && userId) {
+      await finishFullDesign({ runId, userId, success: false, usage, model, latency: Date.now() - start,
+        failure: error instanceof Error && error.name === "TimeoutError" ? "timeout" : error instanceof Error && error.message.startsWith("provider") ? "provider" : "validation",
+      }).catch(() => console.error("full-design reservation finalization failed"));
+    }
+    if (error instanceof FullDesignAccessError) return fail(error.safeMessage, error.status);
+    console.error("full-design generation failed"); // Never log request/provider text.
+    return fail("デザインを生成できませんでした。少し時間を空けてもう一度お試しください。", 502);
+  }
 }

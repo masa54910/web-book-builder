@@ -6,6 +6,7 @@ import type { ReaderColumnChild } from "@/lib/types";
 import TextPage from "./TextPage";
 import YouTubePage from "./YouTubePage";
 import MapPage from "./MapPage";
+import { assessColumns } from "@/lib/columnsSafety";
 
 function ratioColumns(ratio: "50-50" | "40-60" | "60-40") {
   if (ratio === "40-60") return "2fr 3fr";
@@ -61,9 +62,7 @@ export default function ColumnsPage({
   right: ReaderColumnChild[];
   columnsBlockId: string;
 }) {
-  const leftWeight = left.reduce((sum, child) => sum + (child.kind === "text" ? child.paragraphs.join("").length : 1), 0);
-  const rightWeight = right.reduce((sum, child) => sum + (child.kind === "text" ? child.paragraphs.join("").length : 1), 0);
-  const safetyFallback = leftWeight === 0 || rightWeight === 0 || Math.max(leftWeight, rightWeight) > Math.min(leftWeight, rightWeight) * 4;
+  const safetyFallback = assessColumns(left, right).fallback;
   const safeChildren = safetyFallback ? [...left, ...right] : [];
   const leftRef = useRef<HTMLDivElement | null>(null);
   const rightRef = useRef<HTMLDivElement | null>(null);
@@ -85,14 +84,15 @@ export default function ColumnsPage({
       observer?.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [left.length, right.length]);
+  }, [left, right, safetyFallback]);
 
   return (
     <article
       className={`columns-reader-page${overflow ? " is-overflowing" : ""}`}
       data-columns-block-id={columnsBlockId}
       data-columns-ratio={ratio}
-      style={{ "--columns-grid": ratioColumns(ratio) } as CSSProperties}
+      data-layout-fallback={safetyFallback ? "standard-text" : undefined}
+      style={{ "--columns-grid": safetyFallback ? "minmax(0, 1fr)" : ratioColumns(ratio) } as CSSProperties}
     >
       <div className={`columns-reader-pane${safetyFallback ? " is-safety-fallback" : ""}`} ref={leftRef} data-columns-side={safetyFallback ? "fallback" : "left"}>
         {(safetyFallback ? safeChildren : left).map((child) => <ColumnChild key={child.id} child={child} />)}

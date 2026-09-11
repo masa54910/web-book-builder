@@ -37,21 +37,22 @@ function mediaCost(charactersPerPage: number, displaySize: MediaDisplaySize) {
   return Math.max(64, Math.floor(charactersPerPage * ratio));
 }
 
-function splitLongParagraph(paragraph: string, limit: number) {
+function splitLongParagraph(paragraph: string, limit: number, firstLimit = limit) {
   const chunks: Array<{ text: string; start: number; end: number }> = [];
   let remainder = paragraph;
   let offset = 0;
 
-  while (remainder.length > limit) {
-    const minimum = Math.floor(limit * 0.64);
+  while (remainder.length > (offset === 0 ? firstLimit : limit)) {
+    const chunkLimit = offset === 0 ? firstLimit : limit;
+    const minimum = Math.floor(chunkLimit * 0.64);
     let cut = -1;
-    for (let index = limit; index >= minimum; index -= 1) {
+    for (let index = chunkLimit; index >= minimum; index -= 1) {
       if ("、。！？\n」』）) ".includes(remainder[index] ?? "")) {
         cut = index + 1;
         break;
       }
     }
-    if (cut === -1) cut = limit;
+    if (cut === -1) cut = chunkLimit;
     const raw = remainder.slice(0, cut);
     const text = raw.trim();
     const trimStart = raw.length - raw.trimStart().length;
@@ -208,6 +209,7 @@ export function buildReaderPages({
   includePaywallPage = false,
   showPaywallPage = false,
   tocEntryCountOverride,
+  layoutSafetyEnabled = false,
 }: {
   chapters: NovelChapter[];
   images: ImageManifestRow[];
@@ -219,6 +221,8 @@ export function buildReaderPages({
   /** Render the boundary in an author Preview while keeping later content. */
   showPaywallPage?: boolean;
   tocEntryCountOverride?: number;
+  /** Presentation-only Full Design pagination; legacy/Quick remains unchanged. */
+  layoutSafetyEnabled?: boolean;
 }): ReaderPage[] {
   const pages: ReaderPage[] = [
     { id: "cover", kind: "cover" },
@@ -625,7 +629,15 @@ export function buildReaderPages({
       const displaySegment = paragraphOverrideFor(segment);
       if (!displaySegment.text) continue;
       if (displaySegment.sourceId) paragraphSourceBlockIds.push(displaySegment.sourceId);
-      for (const chunk of splitLongParagraph(displaySegment.text, Math.floor(charactersPerPage * 0.86))) {
+      const ordinaryLimit = Math.floor(charactersPerPage * 0.86);
+      const headingOnly = layoutSafetyEnabled && paragraphs.length > 0 &&
+        paragraphs.every((paragraph) => /^#{2,3}\s/u.test(paragraph));
+      // Reserve real body text alongside a pending H2/H3. The normal fixed
+      // paragraph chunk can otherwise push all body text onto the next page.
+      // Paywall/atomic boundaries have already flushed above and are not crossed.
+      const remaining = Math.floor(charactersPerPage - cost - 22);
+      const firstLimit = headingOnly && remaining >= 32 ? Math.min(ordinaryLimit, remaining) : ordinaryLimit;
+      for (const chunk of splitLongParagraph(displaySegment.text, ordinaryLimit, firstLimit)) {
         const chunkCost = textCost(chunk.text);
         const startsWithHeading = chunk.text.startsWith("## ");
         if (paragraphs.length && cost + chunkCost > charactersPerPage) flushTextPage();

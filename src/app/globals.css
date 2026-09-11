@@ -3584,6 +3584,53 @@ button.reader-edit-link:disabled {
 }
 
 /* A ColumnsBlock is one physical reader page with two internal panes. */
+.full-design-reader-dialog {
+  width: min(1280px, 96vw);
+  max-width: 96vw;
+  max-height: 94dvh;
+  overflow: auto;
+  border: 1px solid #dce5eb;
+  border-radius: 16px;
+  padding: 20px;
+  background: #f8fafb;
+}
+.full-design-reader-dialog::backdrop { background: rgb(18 32 46 / 65%); }
+.full-design-panel { margin-block: 20px; border-block: 1px solid #dce5eb; padding-block: 16px; }
+.full-design-panel li { margin-block: 8px; }
+
+/* Full Design patterns only affect explicit previews/adoptions. Neither
+   canonical DOM order nor existing books without Full Design is changed. */
+[data-full-pattern="quote"] .text-paragraph {
+  border-inline-start: 3px solid var(--book-accent-color, #6bb9ad);
+  padding-inline-start: 0.65em;
+}
+[data-full-pattern="checklist"] .text-paragraph {
+  border-block-end: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  padding-block-end: 0.25em;
+}
+[data-full-pattern="closing"] .text-page-header {
+  border-block-end: 2px solid var(--book-accent-color, #6bb9ad);
+}
+[data-full-pattern] .image-page-content,
+[data-full-pattern] .image-frame { min-height: 0; max-height: 100%; }
+[data-full-pattern] .reader-image { object-fit: contain; max-width: 100%; max-height: 100%; }
+[data-full-pattern] .text-inline-image,
+[data-full-pattern] .text-inline-youtube,
+[data-full-pattern] .text-inline-map,
+[data-full-pattern] .columns-reader-child { break-inside: avoid; }
+[data-full-pattern] .text-paragraph { overflow-wrap: anywhere; orphans: 2; widows: 2; }
+[data-full-pattern]:not([data-full-pattern="cover"]) .text-page {
+  max-height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+[data-full-pattern] [data-layout-overflow="scroll"] {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
 .columns-reader-page {
   --columns-grid: 1fr 1fr;
   position: relative;
