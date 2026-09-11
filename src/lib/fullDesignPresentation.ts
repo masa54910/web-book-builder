@@ -23,7 +23,10 @@ export function fullPatternForPage(page: ReaderPage, plan: readonly SafePatternA
   if (page.kind === "cover" || page.kind === "backCover") return "cover";
   if (page.kind === "chapterTitle") return "chapter-opening";
   if (page.kind === "image") return plan.find((item) => page.sourceBlockIds?.includes(item.blockId))?.pattern || "image-text";
-  if (page.kind === "columns") return assessColumns(page.left, page.right).fallback ? "standard-text" : "editorial-columns";
+  if (page.kind === "columns") {
+    const assigned = plan.find((item) => item.blockId === page.columnsBlockId);
+    return assessColumns(page.left, page.right).fallback || assigned?.pattern === "standard-text" ? "standard-text" : "editorial-columns";
+  }
   if (page.kind !== "text") return undefined;
   const patterns = plan.filter((item) => page.sourceBlockIds?.includes(item.blockId)).map((item) => item.pattern);
   const first = patterns[0];

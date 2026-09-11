@@ -56,13 +56,15 @@ export default function ColumnsPage({
   left,
   right,
   columnsBlockId,
+  forceSingleColumn = false,
 }: {
   ratio: "50-50" | "40-60" | "60-40";
   left: ReaderColumnChild[];
   right: ReaderColumnChild[];
   columnsBlockId: string;
+  forceSingleColumn?: boolean;
 }) {
-  const safetyFallback = assessColumns(left, right).fallback;
+  const safetyFallback = forceSingleColumn || assessColumns(left, right).fallback;
   const safeChildren = safetyFallback ? [...left, ...right] : [];
   const leftRef = useRef<HTMLDivElement | null>(null);
   const rightRef = useRef<HTMLDivElement | null>(null);

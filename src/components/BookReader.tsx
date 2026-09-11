@@ -641,7 +641,7 @@ export default function BookReader({
     } else if (page.kind === "map") {
       content = <MapPage sourceUrl={page.sourceUrl} embedUrl={page.embedUrl} displaySize={page.displaySize} alignment={page.alignment} />;
     } else if (page.kind === "columns") {
-      content = <ColumnsPage ratio={page.ratio} left={page.left} right={page.right} columnsBlockId={page.columnsBlockId} />;
+      content = <ColumnsPage ratio={page.ratio} left={page.left} right={page.right} columnsBlockId={page.columnsBlockId} forceSingleColumn={fullPatternForPage(page, fullPatternPlan) === "standard-text"} />;
     } else if (page.kind === "pageBreak") {
       content = <div className="page-break-page" aria-label="手動改ページ">ここから新しいページ</div>;
     } else if (page.kind === "paywall") {

@@ -2,12 +2,17 @@ import assert from "node:assert/strict";
 import { buildShioriDesignBrief } from "../src/lib/shioriDesignBrief";
 import { buildFullDesignProfile, mergeFullDesignOverrides, parseFullDesignBrief, readFullDesignRequest } from "../src/lib/fullDesignContract";
 import { generateFullDesign } from "../src/lib/fullDesignPipeline";
-import { DEFAULT_BOOK_DESIGN_SPEC } from "../src/lib/designSpec";
+import { DEFAULT_BOOK_DESIGN_SPEC, type BookDesignHistoryEntry } from "../src/lib/designSpec";
 import { assessColumns } from "../src/lib/columnsSafety";
 import type { BookColumnChildBlock } from "../src/lib/bookProject";
 import type { ReaderColumnChild } from "../src/lib/types";
 import { myDesignFromResult, parseMyDesignGrammar } from "../src/lib/myDesigns";
 import { evaluateLayoutGeometry } from "../src/lib/layoutGeometry";
+import { appendDesignHistory, normalizeDesignHistory, AI_BOOK_DESIGNER_MAX_HISTORY } from "../src/lib/aiBookDesigner";
+import { fullPatternForPage } from "../src/lib/fullDesignPresentation";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import ColumnsPage from "../src/components/ColumnsPage";
 
 async function main() {
   const brief = buildShioriDesignBrief({
@@ -43,6 +48,16 @@ async function main() {
   const grammar = myDesignFromResult(brief, off)!;
   assert.ok(grammar);
   assert.deepEqual(parseMyDesignGrammar(JSON.parse(JSON.stringify(grammar))), grammar);
+  const baseline = { id: "original", name: "Original", bookId: "qa", spec: DEFAULT_BOOK_DESIGN_SPEC, prompt: "", createdAt: "2026-09-11T00:00:00Z", active: false };
+  let history: BookDesignHistoryEntry[] = [baseline];
+  for (let index = 0; index < 40; index++) {
+    history = appendDesignHistory(history, { ...baseline, id: `full-${index}`, name: "Full Design", fullDesign: grammar });
+  }
+  assert.equal(history.length, AI_BOOK_DESIGNER_MAX_HISTORY);
+  assert.equal(history[0].id, "original");
+  assert.equal(history.at(-1)?.id, "full-39");
+  assert.equal(history.filter((entry) => entry.active).length, 1);
+  assert.deepEqual(normalizeDesignHistory(JSON.parse(JSON.stringify(history))).map((entry) => entry.id), history.map((entry) => entry.id));
   for (const key of ["bookId", "rawText", "contentBlocks", "imageIds", "paywall", "stripe", "publication"]) {
     assert.equal(parseMyDesignGrammar({ ...grammar, [key]: "forbidden" }), null);
   }
@@ -73,6 +88,20 @@ async function main() {
   assert.equal(assessColumns(canonical, media).fallback, false);
   assert.equal(assessColumns([], reader).fallback, true);
   assert.equal(assessColumns([{ id: "x", type: "text", content: "  " }], reader).fallback, true);
+  const left: ReaderColumnChild[] = [{ id: "left", kind: "text", paragraphs: ["LEFT_CONTENT"] }];
+  const right: ReaderColumnChild[] = [{ id: "right", kind: "text", paragraphs: ["RIGHT_CONTENT"] }];
+  const page = { id: "columns-page", chapterTitle: "QA", kind: "columns" as const, ratio: "50-50" as const, left, right, columnsBlockId: "columns-source" };
+  assert.equal(fullPatternForPage(page, [{ blockId: "columns-source", pattern: "standard-text", reason: "safe fallback", issues: [] }]), "standard-text");
+  assert.equal(fullPatternForPage(page, null), undefined);
+  const beforeColumns = JSON.stringify(page);
+  const fallbackHTML = renderToStaticMarkup(createElement(ColumnsPage, { ...page, forceSingleColumn: true }));
+  assert.match(fallbackHTML, /data-layout-fallback="standard-text"/);
+  assert.ok(fallbackHTML.indexOf("LEFT_CONTENT") < fallbackHTML.indexOf("RIGHT_CONTENT"));
+  assert.ok(!fallbackHTML.includes('data-columns-side="right"'));
+  assert.equal(JSON.stringify(page), beforeColumns);
+  const normalHTML = renderToStaticMarkup(createElement(ColumnsPage, page));
+  assert.ok(normalHTML.includes('data-columns-side="right"'));
+  assert.ok(!normalHTML.includes('data-layout-fallback'));
   console.log("Full Design contract / API OFF / selection / payload limits / shared Columns checks PASS");
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

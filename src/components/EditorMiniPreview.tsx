@@ -74,7 +74,7 @@ function MiniImageMarker({ inline = false }: { inline?: boolean }) {
   );
 }
 
-function MiniPageContent({ page }: { page: ReaderPage; unsafePatternBlockIds?: string[] }) {
+function MiniPageContent({ page, fullPatternPlan }: { page: ReaderPage; unsafePatternBlockIds?: string[]; fullPatternPlan?: SafePatternAssignment[] | null }) {
   if (page.kind === "image") {
     return <div className="editor-mini-page-image"><MiniImageMarker /></div>;
   }
@@ -85,7 +85,7 @@ function MiniPageContent({ page }: { page: ReaderPage; unsafePatternBlockIds?: s
     return <div className={`editor-mini-page-map media-display-size-${page.displaySize || "medium"} map-align-${normalizeMapAlignment(page.alignment)}`}><span aria-hidden="true">📍</span><strong>Googleマップ</strong></div>;
   }
   if (page.kind === "columns") {
-    const unsafe = assessColumns(page.left, page.right).fallback;
+    const unsafe = assessColumns(page.left, page.right).fallback || fullPatternForPage(page, fullPatternPlan || null) === "standard-text";
     const columnsGrid = page.ratio === "40-60" ? "2fr 3fr" : page.ratio === "60-40" ? "3fr 2fr" : "1fr 1fr";
     const renderPane = (children: typeof page.left) => (
       <div className="editor-mini-columns-pane" style={{ display: "grid", minWidth: 0, overflow: "hidden" }}>
@@ -283,7 +283,7 @@ function EditorMiniPreview({
             >
               <div className="editor-mini-page-number">{pageNumber || pageLabel(page)}</div>
               <div className="editor-mini-page-frame">
-                {isMaterialized ? <MiniPageContent page={page} unsafePatternBlockIds={unsafePatternBlockIds} /> : <div className="editor-mini-page-placeholder" aria-hidden="true" />}
+                {isMaterialized ? <MiniPageContent page={page} unsafePatternBlockIds={unsafePatternBlockIds} fullPatternPlan={fullPatternPlan} /> : <div className="editor-mini-page-placeholder" aria-hidden="true" />}
               </div>
               <div className="editor-mini-page-meta"><span>{pageLabel(page)}</span></div>
             </article>

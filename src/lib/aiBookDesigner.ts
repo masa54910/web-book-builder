@@ -110,13 +110,22 @@ export function appendDesignHistory(
   entries: BookDesignHistoryEntry[] | undefined,
   entry: BookDesignHistoryEntry,
 ) {
-  return [...(entries || []).map((item) => ({ ...item, active: false })), { ...entry, active: true }].slice(-AI_BOOK_DESIGNER_MAX_HISTORY);
+  return boundDesignHistory([...(entries || []).map((item) => ({ ...item, active: false })), { ...entry, active: true }]);
+}
+
+/** Keep the recoverable baseline while bounding the recent-version payload. */
+function boundDesignHistory(entries: BookDesignHistoryEntry[]) {
+  if (entries.length <= AI_BOOK_DESIGNER_MAX_HISTORY) return entries;
+  const original = entries.find((entry) => entry.name === "Original");
+  const recent = entries.slice(-AI_BOOK_DESIGNER_MAX_HISTORY);
+  if (!original || recent.includes(original)) return recent;
+  return [original, ...entries.slice(-(AI_BOOK_DESIGNER_MAX_HISTORY - 1))];
 }
 
 /** Validate persisted history before exposing it to the editor. */
 export function normalizeDesignHistory(value: unknown, fallbackBookId = "draft") {
   if (!Array.isArray(value)) return [] as BookDesignHistoryEntry[];
-  return value.map((candidate): BookDesignHistoryEntry | null => {
+  return boundDesignHistory(value.map((candidate): BookDesignHistoryEntry | null => {
     if (!candidate || typeof candidate !== "object") return null;
     const item = candidate as Partial<BookDesignHistoryEntry>;
     const parsed = parseBookDesignSpec(item.spec);
@@ -135,7 +144,7 @@ export function normalizeDesignHistory(value: unknown, fallbackBookId = "draft")
       ...(item.fullDesign && parseMyDesignGrammar(item.fullDesign) ? { fullDesign: parseMyDesignGrammar(item.fullDesign)! } : {}),
       ...(item.designMode === "api-on" || item.designMode === "api-off" || item.designMode === "my-design" ? { designMode: item.designMode } : {}),
     };
-  }).filter((entry): entry is BookDesignHistoryEntry => Boolean(entry)).slice(-AI_BOOK_DESIGNER_MAX_HISTORY);
+  }).filter((entry): entry is BookDesignHistoryEntry => Boolean(entry)));
 }
 
 export function buildDesignContext(input: {
